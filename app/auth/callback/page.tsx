@@ -1,10 +1,9 @@
-// app/auth/callback/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function AuthCallbackPage() {
+function AuthCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<"loading" | "error" | "success">(
@@ -14,7 +13,7 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await fetch("http://localhost:3001/auth/me", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
           credentials: "include",
         });
 
@@ -24,8 +23,7 @@ export default function AuthCallbackPage() {
         console.log("🔐 Authenticated user:", user);
 
         setStatus("success");
-        // Redirect anywhere you want
-        router.push("/settings"); // or '/dashboard', etc.
+        router.push("/settings");
       } catch (err) {
         console.error("❌ Auth check failed:", err);
         setStatus("error");
@@ -43,5 +41,13 @@ export default function AuthCallbackPage() {
   if (status === "error")
     return <p>Authentication failed. Please try again.</p>;
 
-  return null; // already redirecting
+  return null; // Already redirecting
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={<p>Loading...</p>}>
+      <AuthCallbackInner />
+    </Suspense>
+  );
 }
