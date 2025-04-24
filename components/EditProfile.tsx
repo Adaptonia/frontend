@@ -3,8 +3,11 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, Camera } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
+import { EditProfileType } from "@/lib/types";
 
-export default function EditProfile({ isOpen, onClose }: any) {
+
+
+export default function EditProfile({ isOpen, onClose }: EditProfileType) {
   const { user, updateUser, logout } = useAuth() || {
     user: { name: "", email: "" },
   };

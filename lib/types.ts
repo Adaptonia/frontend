@@ -11,3 +11,8 @@ export type AuthContextType = {
   logout: () => Promise<void>;
   updateUser: (updated: Partial<User>) => void;
 };
+
+export type EditProfileType = {
+  isOpen: boolean;
+  onClose: () => void;
+};
