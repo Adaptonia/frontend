@@ -1,10 +1,9 @@
 'use client'
 import Link from 'next/link';
 import { Home, Users, MessageCircle, User } from 'lucide-react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname,} from 'next/navigation';
 
 export default function BottomNav() {
-  const router = useRouter();
   const pathname = usePathname();
   
    const isActive = (path: string) => {

@@ -1,7 +1,13 @@
+export type User = {
+  id?: string;
+  name?: string;
+  email?: string;
+  profilePicture? : string;
+};
 export type AuthContextType = {
-  user: any | null;
+  user: User | null;
   loading: boolean;
-  setUser: React.Dispatch<React.SetStateAction<any | null>>;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
   logout: () => Promise<void>;
-  updateUser: any | null
+  updateUser: (updated: Partial<User>) => void;
 };

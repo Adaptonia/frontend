@@ -1,6 +1,6 @@
 'use client'
 import { getCurrentUser, logoutUser } from "@/lib/auth";
-import { AuthContextType } from "@/lib/types";
+import { AuthContextType, User } from "@/lib/types";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useState, createContext, useEffect, useContext } from "react";
@@ -10,9 +10,8 @@ import { useState, createContext, useEffect, useContext } from "react";
 const AuthContext = createContext<AuthContextType | null>(null)
 
 export const AuthProvider = ({ children} : {children: React.ReactNode}) => {
-    const [user, setUser] = useState(null)
+    const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true);
-    const [updateUser, setUpdateUser] = useState('')
     const router = useRouter()
 
     const fetchUser = async () => {
@@ -53,6 +52,14 @@ export const AuthProvider = ({ children} : {children: React.ReactNode}) => {
             setUser(null)
         }
     }
+
+    const updateUser = (updated: Partial<User>) => {
+      setUser((prev) => {
+        if (!prev) return prev;
+        return { ...prev, ...updated };
+      });
+    };
+
 
    useEffect(() => {
      const init = async () => {

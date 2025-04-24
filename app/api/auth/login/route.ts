@@ -1,3 +1,4 @@
+import { API_ROUTES } from "@/lib/api";
 import axios from "axios";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -6,38 +7,37 @@ export async function POST(req:NextRequest){
       console.log("📥 Incoming login API call:", body);
 
 
-    try{
-        const response = await axios.post("http://localhost:3001/auth/login", body, {
-            withCredentials: true
-        })
+    try {
+      const response = await axios.post(API_ROUTES.login, body, {
+        withCredentials: true,
+      });
 
-        const cookies = response.headers['set-cookie']
+      const cookies = response.headers["set-cookie"];
 
-        const res = NextResponse.json(response.data, {status: 200})
+      const res = NextResponse.json(response.data, { status: 200 });
 
-        if(cookies) {
-            // Set cookies on the browser manually
-            res.headers.set("Set-Cookie", cookies.join(","))
-        }
-        
+      if (cookies) {
+        // Set cookies on the browser manually
+        res.headers.set("Set-Cookie", cookies.join(","));
+      }
 
-        console.log("🎯 Headers:", cookies);
-        console.log("🎯 Backend responded with:", response.data);
-        console.log("🎯 Headers:", response.headers);
-        console.log("🎯 Set-Cookie header:", response.headers["set-cookie"]);
+      return res;
+    } catch (error: unknown) {
+      let message = "Something went wrong";
+      let status = 500;
 
-        return res
-    } catch(error : any){
-            console.error(
-              "🚨 Error from backend:",
-              error.response?.data || error
-            );
+      // If it's an Axios error with a response
+      if (axios.isAxiosError(error) && error.response) {
+        message = error.response.data?.message || message;
+        status = error.response.status || status;
+      } else if (error instanceof Error) {
+        // It's a standard JS error
+        message = error.message;
+      }
 
-        return NextResponse.json({
-            message: error.response?.data?.message || 'somehting went wrong'},
+      console.error("🚨 Error from backend:", message);
 
-            {status: error.response?.status|| 500}
-        )
+      return NextResponse.json({ message }, { status });
     }
 
 }

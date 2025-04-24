@@ -1,10 +1,11 @@
+import { API_ROUTES } from "@/lib/api";
 import axios from "axios";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: NextRequest){
+export async function GET(){
 
     try{
-        const response = await axios.get("http://localhost:3001/auth/refresh", {
+        const response = await axios.get(API_ROUTES.refreshToken, {
             withCredentials: true
         })
         const nextRes = NextResponse.json(response.data, {status: 200});

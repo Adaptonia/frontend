@@ -1,17 +1,20 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Camera } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 
 export default function EditProfile({ isOpen, onClose }: any) {
-  const { user, updateUser, logout } = useAuth() || { user: { name: "", email: "" } };
+  const { user, updateUser, logout } = useAuth() || {
+    user: { name: "", email: "" },
+  };
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [password, setPassword] = useState("************");
-  const [subscription, setSubscription] = useState("Not Subscribed");
-  const profileRef = useRef(null);
-  console.log(email, 'email')
+  // const [subscription, setSubscription] = useState("Not Subscribed");
+  // const profileRef = useRef(null);
+  console.log(email, "email");
 
   useEffect(() => {
     // Update form when user data changes
@@ -31,7 +34,7 @@ export default function EditProfile({ isOpen, onClose }: any) {
   };
 
   const handleLogout = () => {
-    logout()
+    logout();
   };
 
   return (
