@@ -12,7 +12,7 @@ api.interceptors.response.use((res) => res, async(error) => {
 
     if(error.response.status === 401 || error.response.status === 403){
         try{
-            axios.get('api/refresh-token', {withCredentials: true})
+            axios.get('api/auth/refresh-token', {withCredentials: true})
             return api(originalRequest) // retry original request
         } catch {
             await logoutUser()
