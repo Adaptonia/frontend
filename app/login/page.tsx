@@ -95,6 +95,15 @@ const Page = () => {
             Sign In
           </button>
 
+          <div className="text-center mt-8">
+            <p>
+              
+              <Link href="/forget-password" className="font-light cursor-pointer">
+              Forgot password?
+              </Link>
+            </p>
+          </div>
+
           <div className="flex items-center my-8">
             <div className="flex-grow h-px bg-gray-300"></div>
             <div className="px-4 text-gray-500">Or Register with</div>
@@ -154,7 +163,7 @@ const Page = () => {
             <p>
               Already have an account?{" "}
               <Link href="/signup" className="text-blue-500 font-medium">
-                Sign In
+                Sign Up
               </Link>
             </p>
           </div>

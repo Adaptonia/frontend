@@ -50,6 +50,7 @@ export const AuthProvider = ({ children} : {children: React.ReactNode}) => {
         } catch( err){
             console.error('could not refresh token:', err)
             setUser(null)
+            // router.push('/login')
         }
     }
 

@@ -12,11 +12,11 @@ import {
   Headphones,
 } from "lucide-react";
 import BottomNav from "@/components/reuseable/BottomNav";
-import { useAuth } from "@/context/AuthContext";
 import EditProfile from "@/components/EditProfile";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 export default function SettingsPage() {
-  const { user } = useAuth() || { user: null };
+  const { loading, user } = useRequireAuth()
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const openProfileEditor = () => {
@@ -26,6 +26,10 @@ export default function SettingsPage() {
   const closeProfileEditor = () => {
     setIsProfileOpen(false);
   };
+
+  if (loading) {
+    return <div className="min-h-screen flex justify-center items-center">Loading...</div>
+  }
 
   return (
     <div className="max-w-md mx-auto bg-gray-100 min-h-screen pb-16 relative">

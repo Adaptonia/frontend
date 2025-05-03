@@ -13,13 +13,13 @@ export default function BottomNav() {
   return (
     <div className="fixed bottom-0 left-0 right-0 flex justify-center">
       <div className="bg-white rounded-full px-8 py-3 flex items-center gap-12 shadow-lg mb-4">
-        <Link href="/" passHref>
+        <Link href="/dashboard" passHref>
           <div className="flex flex-col items-center cursor-pointer">
             <Home 
               size={20} 
-              className={isActive('/') ? "text-black" : "text-gray-500"} 
+              className={isActive('/dashboard') ? "text-black" : "text-gray-500"} 
             />
-            {isActive('/') && <div className="border-b-2 border-black w-5 mt-1"></div>}
+            {isActive('/dashboard') && <div className="border-b-2 border-black w-5 mt-1"></div>}
           </div>
         </Link>
         
