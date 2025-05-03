@@ -1,97 +1,40 @@
 import { CreateGoalRequest, Goal, UpdateGoalRequest } from '../types';
 
-// Function to fetch all goals
+// lib/goalsApi.ts (or wherever this lives)
+
+import api from '@/lib/apiClient'; // 👈 Axios instance with interceptor
+
+// Fetch all goals
 export const fetchGoals = async (): Promise<Goal[]> => {
-  const response = await fetch('/api/goals', {
-    method: 'GET',
-    credentials: 'include', // This ensures cookies are sent with the request
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch goals');
-  }
-  
-  return response.json();
+  const { data } = await api.get('/goals');
+  return data;
 };
 
-// Function to fetch a single goal by ID
+// Fetch goal by ID
 export const fetchGoalById = async (id: string): Promise<Goal> => {
-  const response = await fetch(`/api/goals/${id}`, {
-    method: 'GET',
-    credentials: 'include',
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch goal');
-  }
-  
-  return response.json();
+  const { data } = await api.get(`/goals/${id}`);
+  return data;
 };
 
-// Function to create a new goal
+// Create a new goal
 export const createGoal = async (goalData: CreateGoalRequest): Promise<Goal> => {
-  const response = await fetch('/api/goals', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify(goalData),
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to create goal');
-  }
-  
-  return response.json();
+  const { data } = await api.post('/goals', goalData);
+  return data;
 };
 
-// Function to update a goal
+// Update a goal
 export const updateGoal = async (id: string, goalData: Partial<CreateGoalRequest>): Promise<Goal> => {
-  const response = await fetch(`/api/goals/${id}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify(goalData),
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to update goal');
-  }
-  
-  return response.json();
+  const { data } = await api.patch(`/goals/${id}`, goalData);
+  return data;
 };
 
-// Function to delete a goal
+// Delete a goal
 export const deleteGoal = async (id: string): Promise<void> => {
-  const response = await fetch(`/api/goals/${id}`, {
-    method: 'DELETE',
-    credentials: 'include',
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to delete goal');
-  }
+  await api.delete(`/goals/${id}`);
 };
 
-// Function to toggle goal completion status
+// Toggle goal complete
 export const toggleGoalComplete = async (id: string): Promise<Goal> => {
-  const response = await fetch(`/api/goals/${id}/toggle-complete`, {
-    method: 'PATCH',
-    credentials: 'include',
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to toggle goal completion');
-  }
-  
-  return response.json();
-}; 
+  const { data } = await api.patch(`/goals/${id}/toggle-complete`);
+  return data;
+};
