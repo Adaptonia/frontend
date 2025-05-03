@@ -1,9 +1,9 @@
-import axios from "axios";
+import api from "./apiClient";
 
 export async function getCurrentUser() {
 
     try{
-        const res = await axios.get('/api/auth/me', {withCredentials: true})
+        const res = await api.get('/api/auth/me', {withCredentials: true})
         return res.data // make sure it Returns
     } catch(error: unknown){
         const errorMessage =

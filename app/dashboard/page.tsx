@@ -15,8 +15,10 @@ import GoalFormModal from '@/components/goals/GoalFormModal'
 // API
 import { fetchGoals, toggleGoalComplete,  } from '@/lib/api/goals'
 import { Goal } from '@/lib/types'
+import { useRequireAuth } from '@/hooks/useRequireAuth'
 
 const Dashboard = () => {
+  const {loading, user} = useRequireAuth()
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [goals, setGoals] = useState<Goal[]>([])
   const [loadingGoals, setLoadingGoals] = useState(true)
@@ -83,6 +85,10 @@ const Dashboard = () => {
 
   // Count completed goals
   const completedGoals = goals.filter(goal => goal.isCompleted).length;
+
+  if (loading) {
+    return <div className="min-h-screen flex justify-center items-center">Loading...</div>
+  }
 
   return (
     <div className="bg-gray-100 min-h-screen pb-20">
