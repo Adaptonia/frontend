@@ -23,23 +23,23 @@ export default function BottomNav() {
           </div>
         </Link>
         
-        <Link href="/community" passHref>
+        <Link href="/groups" passHref>
           <div className="flex flex-col items-center cursor-pointer">
             <Users 
               size={20} 
-              className={isActive('/community') ? "text-black" : "text-gray-500"} 
+              className={isActive('/groups') ? "text-black" : "text-gray-500"} 
             />
-            {isActive('/community') && <div className="border-b-2 border-black w-5 mt-1"></div>}
+            {isActive('/groups') && <div className="border-b-2 border-black w-5 mt-1"></div>}
           </div>
         </Link>
         
-        <Link href="/messages" passHref>
+        <Link href="/admin" passHref>
           <div className="flex flex-col items-center cursor-pointer">
             <MessageCircle 
               size={20}
-              className={isActive('/messages') ? "text-black" : "text-gray-500"} 
+              className={isActive('/admin') ? "text-black" : "text-gray-500"} 
             />
-            {isActive('/messages') && <div className="border-b-2 border-black w-5 mt-1"></div>}
+            {isActive('/admin') && <div className="border-b-2 border-black w-5 mt-1"></div>}
           </div>
         </Link>
         

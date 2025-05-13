@@ -28,12 +28,13 @@ const Page = () => {
 
 
             if(response.status === 200) {
+              // Use the Next.js API route
               const userRes = await axios.get('/api/auth/me', {
                 withCredentials: true
               })
 
               setUser(userRes.data)
-                router.push('/settings')
+              router.push('/settings')
             }
 
             console.log(response.data)
@@ -46,7 +47,7 @@ const Page = () => {
       <div className="flex flex-col min-h-screen  p-6">
         {/* Back Button */}
         <div className="mb-8">
-          <button className="p-1">
+            <Link href="/home">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -59,8 +60,8 @@ const Page = () => {
               strokeLinejoin="round"
             >
               <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-          </button>
+            </svg></Link>
+            
         </div>
 
         {/* Logo */}

@@ -11,7 +11,8 @@ import {
   FileText,
   Headphones,
 } from "lucide-react";
-import BottomNav from "@/components/reuseable/BottomNav";
+import BottomNav from "@/components/dashboard/BottomNav";
+      // import BottomNav from "@/components/reuseable/BottomNav";
 import EditProfile from "@/components/EditProfile";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 

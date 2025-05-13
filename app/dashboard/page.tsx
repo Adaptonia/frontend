@@ -9,19 +9,18 @@ import { Toaster } from 'sonner'
 import DashboardCalendar from '@/components/dashboard/Calendar'
 import CategoryCard from '@/components/dashboard/CategoryCard'
 import TaskItem from '@/components/dashboard/TaskItem'
-import BottomNav from '@/components/reuseable/BottomNav'
+import BottomNav from '@/components/dashboard/BottomNav'
+  // import BottomNav from '@/components/reuseable/BottomNav'
 import GoalFormModal from '@/components/goals/GoalFormModal'
 
 // API
 import { fetchGoals, toggleGoalComplete,  } from '@/lib/api/goals'
 import { Goal } from '@/lib/types'
-import { useRequireAuth } from '@/hooks/useRequireAuth'
 
 const Dashboard = () => {
-  const {loading, user} = useRequireAuth()
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [goals, setGoals] = useState<Goal[]>([])
-  const [loadingGoals, setLoadingGoals] = useState(true)
+  const [loading, setLoading] = useState(true)
   const [activeGoal, setActiveGoal] = useState<Goal | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   
@@ -39,13 +38,13 @@ const Dashboard = () => {
 
   const loadGoals = async () => {
     try {
-      setLoadingGoals(true);
+      setLoading(true);
       const data = await fetchGoals();
       setGoals(data);
     } catch (error) {
       console.error('Error fetching goals:', error);
     } finally {
-      setLoadingGoals(false);
+      setLoading(false);
     }
   };
 
@@ -85,10 +84,6 @@ const Dashboard = () => {
 
   // Count completed goals
   const completedGoals = goals.filter(goal => goal.isCompleted).length;
-
-  if (loading) {
-    return <div className="min-h-screen flex justify-center items-center">Loading...</div>
-  }
 
   return (
     <div className="bg-gray-100 min-h-screen pb-20">
@@ -136,7 +131,7 @@ const Dashboard = () => {
             onGoalCreated={loadGoals}
           >
             {/* Filter and show tasks that belong to this category */}
-            {loadingGoals ? (
+            {loading ? (
               <div className="p-4 text-center text-gray-500">Loading goals...</div>
             ) : goals.filter(goal => goal.category === category.id.toUpperCase()).length === 0 ? (
               <div className="p-4 text-center text-gray-500">No goals in this category yet</div>

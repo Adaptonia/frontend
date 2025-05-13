@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await logoutUser();
       setUser(null);
-      router.push("/home");
+      router.push('/login');
     } catch (error) {
       console.error("Logout failed:", error);
     }

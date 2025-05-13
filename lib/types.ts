@@ -1,9 +1,11 @@
+export type UserRole = 'USER' | 'ADMIN';
 
 export type User = {
   id?: string;
   name?: string;
   email?: string;
   profilePicture? : string;
+  role?: UserRole;
 };
 export type AuthContextType = {
   user: User | null;

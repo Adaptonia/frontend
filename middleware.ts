@@ -7,6 +7,11 @@ export default function middleware(req: NextRequest){
         '/dashboard',
         '/settings',
         '/premium',
+        "/admin",
+        '/groups',
+        '/groups/:path*',
+        '/channels',
+        '/channels/:path*',
        
         
     ]
@@ -21,5 +26,5 @@ export default function middleware(req: NextRequest){
 }
 
 export const config = {
-    matcher: ['/dashboard/:path*', '/settings/:path*', '/premium', '/email-verification'],
+    matcher: ['/dashboard/:path*', '/settings/:path*', '/premium', '/email-verification', '/channels/:path*', '/groups/:path*'],
   };
