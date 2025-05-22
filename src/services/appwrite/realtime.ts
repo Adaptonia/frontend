@@ -1,5 +1,4 @@
-import { Client, Databases } from 'appwrite';
-import { client, databases, DATABASE_ID } from './client';
+import { client, DATABASE_ID } from './client';
 import { 
   CHANNELS_COLLECTION_ID, 
   CHANNEL_MESSAGES_COLLECTION_ID,

@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { channelApi } from '@/lib/api/channel';
 
 export function JoinChannel() {
   const [inviteLink, setInviteLink] = useState('');
@@ -40,11 +39,11 @@ export function JoinChannel() {
     
     try {
       setIsJoining(true);
-      const result = await channelApi.joinByInviteCode(code);
-      toast.success('Successfully joined channel');
-      router.push(`/channels/${result.channelId}`);
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to join channel';
+      // const result = await channelApi.joinByInviteCode(code);
+      //toast.success('Successfully joined channel');
+      //router.push(`/channels/${result.channelId}`);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to join channel';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

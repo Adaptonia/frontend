@@ -10,6 +10,7 @@ export default function JoinChannelPage() {
   const searchParams = useSearchParams();
   const code = searchParams.get('code');
   const router = useRouter();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState('');
   const { user } = useAuth();
@@ -24,11 +25,18 @@ export default function JoinChannelPage() {
         description: result.message || 'Successfully joined channel',
       });
       router.push(`/channels/${result.channelId}`);
-    } catch (err: any) {
-      setError(err.message || 'Failed to join channel');
-      toast.error('Error', {
-        description: err.message || 'Failed to join channel',
-      });
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to join channel');
+        toast.error('Error', {
+          description: err.message || 'Failed to join channel',
+        });
+      } else {
+        setError('An unknown error occurred');
+        toast.error('Error', {
+          description: 'Failed to join channel',
+        });
+      }
     } finally {
       setIsJoining(false);
     }

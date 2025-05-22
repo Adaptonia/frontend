@@ -119,11 +119,11 @@ export const blockContact = async (userId: string, contactId: string) => {
     }
 
     // Update existing contact
-    const contactId = contacts.documents[0].$id;
+    const contactDocId = contacts.documents[0].$id;
     const contact = await databases.updateDocument(
       DATABASE_ID,
       CONTACTS_COLLECTION_ID,
-      contactId,
+      contactDocId,
       {
         isBlocked: true,
       }

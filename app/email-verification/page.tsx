@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect } from 'react';
-import { ChevronLeft } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
@@ -57,7 +56,6 @@ const Page = () => {
         code
       });
 
-      console.log('✅ Code verification successful:', response.data);
       
       // Store the temporary token for the reset password page
       if (response.data.tempToken) {
@@ -107,7 +105,7 @@ const Page = () => {
         </h1>
 
         <p className="mt-4 text-gray-600 text-sm">
-          We've sent a code to <span className="text-gray-800 font-medium">{email}</span>
+          We&apos;ve sent a code to <span className="text-gray-800 font-medium">{email}</span>
         </p>
         
         <div className="flex gap-3 mt-8 w-full">

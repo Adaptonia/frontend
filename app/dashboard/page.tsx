@@ -19,6 +19,7 @@ import { getCurrentUser } from '../../src/services/appwrite/auth'
 import { Goal } from '@/lib/types'
 
 const Dashboard = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [goals, setGoals] = useState<Goal[]>([])
   const [loading, setLoading] = useState(true)

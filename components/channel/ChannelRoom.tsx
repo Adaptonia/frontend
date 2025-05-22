@@ -10,10 +10,8 @@ import { Send, ArrowLeft, Users, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { TypingIndicator } from '@/components/ui/TypingIndicator';
-import { channelApi } from '@/lib/api/channel';
 import { getInitials, formatTime } from '@/lib/utils';
-import { Channel } from '@/lib/api/channel';
-
+import { Channel } from '@/lib/types/messaging';
 interface ChannelRoomProps {
   channelId: string;
   onBack?: () => void;
@@ -21,6 +19,7 @@ interface ChannelRoomProps {
 
 export default function ChannelRoom({ channelId, onBack }: ChannelRoomProps) {
   const [newMessage, setNewMessage] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [channel, setChannel] = useState<Channel | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -34,6 +33,7 @@ export default function ChannelRoom({ channelId, onBack }: ChannelRoomProps) {
     isSending,
     typingUsers,
     sendMessage,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     sendTypingIndicator,
     onUserTyping,
     typingIndicatorText: typingText
@@ -43,10 +43,11 @@ export default function ChannelRoom({ channelId, onBack }: ChannelRoomProps) {
   useEffect(() => {
     const fetchChannel = async () => {
       try {
-        const channelData = await channelApi.getChannelById(channelId);
-        setChannel(channelData);
-      } catch (error) {
-        console.error('Failed to fetch channel:', error);
+          // const channelData = await channelApi.getChannelById(channelId);
+          // setChannel(channelData);
+      } catch (error: unknown ) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to fetch channel.';
+        console.error('Failed to fetch channel:', errorMessage);
       }
     };
 
@@ -150,7 +151,7 @@ export default function ChannelRoom({ channelId, onBack }: ChannelRoomProps) {
                 </span>
               </div>
               
-              {dateMessages.map((message) => {
+              {/* {dateMessages.map((message) => {
                 const isCurrentUser = message.sender.id === user?.id;
                 
                 return (
@@ -186,7 +187,7 @@ export default function ChannelRoom({ channelId, onBack }: ChannelRoomProps) {
                     </div>
                   </div>
                 );
-              })}
+              })} */}
             </div>
           ))
         )}

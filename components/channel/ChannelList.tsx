@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { 
   createChannel, 
   getChannels, 
-  getChannelById, 
   getUserChannels,
   addChannelMember 
 } from '@/src/services/appwrite/channel';
@@ -18,7 +17,6 @@ import {
   Bell, 
   ChevronDown, 
   ChevronRight,
-  Search,
   Plus
 } from 'lucide-react';
 import { Input } from '../ui/input';
@@ -66,11 +64,12 @@ const CreateChannelModal = ({ isOpen, onClose, onChannelCreated }: CreateChannel
       toast.success("Channel created", {
         description: `${name} has been created successfully.`
       });
-    } catch (error: any) {
-        toast.error("Error", {
-        description: error.message || "Failed to create channel. Please try again.",
-        });
-      console.error('Failed to create channel:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create channel. Please try again.';
+      toast.error("Error", {
+        description: errorMessage,
+      });
+        console.error('Failed to create channel:', error);
     } finally {
       setIsLoading(false);
     }
@@ -188,7 +187,7 @@ export default function ChannelList() {
   ]);
   
   const router = useRouter();
-  const { socket, isConnected, sendMessage } = useWebSocket();
+  const { socket, isConnected} = useWebSocket();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -332,12 +331,13 @@ export default function ChannelList() {
         // Navigate to the channel
         navigateToChannel(channelId);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to join channel. Please try again.';
       console.error('Failed to join channel:', error);
       
       // Show a user-friendly error message
       toast.error("Couldn't join channel", {
-        description: error.message || "There was a problem joining the channel.",
+        description: errorMessage,
       });
       
       // Let's try to refresh the user channels to make sure we didn't lose connection

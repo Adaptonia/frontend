@@ -54,7 +54,7 @@ export default function JoinChannelInvitePage() {
         </div>
         
         <p className="text-sm text-gray-500 text-center">
-          Don't have an invite code? <br />
+          Don&apos;t have an invite code? <br />
           <button 
             onClick={() => router.push('/groups/join')}
             className="text-blue-500 hover:underline mt-1"

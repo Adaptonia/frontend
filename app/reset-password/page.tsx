@@ -19,7 +19,7 @@ const Page = () => {
     useEffect(() => {
         // Get email and code from session storage
         const storedEmail = sessionStorage.getItem('resetEmail')
-        const storedToken = sessionStorage.getItem('resetTempToken')
+        // const storedToken = sessionStorage.getItem('resetTempToken')
         const storedCode = sessionStorage.getItem('resetCode')
         
         if (!storedEmail || !storedCode) {

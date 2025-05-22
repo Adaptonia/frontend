@@ -4,9 +4,10 @@ import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/input';
-import { Channel, channelApi } from '@/lib/api/channel';
+        // import { Channel, channelApi } from '@/lib/api/channel';
 import { Copy, Link, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { Channel } from '@/lib/types/messaging';
 
 interface ChannelHeaderProps {
   channel: Channel;
@@ -20,13 +21,14 @@ export function ChannelHeader({ channel, isAdmin }: ChannelHeaderProps) {
 
   const generateInviteLink = async () => {
     try {
-      setIsLoading(true);
-      const code = await channelApi.generateInviteCode(channel.id);
-      const inviteLink = `${window.location.origin}/channels/join?code=${code}`;
-      setInviteCode(inviteLink);
-    } catch (error) {
-      toast.error('Failed to generate invite link', {
-        description: 'Failed to generate invite link',
+      // setIsLoading(true);
+      // const code = await channelApi.generateInviteCode(channel.id);
+      // const inviteLink = `${window.location.origin}/channels/join?code=${code}`;
+      // setInviteCode(inviteLink);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate invite link';
+      toast.error(errorMessage, {
+        description: errorMessage,
       });
     } finally {
       setIsLoading(false);

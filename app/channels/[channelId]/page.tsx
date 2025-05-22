@@ -1,17 +1,15 @@
 'use client'
-import React, { useEffect, useState, useRef, use } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   getChannelById, 
-  getChannelMessages, 
   getChannelMembership,
-  sendChannelMessage
 } from '@/src/services/appwrite/channel';
+import { Channel, ChannelMessage } from '@/lib/types/messaging';
 
-import { ArrowLeft, Send, Hash, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Hash, MoreVertical } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useChannelMessaging } from '@/hooks/useChannelMessaging';
-import { ChannelMessage } from '@/lib/types/messaging';
 import { format } from 'date-fns';
 import { getInitials } from '@/lib/utils';
 import { useWebSocket } from '@/context/WebSocketContext';
@@ -46,12 +44,11 @@ const typingAnimationStyles = `
 `;
 
 export default function ChannelPage({ params }: { params: { channelId: string } }) {
-  // Use React.use to unwrap the params object
-  const unwrappedParams = use(params as any) as { channelId: string };
-  const channelId = unwrappedParams.channelId;
+  // Get channel ID directly from params
+  const channelId = params.channelId;
   
   const router = useRouter();
-  const [channel, setChannel] = useState<any>(null);
+  const [channel, setChannel] = useState<Channel | null>(null);
   const [loading, setLoading] = useState(true);
   const [messageText, setMessageText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -174,6 +171,10 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
           name: 'General Chat',
           description: 'Channel description',
           type: 'public',
+          creatorId: 'system',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          isActive: true,
           memberCount: 20
         });
       } finally {
@@ -248,11 +249,18 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
-    } catch (error: any) {
-      console.error('Failed to send message:', error);
-      toast.error("Failed to send message", {
-        description: error.message || "Please try again"
-      });
+    } catch (error: unknown ) {
+      if (error instanceof Error) {
+        console.error('Failed to send message:', error);
+        toast.error("Failed to send message", {
+          description: error.message || "Please try again"
+        });
+      } else {
+        console.error('Failed to send message:', error);
+        toast.error("Failed to send message", {
+          description: "An unknown error occurred"
+        });
+      }
     }
   };
 
@@ -329,7 +337,7 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
               onClick={() => setIsHeaderOpen(true)}
             >
               <Hash className="h-5 w-5 mr-2 text-gray-500" />
-              <h1 className="text-xl font-semibold">{channel.name}</h1>
+              <h1 className="text-xl font-semibold">{channel?.name || 'Channel'}</h1>
             </div>
           </div>
           <div>
@@ -345,7 +353,7 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
         {/* Channel Header Dialog */}
         <Dialog open={isHeaderOpen} onOpenChange={setIsHeaderOpen}>
           <DialogContent>
-            <ChannelHeader channel={channel} isAdmin={isAdmin} />
+            {channel && <ChannelHeader channel={channel} isAdmin={isAdmin} />}
           </DialogContent>
         </Dialog>
 
@@ -530,7 +538,7 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
                   onUserTyping(); // Trigger typing indicator
                 }
               }}
-              placeholder={`Message # ${channel.name}`}
+              placeholder={`Message # ${channel?.name || 'Channel'}`}
               className="w-full py-3 px-12 rounded-full border border-gray-300 bg-gray-100"
               disabled={isSending}
             />
@@ -559,4 +567,4 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
       </div>
     </div>
   );
-} 
+}
