@@ -7,17 +7,43 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { subscribeToDirectMessages } from '@/src/services/appwrite/realtime';
+import { useAuth } from '@/context/AuthContext';
+import { getCurrentUser } from '@/src/services/appwrite/auth';
 
 export default function ChatList() {
   const [chats, setChats] = useState<ChatPreview[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const { user, setUser } = useAuth();
   const router = useRouter();
+
+  // Check auth state on component mount, especially after OAuth redirects
+  useEffect(() => {
+    const checkAuthState = async () => {
+      try {
+        // If we don't have a user in context but might have a valid Appwrite session
+        if (!user) {
+          const currentUser = await getCurrentUser();
+          if (currentUser) {
+            setUser(currentUser);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking auth state:', error);
+      }
+    };
+    
+    checkAuthState();
+  }, []);
 
   useEffect(() => {
     const fetchChats = async () => {
+      if (!user) return; // Only fetch chats if we have a user
+      
       try {
         const data = await chatApi.getRecentChats();
+        console.log("Chat data received:", data);
         setChats(data);
         setIsLoading(false);
       } catch (error) {
@@ -27,7 +53,72 @@ export default function ChatList() {
     };
 
     fetchChats();
-  }, []);
+
+    // Set up real-time listeners for each chat if user is available
+    let unsubscribers: Array<() => void> = [];
+    
+    if (user?.id) {
+      // We'll add real-time listeners when we have chats
+      const setupRealTimeListeners = () => {
+        // Clean up any existing listeners
+        unsubscribers.forEach(unsub => unsub());
+        unsubscribers = [];
+
+        
+        
+        // Set up new listeners for each chat
+        chats.forEach(chat => {
+          const unsubscribe = subscribeToDirectMessages(
+            user.id!, 
+            chat.user.id,
+            (messageEvent) => {
+              if (messageEvent.type === 'new_message') {
+                // Update the chat list with the new message
+                setChats(prevChats => {
+                  return prevChats.map(prevChat => {
+                    if (prevChat.user.id === chat.user.id) {
+                      // This is the chat that has a new message
+                      const isFromCurrentUser = messageEvent.data.senderId === user.id;
+                      
+                      return {
+                        ...prevChat,
+                        lastMessage: {
+                          id: messageEvent.data.id,
+                          content: messageEvent.data.content,
+                          createdAt: messageEvent.data.createdAt,
+                          isFromCurrentUser,
+                          read: isFromCurrentUser || messageEvent.data.isRead,
+                        },
+                        unreadCount: isFromCurrentUser 
+                          ? prevChat.unreadCount
+                          : prevChat.unreadCount + 1
+                      };
+                    }
+                    return prevChat;
+                  });
+                });
+              }
+            },
+            (error) => {
+              console.error(`Error in direct message subscription for ${chat.user.id}:`, error);
+            }
+          );
+          
+          unsubscribers.push(unsubscribe);
+        });
+      };
+      
+      // Set up listeners when chats are loaded
+      if (chats.length > 0) {
+        setupRealTimeListeners();
+      }
+    }
+    
+    return () => {
+      // Clean up all listeners on unmount
+      unsubscribers.forEach(unsub => unsub());
+    };
+  }, [user?.id, chats.length]);
 
   // Filter chats based on search term
   const filteredChats = chats.filter(chat => {
@@ -111,9 +202,9 @@ export default function ChatList() {
                         {chat.lastMessage.isFromCurrentUser ? 'You: ' : ''}
                         {getMessagePreview(chat.lastMessage.content)}
                       </p>
-                      {!chat.lastMessage.read && !chat.lastMessage.isFromCurrentUser && (
+                      {chat.unreadCount > 0 && !chat.lastMessage.isFromCurrentUser && (
                         <span className="bg-blue-500 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs">
-                          1
+                          {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
                         </span>
                       )}
                     </div>

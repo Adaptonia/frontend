@@ -1,20 +1,21 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useWebSocket } from '@/context/WebSocketContext';
-import { chatApi } from '@/lib/api/chat';
 import { useAuth } from '@/context/AuthContext';
+import { chatApi } from '@/lib/api/chat';
+import { subscribeToDirectMessages } from '@/src/services/appwrite/realtime';
 
 // Message types
 export interface Message {
   id: string;
   content: string;
   senderId: string;
-  receiverId?: string;
-  channelId?: string;
-  read: boolean;
+  recipientId?: string;
   createdAt: string | Date;
-  sender: {
+  isRead: boolean;
+  isDeleted: boolean;
+  replyToId?: string | null;
+  sender?: {
     id: string;
     firstName?: string;
     lastName?: string;
@@ -27,19 +28,15 @@ interface UseDirectMessagingResult {
   messages: Message[];
   isLoading: boolean;
   isSending: boolean;
-  otherUserIsTyping: boolean;
   sendMessage: (content: string) => Promise<void>;
-  sendTypingIndicator: (isTyping: boolean) => void;
   markAsRead: (messageId: string) => void;
 }
 
 export function useDirectMessaging(otherUserId: string): UseDirectMessagingResult {
-  const { socket, isConnected } = useWebSocket();
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const [otherUserIsTyping, setOtherUserIsTyping] = useState(false);
   
   // Keep a ref to the otherUserId to use in event listeners
   const otherUserIdRef = useRef(otherUserId);
@@ -49,7 +46,7 @@ export function useDirectMessaging(otherUserId: string): UseDirectMessagingResul
     otherUserIdRef.current = otherUserId;
   }, [otherUserId]);
 
-  // Load initial messages from REST API
+  // Load initial messages from API
   useEffect(() => {
     const fetchMessages = async () => {
       setIsLoading(true);
@@ -66,117 +63,129 @@ export function useDirectMessaging(otherUserId: string): UseDirectMessagingResul
       }
     };
 
-    if (otherUserId) {
+    if (otherUserId && user?.id) {
       fetchMessages();
     }
-  }, [otherUserId]);
+  }, [otherUserId, user?.id]);
 
-  // Listen for new messages via WebSocket
+  // Set up real-time listener for new messages
   useEffect(() => {
-    if (!socket || !isConnected) return;
+    if (!user?.id || !otherUserId) return;
 
-    const handleNewMessage = (message: Message) => {
-      // Only add message if it's relevant to this conversation
-      const isRelevantMessage = 
-        (message.senderId === otherUserIdRef.current && message.receiverId === user?.id) || 
-        (message.senderId === user?.id && message.receiverId === otherUserIdRef.current);
-        
-      if (isRelevantMessage) {
-        setMessages(prev => [...prev, message]);
-        
-        // Mark incoming messages as read automatically
-        if (message.senderId === otherUserIdRef.current && !message.read) {
-          markMessageAsReadViaSocket(message.id);
+    // Subscribe to direct messages between the current user and other user
+    const unsubscribe = subscribeToDirectMessages(
+      user.id,
+      otherUserId,
+      (messageEvent) => {
+        if (messageEvent.type === 'new_message') {
+          const newMessage = messageEvent.data;
+          
+          // Add message to our list
+          setMessages(prev => [...prev, {
+            id: newMessage.id,
+            content: newMessage.content,
+            senderId: newMessage.senderId,
+            recipientId: newMessage.recipientId,
+            createdAt: newMessage.createdAt,
+            isRead: newMessage.isRead,
+            isDeleted: newMessage.isDeleted,
+            replyToId: newMessage.replyToId,
+          }]);
+          
+          // If the message is from the other user, mark it as read
+          if (newMessage.senderId === otherUserId) {
+            markAsRead(newMessage.id);
+          }
+        } else if (messageEvent.type === 'message_update') {
+          // Update the message in our list
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === messageEvent.data.id 
+                ? {
+                    ...msg,
+                    content: messageEvent.data.content,
+                    isRead: messageEvent.data.isRead,
+                    isDeleted: messageEvent.data.isDeleted,
+                  } 
+                : msg
+            )
+          );
+        } else if (messageEvent.type === 'message_delete') {
+          // Remove or mark as deleted in our list
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === messageEvent.data.id 
+                ? { ...msg, isDeleted: true } 
+                : msg
+            )
+          );
         }
+      },
+      (error) => {
+        console.error('Error in direct message subscription:', error);
       }
-    };
+    );
     
-    // Listen for the message_received event
-    socket.on('message_received', handleNewMessage);
-    
+    // Clean up subscription on unmount
     return () => {
-      socket.off('message_received', handleNewMessage);
+      unsubscribe();
     };
-  }, [socket, isConnected, user?.id]);
-
-  // Listen for typing indicators
-  useEffect(() => {
-    if (!socket || !isConnected) return;
-
-    const handleTypingIndicator = (data: { userId: string; isTyping: boolean }) => {
-      if (data.userId === otherUserIdRef.current) {
-        setOtherUserIsTyping(data.isTyping);
-      }
-    };
-    
-    socket.on('user_typing', handleTypingIndicator);
-    
-    return () => {
-      socket.off('user_typing', handleTypingIndicator);
-    };
-  }, [socket, isConnected]);
+  }, [user?.id, otherUserId]);
 
   // Send a direct message
   const sendMessage = useCallback(async (content: string) => {
-    if (!content.trim() || !otherUserId || !user) return;
+    if (!content.trim() || !otherUserId || !user?.id) return;
     
     setIsSending(true);
     
     try {
-      // If socket is connected, send via WebSocket
-      if (socket && isConnected) {
-        socket.emit('send_direct_message', {
-          receiverId: otherUserId,
-          content: content.trim(),
-        });
-      } else {
-        // Fallback to REST API
         const message = await chatApi.sendDirectMessage(otherUserId, content.trim());
-        setMessages(prev => [...prev, message]);
-      }
+      
+      // No need to update messages state as the real-time listener will catch this
     } catch (error) {
       console.error('Failed to send message:', error);
+      
+      // Optimistically add the message to the UI in case of real-time failure
+      const optimisticMessage: Message = {
+        id: `temp-${Date.now()}`,
+        content: content.trim(),
+        senderId: user.id,
+        recipientId: otherUserId,
+        createdAt: new Date().toISOString(),
+        isRead: false,
+        isDeleted: false,
+      };
+      
+      setMessages(prev => [...prev, optimisticMessage]);
     } finally {
       setIsSending(false);
     }
-  }, [socket, isConnected, otherUserId, user]);
+  }, [otherUserId, user?.id]);
 
-  // Send typing indicator
-  const sendTypingIndicator = useCallback((isTyping: boolean) => {
-    if (!socket || !isConnected || !otherUserId) return;
+  // Mark a message as read
+  const markAsRead = useCallback(async (messageId: string) => {
+    if (!user?.id) return;
     
-    socket.emit('typing', {
-      receiverId: otherUserId,
-      isTyping,
-    });
-  }, [socket, isConnected, otherUserId]);
-
-  // Mark message as read via WebSocket
-  const markMessageAsReadViaSocket = useCallback((messageId: string) => {
-    if (!socket || !isConnected) return;
-    
-    socket.emit('mark_message_read', { messageId });
-  }, [socket, isConnected]);
-
-  // Public method to mark messages as read
-  const markAsRead = useCallback((messageId: string) => {
-    markMessageAsReadViaSocket(messageId);
-    
-    // Update local state to reflect that the message is read
+    try {
+      // Update in the backend
+      await chatApi.markMessagesAsRead(otherUserId);
+      
+      // Update in local state
     setMessages(prev => 
       prev.map(msg => 
-        msg.id === messageId ? { ...msg, read: true } : msg
+          msg.id === messageId ? { ...msg, isRead: true } : msg
       )
     );
-  }, [markMessageAsReadViaSocket]);
+    } catch (error) {
+      console.error('Failed to mark message as read:', error);
+    }
+  }, [otherUserId, user?.id]);
 
   return {
     messages,
     isLoading,
     isSending,
-    otherUserIsTyping,
     sendMessage,
-    sendTypingIndicator,
     markAsRead,
   };
 } 

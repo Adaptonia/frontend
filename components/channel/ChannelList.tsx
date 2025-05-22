@@ -1,10 +1,16 @@
 'use client'
 import React, { useState, useEffect } from 'react';
-import { Channel, channelApi, InsufficientPermissionsError } from '@/lib/api/channel';
+import { 
+  createChannel, 
+  getChannels, 
+  getChannelById, 
+  getUserChannels,
+  addChannelMember 
+} from '@/src/services/appwrite/channel';
 import { MdContactEmergency } from "react-icons/md";
 import { FaCalendarAlt } from "react-icons/fa";
 import { useWebSocket } from '@/context/WebSocketContext';
-import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useAuth } from '@/context/AuthContext';
 import { 
   Hash, 
   MessageSquare, 
@@ -18,7 +24,8 @@ import {
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
+import { Channel } from '@/lib/types/messaging';
 
 type ChannelSection = {
   title: string;
@@ -37,43 +44,32 @@ const CreateChannelModal = ({ isOpen, onClose, onChannelCreated }: CreateChannel
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isPublic, setIsPublic] = useState(true);
-  const [type, setType] = useState<'GROUP' | 'DISCUSSION' | 'SUPPORT' | 'ANNOUNCEMENTS'>('GROUP');
+  const [type, setType] = useState<'public' | 'private'>('public');
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !user?.id) return;
 
     setIsLoading(true);
     try {
-      const newChannel = await channelApi.createChannel({
-        name: name.trim(),
+      const newChannel = await createChannel(
+        name.trim(),
         description,
-        isPublic,
-        type
-      });
+        isPublic ? 'public' : 'private',
+        user.id
+      );
       
       onChannelCreated(newChannel);
       onClose();
-      toast({
-        title: "Channel created",
+      toast.success("Channel created", {
         description: `${name} has been created successfully.`
       });
-    } catch (error) {
-      if (error instanceof InsufficientPermissionsError) {
-        toast({
-          title: "Permission denied",
-          description: error.message,
-          variant: "destructive"
+    } catch (error: any) {
+        toast.error("Error", {
+        description: error.message || "Failed to create channel. Please try again.",
         });
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to create channel. Please try again.",
-          variant: "destructive"
-        });
-      }
       console.error('Failed to create channel:', error);
     } finally {
       setIsLoading(false);
@@ -111,13 +107,11 @@ const CreateChannelModal = ({ isOpen, onClose, onChannelCreated }: CreateChannel
             <label className="block text-sm font-medium mb-1">Channel Type</label>
             <select 
               value={type}
-              onChange={(e) => setType(e.target.value as any)}
+              onChange={(e) => setType(e.target.value as 'public' | 'private')}
               className="w-full p-2 border rounded"
             >
-              <option value="GROUP">Regular Group</option>
-              <option value="DISCUSSION">Discussion Room</option>
-              <option value="SUPPORT">Support</option>
-              <option value="ANNOUNCEMENTS">Announcements</option>
+              <option value="public">Public Channel</option>
+              <option value="private">Private Channel</option>
             </select>
           </div>
           
@@ -160,7 +154,6 @@ export default function ChannelList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJoiningChannel, setIsJoiningChannel] = useState(false);
-  const { toast } = useToast();
   const [sections, setSections] = useState<ChannelSection[]>([
     { 
       title: 'Discussion room', 
@@ -195,22 +188,26 @@ export default function ChannelList() {
   ]);
   
   const router = useRouter();
-  const { isConnected } = useWebSocket();
-  const isAdmin = useIsAdmin();
+  const { socket, isConnected, sendMessage } = useWebSocket();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   // Track new message notifications for channels
   const [channelNotifications, setChannelNotifications] = useState<Record<string, number>>({});
   
   useEffect(() => {
     const fetchChannels = async () => {
+      if (!user?.id) return;
+      
       try {
         // Get channels the user is a member of
-        const userChannels = await channelApi.getUserChannels();
+        const userChannels = await getUserChannels(user.id);
         console.log('User channels:', userChannels);
         setChannels(userChannels);
         
         // Get public channels
-        const public_channels = await channelApi.getPublicChannels();
+        const allChannels = await getChannels();
+        const public_channels = allChannels.filter(c => c.type === 'public');
         console.log('Public channels:', public_channels);
         setPublicChannels(public_channels);
         
@@ -221,32 +218,39 @@ export default function ChannelList() {
       }
     };
 
+    if (user?.id) {
     fetchChannels();
-  }, []);
+    }
+  }, [user?.id]);
 
   // Listen for new channel messages via WebSocket
-  const { socket } = useWebSocket();
-  
   useEffect(() => {
     if (!socket || !isConnected) return;
     
-    const handleNewChannelMessage = (message: any) => {
+    const handleWebSocketMessage = (event: MessageEvent) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === 'channel_message') {
       // If the user is currently not viewing this channel, increment notification count
       const currentPath = window.location.pathname;
-      const isViewingChannel = currentPath.includes(`/channels/${message.channelId}`);
+          const isViewingChannel = currentPath.includes(`/channels/${message.data.channelId}`);
       
       if (!isViewingChannel) {
         setChannelNotifications(prev => ({
           ...prev,
-          [message.channelId]: (prev[message.channelId] || 0) + 1
+              [message.data.channelId]: (prev[message.data.channelId] || 0) + 1
         }));
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
       }
     };
     
-    socket.on('channel_message_received', handleNewChannelMessage);
+    socket.addEventListener('message', handleWebSocketMessage);
     
     return () => {
-      socket.off('channel_message_received', handleNewChannelMessage);
+      socket.removeEventListener('message', handleWebSocketMessage);
     };
   }, [socket, isConnected]);
 
@@ -299,9 +303,14 @@ export default function ChannelList() {
 
   // Add function to handle joining a channel
   const handleJoinChannel = async (channelId: string, channelName: string) => {
+    if (!user?.id) {
+      toast.error("Error", { description: "You must be logged in to join a channel" });
+      return;
+    }
+    
     setIsJoiningChannel(true);
     try {
-      const membership = await channelApi.joinChannel(channelId);
+      const membership = await addChannelMember(channelId, user.id);
       console.log('Successfully joined channel:', membership);
       
       // Add the channel to user's channels list
@@ -316,29 +325,27 @@ export default function ChannelList() {
         setChannels(prev => [...prev, channelWithRole]);
         
         // Show success message
-        toast({
-          title: "Joined channel",
+        toast.success("Joined channel", {
           description: `You've successfully joined ${channelName}`
         });
         
         // Navigate to the channel
         navigateToChannel(channelId);
       }
-    } catch (error) {
-      // Don't log out - handle the error gracefully
+    } catch (error: any) {
       console.error('Failed to join channel:', error);
       
       // Show a user-friendly error message
-      toast({
-        title: "Couldn't join channel",
-        description: "There was a problem joining the channel. The server may need to be restarted.",
-        variant: "destructive"
+      toast.error("Couldn't join channel", {
+        description: error.message || "There was a problem joining the channel.",
       });
       
       // Let's try to refresh the user channels to make sure we didn't lose connection
       try {
-        const userChannels = await channelApi.getUserChannels();
+        if (user?.id) {
+          const userChannels = await getUserChannels(user.id);
         setChannels(userChannels);
+        }
       } catch (refreshError) {
         console.error('Failed to refresh channels after join error:', refreshError);
       }

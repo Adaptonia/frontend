@@ -2,8 +2,13 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import React from 'react'
+import { signIn } from 'next-auth/react'
 
 const Page = () => {
+  const handleGoogleSignIn = () => {
+    signIn('google', { callbackUrl: '/dashboard' });
+  };
+
   return (
     <div>
       <div>
@@ -54,9 +59,7 @@ const Page = () => {
                     </button>
       
                     <button
-                      onClick={() =>
-                        (window.location.href = "http://localhost:3001/auth/google")
-                      }
+                      onClick={handleGoogleSignIn}
                       className="w-full py-4 bg-white text-black rounded-full font-semibold flex items-center justify-center shadow-md"
                     >
                       <svg

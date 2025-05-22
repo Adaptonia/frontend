@@ -2,11 +2,11 @@
 'use client'
 import React, { useState } from 'react';
 import { Button } from '../ui/button';
-import { useToast } from '../ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Channel, channelApi } from '@/lib/api/channel';
 import { Copy, Link, X } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ChannelHeaderProps {
   channel: Channel;
@@ -17,7 +17,6 @@ export function ChannelHeader({ channel, isAdmin }: ChannelHeaderProps) {
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
 
   const generateInviteLink = async () => {
     try {
@@ -26,10 +25,8 @@ export function ChannelHeader({ channel, isAdmin }: ChannelHeaderProps) {
       const inviteLink = `${window.location.origin}/channels/join?code=${code}`;
       setInviteCode(inviteLink);
     } catch (error) {
-      toast({
-        title: 'Error',
+      toast.error('Failed to generate invite link', {
         description: 'Failed to generate invite link',
-        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -38,8 +35,7 @@ export function ChannelHeader({ channel, isAdmin }: ChannelHeaderProps) {
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(inviteCode);
-    toast({
-      title: 'Copied',
+    toast.success('Copied', {
       description: 'Invite link copied to clipboard',
     });
   };

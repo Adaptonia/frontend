@@ -1,7 +1,9 @@
 'use client'
-import React from 'react';
+import React, { useEffect } from 'react';
 import ChatRoom from '@/components/chat/ChatRoom';
 import ChatList from '@/components/chat/ChatList';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface ChatDetailPageProps {
   params: {
@@ -10,6 +12,16 @@ interface ChatDetailPageProps {
 }
 
 export default function ChatDetailPage({ params }: ChatDetailPageProps) {
+  const { user } = useAuth();
+  const router = useRouter();
+  
+  // Check if user is authenticated
+  useEffect(() => {
+    if (!user?.id) {
+      router.push('/login'); // Redirect to login if not authenticated
+    }
+  }, [user, router]);
+  
   return (
     <div className="flex h-full">
       {/* Chat List Sidebar */}

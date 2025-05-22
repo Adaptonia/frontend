@@ -3,18 +3,19 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Calendar, User, BookOpen, BarChart3 } from 'lucide-react'
 import Image from 'next/image'
-import { Toaster } from 'sonner'
+import { Toaster, toast } from 'sonner'
+import { useAuth } from '@/context/AuthContext'
 
 // Custom components
 import DashboardCalendar from '@/components/dashboard/Calendar'
 import CategoryCard from '@/components/dashboard/CategoryCard'
 import TaskItem from '@/components/dashboard/TaskItem'
 import BottomNav from '@/components/dashboard/BottomNav'
-  // import BottomNav from '@/components/reuseable/BottomNav'
 import GoalFormModal from '@/components/goals/GoalFormModal'
 
-// API
-import { fetchGoals, toggleGoalComplete,  } from '@/lib/api/goals'
+// Appwrite services
+import { getGoals, toggleGoalCompletion } from '../../src/services/appwrite/database'
+import { getCurrentUser } from '../../src/services/appwrite/auth'
 import { Goal } from '@/lib/types'
 
 const Dashboard = () => {
@@ -23,6 +24,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true)
   const [activeGoal, setActiveGoal] = useState<Goal | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const { user, setUser } = useAuth()
   
   // Categories for the dashboard
   const categories = [
@@ -32,14 +34,51 @@ const Dashboard = () => {
     { id: 'audio_books', name: 'Audio books', icon: <BookOpen className="w-5 h-5 text-gray-500" /> },
   ]
 
+  // Effect to check and update user auth state after OAuth redirects
   useEffect(() => {
-    loadGoals();
+    const checkAuthState = async () => {
+      try {
+        console.log("📊 Dashboard: Checking auth state...");
+        console.log("📊 Current user state:", user?.email || "No user in context");
+        
+        // If we don't have a user in context but might have a valid Appwrite session
+        if (!user) {
+          console.log("📊 No user in context, checking Appwrite session...");
+          const currentUser = await getCurrentUser();
+          
+          if (currentUser) {
+            console.log("📊 Found Appwrite session for:", currentUser.email);
+            setUser(currentUser);
+            toast.success("Welcome back!");
+          } else {
+            console.log("📊 No Appwrite session found");
+          }
+        } else {
+          console.log("📊 User already in context:", user.email);
+        }
+      } catch (error) {
+        console.error('Error checking auth state:', error);
+      }
+    };
+    
+    checkAuthState();
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      console.log("📊 User available, loading goals for:", user.email);
+      loadGoals();
+    } else {
+      console.log("📊 No user available, skipping goal loading");
+    }
+  }, [user]);
+
   const loadGoals = async () => {
+    if (!user?.id) return;
+    
     try {
       setLoading(true);
-      const data = await fetchGoals();
+      const data = await getGoals(user.id);
       setGoals(data);
     } catch (error) {
       console.error('Error fetching goals:', error);
@@ -50,19 +89,19 @@ const Dashboard = () => {
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date)
-    console.log('Selected date:', date)
-    // Here you could fetch tasks for the selected date
+    // console.log('Selected date:', date)
+    // Here you could filter tasks for the selected date
   }
 
-  const handleToggleComplete = async (goalId: string, completed: boolean) => {
+  const handleToggleComplete = async (goalId: string) => {
+    if (!user?.id) return;
+    
     try {
-      await toggleGoalComplete(goalId);
+      const updatedGoal = await toggleGoalCompletion(goalId, user.id);
       
       // Update local state
       setGoals(goals.map(goal => 
-        goal.id === goalId 
-          ? { ...goal, isCompleted: !goal.isCompleted } 
-          : goal
+        goal.id === goalId ? updatedGoal : goal
       ));
     } catch (error) {
       console.error('Error toggling goal completion:', error);
@@ -84,6 +123,24 @@ const Dashboard = () => {
 
   // Count completed goals
   const completedGoals = goals.filter(goal => goal.isCompleted).length;
+
+  // Helper function to format category for filtering
+  const formatCategoryForFiltering = (categoryId: string): string => {
+    const lowercaseCategory = categoryId.toLowerCase();
+    
+    switch (lowercaseCategory) {
+      case 'schedule':
+        return 'schedule';
+      case 'finance':
+        return 'finance';
+      case 'career':
+        return 'career';
+      case 'audio_books':
+        return 'audio_books';
+      default:
+        return lowercaseCategory;
+    }
+  };
 
   return (
     <div className="bg-gray-100 min-h-screen pb-20">
@@ -133,11 +190,11 @@ const Dashboard = () => {
             {/* Filter and show tasks that belong to this category */}
             {loading ? (
               <div className="p-4 text-center text-gray-500">Loading goals...</div>
-            ) : goals.filter(goal => goal.category === category.id.toUpperCase()).length === 0 ? (
+            ) : goals.filter(goal => goal.category === formatCategoryForFiltering(category.id)).length === 0 ? (
               <div className="p-4 text-center text-gray-500">No goals in this category yet</div>
             ) : (
               goals
-                .filter(goal => goal.category === category.id.toUpperCase())
+                .filter(goal => goal.category === formatCategoryForFiltering(category.id))
                 .map(goal => (
                   <div 
                     key={goal.id} 
@@ -150,10 +207,10 @@ const Dashboard = () => {
                       description={goal.description || ''}
                       dueDate={goal.deadline ? new Date(goal.deadline).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }) : undefined}
                       completed={goal.isCompleted}
-                      onToggleComplete={(id, completed) => {
+                      onToggleComplete={(id) => {
                         // Stop event propagation
                         event?.stopPropagation();
-                        handleToggleComplete(id, completed);
+                        handleToggleComplete(id);
                       }}
                     />
                   </div>

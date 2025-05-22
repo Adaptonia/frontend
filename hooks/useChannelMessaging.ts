@@ -1,260 +1,332 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useWebSocket } from '@/context/WebSocketContext';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useWebSocket, TypingIndicatorData } from '@/context/WebSocketContext';
 import { useAuth } from '@/context/AuthContext';
-import { channelApi } from '@/lib/api/channel';
-import { Message } from '@/lib/api/chat';
-import { useChannelTyping, UseChannelTypingResult } from './useChannelTyping';
+import { 
+  getChannelMessages, 
+  sendChannelMessage 
+} from '@/src/services/appwrite/channel';
+import { subscribeToChannelMessages } from '@/src/services/appwrite/realtime';
+import { ChannelMessage } from '@/lib/types/messaging';
 
-// Define typing users interface
-interface TypingUser {
-  userId: string;
-  timestamp: number;
-}
-
-export interface UseChannelMessagingResult {
-  messages: Message[];
-  isLoading: boolean;
-  isSending: boolean;
-  typingUsers: string[];
-  sendMessage: (content: string) => Promise<void>;
-  sendTypingIndicator: (isTyping: boolean) => void;
-  joinChannel: () => void;
-  leaveChannel: () => void;
-  typingIndicatorText: string;
-  onUserTyping: () => void;
-}
-
-// How long typing indicator should remain active (ms)
-const TYPING_TIMEOUT = 5000;
-
-export function useChannelMessaging(channelId: string): UseChannelMessagingResult {
-  const { socket, isConnected } = useWebSocket();
-  const { user } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
+export function useChannelMessaging(channelId: string) {
+  const [messages, setMessages] = useState<ChannelMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const [typingUsersMap, setTypingUsersMap] = useState<Map<string, TypingUser>>(new Map());
+  const [error, setError] = useState<string | null>(null);
+  const [typingUsers, setTypingUsers] = useState<Record<string, boolean>>({});
+  const { socket, isConnected, sendMessage: sendWebSocketMessage } = useWebSocket();
+  const { user } = useAuth();
   
   // Keep a ref to the channelId to use in event listeners
   const channelIdRef = useRef(channelId);
   
-  // Derived state for currently typing users
-  const typingUsers = Array.from(typingUsersMap.keys());
-  
-  const { typingIndicatorText, onUserTyping, typingUsers: typingUsersResult } = useChannelTyping(channelId);
-  
-  // Update ref when prop changes
+  // Update ref when channelId changes
   useEffect(() => {
     channelIdRef.current = channelId;
   }, [channelId]);
 
-  // Load initial messages from REST API
+  // Load initial messages when component mounts
   useEffect(() => {
+    if (!user?.id) return;
+    
     const fetchMessages = async () => {
-      setIsLoading(true);
       try {
-        const data = await channelApi.getChannelMessages(channelId);
-        setMessages(data);
-      } catch (error) {
-        console.error('Failed to fetch channel messages:', error);
+        setIsLoading(true);
+        
+        const fetchedMessages = await getChannelMessages(
+          channelId,
+          user.id || "" // Ensure we have a string even if undefined
+        );
+        
+        // Map to the expected format
+        const formattedMessages = fetchedMessages.map(msg => ({
+          ...msg,
+          sender: {
+            // Add placeholder sender info since we don't have it from Appwrite
+            firstName: 'User',
+            lastName: '',
+            email: msg.senderId // Using senderId as email for now
+          }
+        }));
+        
+        setMessages(formattedMessages);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching channel messages:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load messages');
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (channelId) {
       fetchMessages();
-    }
-  }, [channelId]);
+  }, [channelId, user?.id]);
 
-  // Clean up typing indicators after timeout
+  // Set up Appwrite Realtime listener for persistent message data
   useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      
-      setTypingUsersMap(prev => {
-        const newMap = new Map(prev);
-        let hasChanges = false;
-        
-        for (const [userId, data] of newMap.entries()) {
-          if (now - data.timestamp > TYPING_TIMEOUT) {
-            newMap.delete(userId);
-            hasChanges = true;
-          }
-        }
-        
-        return hasChanges ? newMap : prev;
-      });
-    }, 1000);
+    if (!user?.id) return;
     
-    return () => clearInterval(interval);
-  }, []);
-
-  // Join channel via WebSocket
-  const joinChannel = useCallback(() => {
-    if (!socket || !isConnected || !channelId) return;
-    
-    socket.emit('join_channel', { channelId });
-  }, [socket, isConnected, channelId]);
-  
-  // Leave channel via WebSocket
-  const leaveChannel = useCallback(() => {
-    if (!socket || !isConnected || !channelId) return;
-    
-    socket.emit('leave_channel', { channelId });
-  }, [socket, isConnected, channelId]);
-
-  // Automatically join channel when socket connects
-  useEffect(() => {
-    if (socket && isConnected && channelId) {
-      joinChannel();
-    }
-    
-    return () => {
-      if (socket && isConnected && channelId) {
-        leaveChannel();
-      }
-    };
-  }, [socket, isConnected, channelId, joinChannel, leaveChannel]);
-
-  // Listen for new channel messages via WebSocket
-  useEffect(() => {
-    if (!socket || !isConnected) return;
-
-    const handleNewMessage = (message: Message) => {
-      // Only add message if it's for this channel
-      if (message.channelId === channelIdRef.current) {
-        setMessages(prev => {
-          // Check if we already have this message (e.g., from optimistic update)
-          const messageExists = prev.some(m => 
-            m.id === message.id || 
-            (m.id.startsWith('temp-') && m.content === message.content)
-          );
-          
-          if (messageExists) {
-            // Replace temp message with real one
-            return prev.map(m => 
-              (m.id.startsWith('temp-') && m.content === message.content) ? message : m
+    // Subscribe to new messages through Appwrite Realtime
+    const unsubscribe = subscribeToChannelMessages(
+      channelId,
+      (message) => {
+        if (message.type === 'new_message') {
+          // Check if this message is already in our state to prevent duplicates
+          setMessages(prev => {
+            // If we already have this message by ID, don't add it again
+            if (prev.some(msg => msg.id === message.data.id)) {
+              return prev;
+            }
+            
+            // Also check if we have a temporary message with matching content and sender
+            // that should be replaced with this real message
+            const tempMessageIndex = prev.findIndex(msg => 
+              msg.id.startsWith('temp-') && 
+              msg.senderId === message.data.senderId &&
+              msg.content === message.data.content
             );
-          }
+            
+            if (tempMessageIndex >= 0) {
+              // Replace the temporary message with the real one
+              const updatedMessages = [...prev];
+              updatedMessages[tempMessageIndex] = {
+                ...message.data,
+                sender: {
+                  firstName: 'User',
+                  lastName: '',
+                  email: message.data.senderId || ''
+                }
+              };
+              return updatedMessages;
+            }
+            
+            // If no temporary message to replace, add as new
+            const newMessage: ChannelMessage = {
+              ...message.data,
+              sender: {
+                firstName: 'User',
+                lastName: '',
+                email: message.data.senderId || ''
+              }
+            };
+            
+            return [...prev, newMessage];
+          });
           
-          return [...prev, message];
-        });
+          // Clear typing indicator for the sender
+          setTypingUsers(prev => ({
+            ...prev,
+            [message.data.senderId]: false
+          }));
+        } else if (message.type === 'message_update') {
+          // Update an existing message
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === message.data.id 
+                ? {
+                    ...msg,
+                    content: message.data.content,
+                    updatedAt: message.data.updatedAt,
+                    isDeleted: message.data.isDeleted
+                  }
+                : msg
+            )
+          );
+        } else if (message.type === 'message_delete') {
+          // Remove a message
+          setMessages(prev => 
+            prev.filter(msg => msg.id !== message.data.id)
+          );
+        }
+      },
+      (error) => {
+        console.error('Channel messages subscription error:', error);
+        setError(`Realtime subscription failed: ${error.message}`);
       }
-    };
-    
-    // Listen for the channel_message_received event
-    socket.on('channel_message_received', handleNewMessage);
+    );
     
     return () => {
-      socket.off('channel_message_received', handleNewMessage);
+      unsubscribe();
     };
-  }, [socket, isConnected]);
+  }, [channelId, user?.id]);
 
-  // Listen for typing indicators
+  // Set up WebSocket listeners for ephemeral data (typing indicators)
   useEffect(() => {
-    if (!socket || !isConnected) return;
+    if (!isConnected || !socket) return;
 
-    const handleTypingIndicator = (data: { userId: string; channelId: string; isTyping: boolean }) => {
-      if (data.channelId === channelIdRef.current && data.userId !== user?.id) {
-        setTypingUsersMap(prev => {
-          const newMap = new Map(prev);
-          
-          if (data.isTyping) {
-            newMap.set(data.userId, { 
-              userId: data.userId, 
-              timestamp: Date.now() 
-            });
-          } else {
-            newMap.delete(data.userId);
-          }
-          
-          return newMap;
+    // Function to handle WebSocket messages
+    const handleWebSocketMessage = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        // Check if this is a typing indicator for the current channel
+        if (data.type === 'typing' && data.data.channelId === channelIdRef.current) {
+          const typingData = data.data as TypingIndicatorData;
+          setTypingUsers(prev => ({
+            ...prev,
+            [typingData.userId]: typingData.isTyping
+          }));
+        }
+      } catch (error) {
+        console.error('Error handling WebSocket message:', error);
+      }
+    };
+
+    // Add event listener for messages
+    socket.addEventListener('message', handleWebSocketMessage);
+
+    // Join the channel via WebSocket for ephemeral events
+    if (channelIdRef.current) {
+      sendWebSocketMessage({
+        type: 'join_channel',
+        data: { channelId: channelIdRef.current }
+      });
+    }
+
+    // Clean up on unmount or when channel changes
+    return () => {
+      socket.removeEventListener('message', handleWebSocketMessage);
+      
+      // Leave the channel
+      if (channelIdRef.current) {
+        sendWebSocketMessage({
+          type: 'leave_channel',
+          data: { channelId: channelIdRef.current }
         });
       }
     };
-    
-    socket.on('user_typing', handleTypingIndicator);
-    
-    return () => {
-      socket.off('user_typing', handleTypingIndicator);
-    };
-  }, [socket, isConnected, user?.id]);
+  }, [isConnected, socket, sendWebSocketMessage]);
 
-  // Send message function
-  const sendMessage = useCallback(async (content: string) => {
-    if (!content.trim() || !channelId || !user?.id || !user?.email) return;
-    
-    setIsSending(true);
-    
+  // Join the channel
+  const joinChannel = useCallback(() => {
+    if (isConnected && user?.id && channelIdRef.current) {
+      sendWebSocketMessage({
+        type: 'join_channel',
+        data: { channelId: channelIdRef.current, userId: user.id }
+      });
+    }
+  }, [isConnected, user?.id, sendWebSocketMessage]);
+
+  // Send a message to the channel
+  const sendChannelMessageToServer = useCallback(async (content: string): Promise<void> => {
+    if (!user?.id) {
+      setError('You must be logged in to send messages');
+      return;
+    }
+
     try {
-      const userName = user.name || user.email.split('@')[0];
-      const [firstName, lastName] = userName.split(' ');
-
-      // Create temporary message for optimistic update
-      const tempMessage: Message = {
-        id: `temp-${Date.now()}`,
-        content: content.trim(),
-        senderId: user.id,
+      setIsSending(true);
+      
+      // Create a temporary ID for optimistic update
+      const tempId = `temp-${Date.now()}`;
+      
+      // Add optimistic message immediately
+      const optimisticMessage: ChannelMessage = {
+        id: tempId,
         channelId,
+        senderId: user.id,
+        content,
+        replyToId: null,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isDeleted: false,
         sender: {
-          id: user.id,
-          firstName: firstName || 'User',
-          lastName: lastName || '',
-          email: user.email
+          firstName: user.name?.split(' ')[0] || 'User',
+          lastName: user.name?.split(' ')[1] || '',
+          email: user.email || user.id || ''
         }
       };
       
-      // Optimistic update
-      setMessages(prev => [...prev, tempMessage]);
+      // Add to local state for immediate UI update
+      setMessages(prev => [...prev, optimisticMessage]);
       
-      // Send via WebSocket if connected
-      if (socket && isConnected) {
-        socket.emit('send_channel_message', {
-          channelId,
-          content: content.trim()
+      // Call typing indicator when sending a message
+      if (isConnected && user?.id && channelIdRef.current) {
+        sendWebSocketMessage({
+          type: 'typing',
+          data: {
+            channelId: channelIdRef.current,
+            userId: user.id,
+            isTyping: false
+          }
         });
-      } else {
-        // Fallback to REST API
-        const message = await channelApi.sendChannelMessage(channelId, content.trim());
-        // Replace temp message with real one
-        setMessages(prev => prev.map(msg => 
-          msg.id === tempMessage.id ? message : msg
-        ));
       }
-    } catch (error) {
-      console.error('Failed to send message:', error);
-      // Remove temp message on error
-      setMessages(prev => prev.filter(msg => msg.id !== `temp-${Date.now()}`));
+      
+      // Send the actual message via Appwrite
+      const message = await sendChannelMessage(
+        channelId,
+        user.id,
+        content
+      );
+      
+      // Replace the temporary message with the real one
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === tempId 
+            ? {
+                ...message,
+                sender: {
+                  firstName: user.name?.split(' ')[0] || 'User',
+                  lastName: user.name?.split(' ')[1] || '',
+                  email: user.email || user.id || ''
+                }
+              } as ChannelMessage
+            : msg
+        )
+      );
+    } catch (err) {
+      console.error('Error sending message:', err);
+      setError(err instanceof Error ? err.message : 'Failed to send message');
     } finally {
       setIsSending(false);
     }
-  }, [socket, isConnected, channelId, user]);
+  }, [channelId, user, isConnected, sendWebSocketMessage]);
 
-  // Send typing indicator
+  // Send typing indicator via WebSocket
   const sendTypingIndicator = useCallback((isTyping: boolean) => {
-    if (!socket || !isConnected || !channelId) return;
-    
-    socket.emit('typing', {
-      channelId,
-      isTyping,
-      userName: user?.name || user?.email?.split('@')[0] || 'Anonymous'
+    if (!isConnected || !user?.id || !channelIdRef.current) return;
+
+    sendWebSocketMessage({
+      type: 'typing',
+      data: {
+        channelId: channelIdRef.current,
+        userId: user.id,
+        isTyping
+      }
     });
-  }, [socket, isConnected, channelId, user]);
+  }, [isConnected, user?.id, sendWebSocketMessage]);
+
+  // Convert typing users object to a readable string
+  const typingIndicatorText = useMemo(() => {
+    const typingUserIds = Object.entries(typingUsers)
+      .filter(([userId, isTyping]) => isTyping && userId !== user?.id)
+      .map(([userId]) => userId);
+
+    if (typingUserIds.length === 0) return '';
+    if (typingUserIds.length === 1) return `Someone is typing...`;
+    if (typingUserIds.length === 2) return `Multiple people are typing...`;
+    return `Several people are typing...`;
+  }, [typingUsers, user?.id]);
+
+  // Helper method for the typing event handler
+  const onUserTyping = useCallback(() => {
+    sendTypingIndicator(true);
+  }, [sendTypingIndicator]);
 
   return {
     messages,
     isLoading,
     isSending,
-    typingUsers: typingUsersResult.map(u => u.id),
-    sendMessage,
+    error,
+    typingUsers: Object.keys(typingUsers).filter(id => typingUsers[id]),
+    sendMessage: sendChannelMessageToServer,
     sendTypingIndicator,
     joinChannel,
-    leaveChannel,
     typingIndicatorText,
-    onUserTyping
+    onUserTyping,
   };
 } 
+
+export default useChannelMessaging; 

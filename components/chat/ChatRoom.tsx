@@ -8,8 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Send, ArrowLeft, MoreVertical } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { UserStatusBadge } from '@/components/ui/UserStatusBadge';
-import { TypingIndicator } from '@/components/ui/TypingIndicator';
 import { chatApi } from '@/lib/api/chat';
 import { getInitials, formatTime } from '@/lib/utils';
 
@@ -27,18 +25,15 @@ export default function ChatRoom({ otherUserId, onBack }: ChatRoomProps) {
     email: string; 
   } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
   const { user } = useAuth();
   
-  // Use the WebSocket-enabled hook for direct messaging
+  // Use the Appwrite hook for direct messaging
   const {
     messages,
     isLoading,
     isSending,
-    otherUserIsTyping,
     sendMessage,
-    sendTypingIndicator,
     markAsRead,
   } = useDirectMessaging(otherUserId);
 
@@ -51,11 +46,11 @@ export default function ChatRoom({ otherUserId, onBack }: ChatRoomProps) {
   useEffect(() => {
     if (messages.length > 0 && !otherUser) {
       const firstMessage = messages[0];
-      const isOtherUserSender = firstMessage.sender.id !== user?.id;
+      const isOtherUserSender = firstMessage.senderId !== user?.id;
       
-      if (isOtherUserSender) {
+      if (isOtherUserSender && firstMessage.sender) {
         setOtherUser(firstMessage.sender);
-      } else if (firstMessage.receiverId === otherUserId) {
+      } else if (firstMessage.recipientId === otherUserId) {
         // Attempt to get receiver info from API or other message
         // For now, set with limited info
         setOtherUser({
@@ -65,32 +60,6 @@ export default function ChatRoom({ otherUserId, onBack }: ChatRoomProps) {
       }
     }
   }, [messages, otherUser, otherUserId, user?.id]);
-
-  // Handle typing indicators with debounce
-  useEffect(() => {
-    // Clear any existing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-    
-    // Only send typing events if there's content
-    if (newMessage.trim().length > 0) {
-      sendTypingIndicator(true);
-      
-      // Set a timeout to stop the typing indicator
-      typingTimeoutRef.current = setTimeout(() => {
-        sendTypingIndicator(false);
-      }, 3000);
-    } else {
-      sendTypingIndicator(false);
-    }
-    
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-    };
-  }, [newMessage, sendTypingIndicator]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,12 +107,6 @@ export default function ChatRoom({ otherUserId, onBack }: ChatRoomProps) {
               {getInitials(otherUser?.firstName, otherUser?.lastName)}
             </AvatarFallback>
           </Avatar>
-          {otherUser && (
-            <UserStatusBadge 
-              userId={otherUser.id} 
-              className="absolute bottom-0 right-0"
-            />
-          )}
         </div>
         
         <div className="ml-3 flex-grow">
@@ -152,7 +115,6 @@ export default function ChatRoom({ otherUserId, onBack }: ChatRoomProps) {
               ? `${otherUser.firstName} ${otherUser.lastName}` 
               : otherUser?.email || 'Unknown User'}
           </h2>
-          <TypingIndicator isTyping={otherUserIsTyping} text="typing..." />
         </div>
         
         <Button variant="ghost" size="icon">
@@ -177,10 +139,10 @@ export default function ChatRoom({ otherUserId, onBack }: ChatRoomProps) {
               </div>
               
               {dateMessages.map((message) => {
-                const isCurrentUser = message.sender.id === user?.id;
+                const isCurrentUser = message.senderId === user?.id;
                 
                 // Mark incoming messages as read when rendered
-                if (!isCurrentUser && !message.read) {
+                if (!isCurrentUser && !message.isRead) {
                   markAsRead(message.id);
                 }
                 
@@ -189,7 +151,7 @@ export default function ChatRoom({ otherUserId, onBack }: ChatRoomProps) {
                     key={message.id} 
                     className={`flex mb-3 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
                   >
-                    {!isCurrentUser && (
+                    {!isCurrentUser && message.sender && (
                       <Avatar className="h-8 w-8 mr-2 self-end">
                         <AvatarImage 
                           src={message.sender.firstName && message.sender.lastName ? 
@@ -206,7 +168,7 @@ export default function ChatRoom({ otherUserId, onBack }: ChatRoomProps) {
                       <p>{message.content}</p>
                       <div className={`flex items-center justify-end text-xs mt-1 ${isCurrentUser ? 'text-blue-100' : 'text-gray-500'}`}>
                         {formatTime(message.createdAt)}
-                        {isCurrentUser && message.read && (
+                        {isCurrentUser && message.isRead && (
                           <span className="ml-1">✓</span>
                         )}
                       </div>

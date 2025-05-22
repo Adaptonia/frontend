@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 
 interface CalendarDate {
+  date: Date
   day: number
   weekday: string
   isSelected: boolean
@@ -17,30 +18,51 @@ interface CalendarProps {
 const Calendar: React.FC<CalendarProps> = ({ onDateSelect }) => {
   const [dates, setDates] = useState<CalendarDate[]>([])
   const [currentMonth, setCurrentMonth] = useState<string>('')
+  const initialSelectionMade = useRef(false)
 
   useEffect(() => {
     const calendarDates = generateCalendarDates()
     setDates(calendarDates)
-    setCurrentMonth('February') // This would normally be dynamic based on current date
-  }, [])
+    
+    // Get current month name
+    const today = new Date()
+    setCurrentMonth(today.toLocaleString('default', { month: 'long' }))
+    
+    // Only notify parent of initial date selection once
+    if (!initialSelectionMade.current && onDateSelect) {
+      const todayDate = calendarDates.find(date => date.isToday)
+      if (todayDate) {
+        onDateSelect(todayDate.date)
+        initialSelectionMade.current = true
+      }
+    }
+  }, []) // Empty dependency array to run only once
 
   function generateCalendarDates(): CalendarDate[] {
     const today = new Date()
     const currentDay = today.getDate()
-    const weekdays = ['Mon', 'Tue', 'Wed', 'Thur', 'Fri', 'Sat', 'Sun', 'Mon']
+    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     
-    // Generate dates for current month
+    // Generate 9 dates centered around today (-4 days to +4 days)
     return Array.from({ length: 9 }, (_, i) => {
-      const day = currentDay - 3 + i
-      const date = new Date()
-      date.setDate(day)
+      // Create a proper date object
+      const date = new Date(today)
+      date.setDate(today.getDate() - 4 + i)
+      
+      const day = date.getDate()
+      const weekday = weekdays[date.getDay()]
+      const isToday = date.getDate() === today.getDate() && 
+                      date.getMonth() === today.getMonth() && 
+                      date.getFullYear() === today.getFullYear()
       
       return {
+        date,
         day,
-        weekday: weekdays[i],
-        isSelected: i === 3, // Selected day is the 4th in this array (6th of the month in the image)
-        isToday: day === currentDay,
-        month: i === 0 ? 'February' : undefined // Only show month on first date
+        weekday,
+        isSelected: isToday, // Select today by default
+        isToday,
+        // Only show month name if it's the first day of a month or first date in our array
+        month: day === 1 || i === 0 ? date.toLocaleString('default', { month: 'long' }) : undefined
       }
     })
   }
@@ -52,10 +74,10 @@ const Calendar: React.FC<CalendarProps> = ({ onDateSelect }) => {
     }))
     setDates(newDates)
     
-    // Create actual date object to pass to parent component
-    const selectedDate = new Date()
-    selectedDate.setDate(dates[index].day)
-    onDateSelect?.(selectedDate)
+    // Pass selected date to parent component
+    if (onDateSelect) {
+      onDateSelect(dates[index].date)
+    }
   }
 
   return (
@@ -72,11 +94,14 @@ const Calendar: React.FC<CalendarProps> = ({ onDateSelect }) => {
             className={`flex flex-col items-center p-3 rounded-xl min-w-[50px] transition-colors duration-200 ${
               date.isSelected 
                 ? 'bg-blue-500 text-white' 
+                : date.isToday
+                  ? 'bg-blue-50'
                 : 'bg-white hover:bg-gray-50'
             }`}
           >
             <span className="text-xs font-medium">{date.weekday}</span>
             <span className="text-lg font-bold">{date.day < 10 ? `0${date.day}` : date.day}</span>
+            {date.month && <span className="text-xs mt-1">{date.month}</span>}
           </div>
         ))}
       </div>

@@ -1,36 +1,33 @@
-
 'use client'
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { channelApi } from '@/lib/api/channel';
+import { joinChannelViaInvite } from '@/src/services/appwrite/channel';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 
 export default function JoinChannelPage() {
   const searchParams = useSearchParams();
   const code = searchParams.get('code');
   const router = useRouter();
-  const { toast } = useToast();
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState('');
+  const { user } = useAuth();
 
   const handleJoin = async () => {
-    if (!code) return;
+    if (!code || !user?.id) return;
     
     try {
       setIsJoining(true);
-      const result = await channelApi.joinByInviteCode(code);
-      toast({
-        title: 'Success',
+      const result = await joinChannelViaInvite(code, user.id);
+      toast.success('Success', {
         description: result.message || 'Successfully joined channel',
       });
       router.push(`/channels/${result.channelId}`);
     } catch (err: any) {
       setError(err.message || 'Failed to join channel');
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: err.message || 'Failed to join channel',
-        variant: 'destructive',
       });
     } finally {
       setIsJoining(false);
@@ -39,10 +36,10 @@ export default function JoinChannelPage() {
 
   useEffect(() => {
     // Auto-join if code is present
-    if (code) {
+    if (code && user?.id) {
       handleJoin();
     }
-  }, [code]);
+  }, [code, user?.id]);
 
   if (!code) {
     return (

@@ -1,21 +1,23 @@
 'use client'
 import React, { useEffect, useState, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { channelApi } from '@/lib/api/channel';
+import { 
+  getChannelById, 
+  getChannelMessages, 
+  getChannelMembership,
+  sendChannelMessage
+} from '@/src/services/appwrite/channel';
 
 import { ArrowLeft, Send, Hash, MoreVertical } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useChannelMessaging } from '@/hooks/useChannelMessaging';
-import { Message as APIMessage } from '@/lib/api/chat';
+import { ChannelMessage } from '@/lib/types/messaging';
 import { format } from 'date-fns';
 import { getInitials } from '@/lib/utils';
 import { useWebSocket } from '@/context/WebSocketContext';
 import { ChannelHeader } from '@/components/channel/ChannelHeader';
-import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-
-// Extended Message type that's compatible with both messaging types
-type Message = APIMessage & { read?: boolean };
+import { toast } from 'sonner';
 
 // CSS for typing animation
 const typingAnimationStyles = `
@@ -47,8 +49,6 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
   // Use React.use to unwrap the params object
   const unwrappedParams = use(params as any) as { channelId: string };
   const channelId = unwrappedParams.channelId;
-  const isAdmin = useIsAdmin();
-
   
   const router = useRouter();
   const [channel, setChannel] = useState<any>(null);
@@ -56,6 +56,29 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
   const [messageText, setMessageText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+  
+  // Check if user is admin
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user?.id || !channelId) return false;
+      
+      try {
+        const membership = await getChannelMembership(channelId, user.id);
+        return membership?.role === 'admin';
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        return false;
+      }
+    };
+    
+    if (user?.id && channelId) {
+      checkAdminStatus().then(isUserAdmin => {
+        setIsAdmin(isUserAdmin);
+      });
+    }
+  }, [user?.id, channelId]);
   
   // Use the existing WebSocket-enabled hook for channel messaging
   const {
@@ -96,7 +119,7 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
   const [hasSeenLatestMessages, setHasSeenLatestMessages] = useState(true);
   
   // Message reply state
-  const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
+  const [replyToMessage, setReplyToMessage] = useState<ChannelMessage | null>(null);
   
   // Reference to track current scrolled position
   const lastScrollTop = useRef(0);
@@ -138,8 +161,10 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
   // Fetch channel data
   useEffect(() => {
     async function fetchChannelData() {
+      if (!channelId) return;
+      
       try {
-        const channelData = await channelApi.getChannelById(channelId);
+        const channelData = await getChannelById(channelId);
         setChannel(channelData);
       } catch (error) {
         console.error('Error fetching channel:', error);
@@ -148,7 +173,7 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
           id: channelId,
           name: 'General Chat',
           description: 'Channel description',
-          type: 'GROUP',
+          type: 'public',
           memberCount: 20
         });
       } finally {
@@ -205,13 +230,13 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!messageText.trim()) return;
+    if (!messageText.trim() || !user?.id) return;
     
     console.log("Attempting to send message:", messageText);
     console.log("WebSocket connected:", isConnected);
-    console.log("Backend URL:", process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001');
     
     try {
+      // Use the channelMessaging hook's sendMessage
       await sendMessage(messageText);
       console.log("Message sent successfully");
       setMessageText('');
@@ -223,13 +248,16 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to send message:', error);
+      toast.error("Failed to send message", {
+        description: error.message || "Please try again"
+      });
     }
   };
 
   // Handle replying to a message
-  const handleReplyClick = (message: Message) => {
+  const handleReplyClick = (message: ChannelMessage) => {
     setReplyToMessage(message);
     // Focus the message input
     document.getElementById('message-input')?.focus();
@@ -241,7 +269,7 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
   };
 
   // Group messages by date
-  const messagesByDate = messages.reduce<{ [date: string]: Message[] }>((groups, message) => {
+  const messagesByDate = messages.reduce<{ [date: string]: ChannelMessage[] }>((groups, message) => {
     const date = new Date(message.createdAt).toDateString();
     if (!groups[date]) {
       groups[date] = [];
@@ -361,16 +389,16 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
                     <div key={message.id} className="flex items-start mb-4">
                       {/* User avatar */}
                       <div className="h-10 w-10 rounded-full bg-gray-300 flex-shrink-0 flex items-center justify-center">
-                        {getInitials(message.sender.firstName, message.sender.lastName)}
+                        {getInitials(message.sender?.firstName || '', message.sender?.lastName || '')}
                       </div>
                       
                       {/* Message content */}
                       <div className="ml-3 flex-grow">
                         <div className="flex items-center">
                           <span className="font-semibold">
-                            {message.sender.firstName && message.sender.lastName 
+                            {message.sender?.firstName && message.sender?.lastName 
                               ? `${message.sender.firstName} ${message.sender.lastName}`
-                              : message.sender.email}
+                              : message.sender?.email || message.senderId}
                           </span>
                           <span className="text-xs text-gray-500 ml-2">
                             {formatMessageTime(message.createdAt)}
@@ -460,7 +488,7 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
               <div className="w-1 h-6 bg-blue-500 mr-2"></div>
               <div>
                 <p className="text-xs text-gray-500">
-                  Replying to {replyToMessage.sender.firstName || replyToMessage.sender.email}
+                  Replying to {replyToMessage.sender?.firstName || replyToMessage.sender?.email || replyToMessage.senderId}
                 </p>
                 <p className="text-sm text-gray-700 truncate max-w-xs">
                   {replyToMessage.content}
@@ -529,9 +557,6 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
           </form>
         </div>
       </div>
-
-      {/* Bottom navigation */}
-      {/* <BottomNav /> */}
     </div>
   );
 } 

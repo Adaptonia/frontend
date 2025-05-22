@@ -1,10 +1,9 @@
 'use client';
 
-import api from "@/lib/apiClient";
-import { getCurrentUser, logoutUser } from "@/lib/auth";
+import { getCurrentUser, logoutUser } from '../src/services/appwrite';
 import { AuthContextType, User } from "@/lib/types";
 import { useRouter } from "next/navigation";
-import { useState, createContext, useEffect, useContext } from "react";
+import { useState, createContext, useEffect, useContext, useCallback } from "react";
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -13,16 +12,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const fetchUser = async () => {
+  // Enhanced fetchUser function with proper error handling and logging
+  const fetchUser = useCallback(async () => {
+    console.log("🔍 Checking for existing Appwrite session...");
     try {
-      const data = await getCurrentUser(); // This should use the centralized `api` internally
+      // Get user from Appwrite
+      const data = await getCurrentUser();
+      console.log("✅ Found authenticated user:", data?.email);
       setUser(data);
-    } catch {
+    } catch (error) {
+      console.log("❌ No authenticated user found");
+      console.error('Error details:', error);
       setUser(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Use effect to check auth on mount - this is critical for OAuth redirects
+  useEffect(() => {
+    console.log("🔄 AuthContext mounted - checking authentication");
+    fetchUser();
+    
+    // We could also set up a periodic refresh here if needed
+    // const interval = setInterval(fetchUser, 5 * 60 * 1000); // Refresh every 5 minutes
+    // return () => clearInterval(interval);
+  }, [fetchUser]);
 
   const logout = async () => {
     try {
@@ -30,7 +45,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(null);
       router.push('/login');
     } catch (error) {
-      console.error("Logout failed:", error);
+      console.error('Error logging out:', error);
     }
   };
 
@@ -38,15 +53,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser((prev) => (prev ? { ...prev, ...updated } : prev));
   };
 
-  useEffect(() => {
-    const init = async () => {
-      await fetchUser();
-    };
-    init();
-  }, []);
+  const value = {
+    user,
+    setUser,
+    loading,
+    logout,
+    updateUser,
+  };
 
   return (
-    <AuthContext.Provider value={{ user, loading, setUser, logout, updateUser }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
@@ -59,3 +75,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+export default AuthContext;
