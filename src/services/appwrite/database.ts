@@ -120,7 +120,7 @@ export const updateGoal = async (
 ): Promise<Goal> => {
   try {
     // First verify the user owns this goal
-    const existingGoal = await getGoalById(goalId, userId);
+    // const existingGoal = await getGoalById(goalId, userId);
     
     const response = await databases.updateDocument(
       DATABASE_ID,

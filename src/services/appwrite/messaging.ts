@@ -1,5 +1,5 @@
 import { ID, Query } from 'appwrite';
-import { client, databases, DATABASE_ID } from './client';
+import { databases, DATABASE_ID } from './client';
 
 // Collection IDs - Make sure to add these to your .env file
 export const CONTACTS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_CONTACTS_COLLECTION_ID || '';

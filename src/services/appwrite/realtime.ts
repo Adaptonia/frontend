@@ -23,7 +23,7 @@ export type ChannelEventType =
 // Define response type for realtime events
 export type RealtimeResponse = {
   events: string[];
-  payload: any;
+  payload: Record<string, any>;
 };
 
 /**
@@ -31,7 +31,7 @@ export type RealtimeResponse = {
  */
 export const subscribeToChannelMessages = (
   channelId: string,
-  onMessage: (message: any) => void,
+  onMessage: (message: unknown) => void,
   onError?: (error: Error) => void
 ) => {
   try {
@@ -84,7 +84,7 @@ export const subscribeToChannelMessages = (
  * Subscribe to channel updates (creation, deletion, member changes)
  */
 export const subscribeToChannelUpdates = (
-  onUpdate: (update: any) => void,
+  onUpdate: (update: unknown) => void,
   onError?: (error: Error) => void
 ) => {
   try {
@@ -166,14 +166,18 @@ export const subscribeToChannelUpdates = (
 export const subscribeToDirectMessages = (
   userId: string,
   otherUserId: string,
-  onMessage: (message: any) => void,
+  onMessage: (message: unknown) => void,
   onError?: (error: Error) => void
 ) => {
   try {
     return client.subscribe(
       `databases.${DATABASE_ID}.collections.${DIRECT_MESSAGES_COLLECTION_ID}.documents`,
       (response: RealtimeResponse) => {
-        const message = response.payload;
+        const message = response.payload as {
+          senderId: string;
+          recipientId: string;
+          $id: string;
+        };
         
         // Only process messages that are part of this conversation
         if ((message.senderId === userId && message.recipientId === otherUserId) ||

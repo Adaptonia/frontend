@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Calendar as CalendarIcon, Tag as TagIcon, Bell as BellIcon, Bell, X, Settings, Flag, Calendar, Clock, Loader2, MapPin } from 'lucide-react';
+import { Calendar as CalendarIcon, Tag as TagIcon, Bell as BellIcon, Settings, Flag, Loader2, MapPin } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { createGoal, updateGoal } from '@/lib/api/goals';
-import { ActionButtonProps, CreateGoalRequest, Goal, GoalFormModalProps, ModalTab, OptionItemProps, PremiumFeatureModalProps } from '@/lib/types';
+  import { ActionButtonProps, CreateGoalRequest, GoalFormModalProps, ModalTab, OptionItemProps, PremiumFeatureModalProps } from '@/lib/types';
 import { useRouter } from 'next/navigation';
+import { createGoal } from '@/src/services/appwrite/database';
+import { updateGoal } from '@/src/services/appwrite';
 
 // Action button component
 const ActionButton: React.FC<ActionButtonProps> = ({ icon, label, onClick, selected }) => (
@@ -32,54 +33,54 @@ const ModalHeader: React.FC<{ title: string; onBack: () => void }> = ({ title, o
   </div>
 );
 
-const OptionItem: React.FC<OptionItemProps> = ({ 
-  icon, 
-  label, 
-  onClick, 
-  hasToggle = false, 
-  isActive = false,
-  isPro = false
-}) => {
-  const router = useRouter();
+// const OptionItem: React.FC<OptionItemProps> = ({ 
+//   icon, 
+//   label, 
+//   onClick, 
+//   hasToggle = false, 
+//   isActive = false,
+//   isPro = false
+// }) => {
+//   const router = useRouter();
   
-  const handleClick = () => {
-    if (isPro) {
-      router.push('/premium');
-    } else {
-      onClick();
-    }
-  };
+//   const handleClick = () => {
+//     if (isPro) {
+//       router.push('/premium');
+//     } else {
+//       onClick();
+//     }
+//   };
   
-  return (
-    <div 
-      className="flex items-center justify-between p-4 border-b border-gray-100 cursor-pointer"
-      onClick={handleClick}
-    >
-      <div className="flex items-center">
-        <div className="mr-3 text-gray-600">
-          {icon}
-        </div>
-        <span>{label}</span>
-      </div>
-      {hasToggle ? (
-        <input 
-          type="checkbox"
-          checked={isActive}
-          onChange={onClick}
-          className="w-5 h-5 accent-blue-500"
-        />
-      ) : (
-        <div className="text-gray-400">
-          {isPro ? (
-            <span className="text-amber-400">⭐</span>
-          ) : (
-            <span>⟩</span>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
+//   return (
+//     <div 
+//       className="flex items-center justify-between p-4 border-b border-gray-100 cursor-pointer"
+//       onClick={handleClick}
+//     >
+//       <div className="flex items-center">
+//         <div className="mr-3 text-gray-600">
+//           {icon}
+//         </div>
+//         <span>{label}</span>
+//       </div>
+//       {hasToggle ? (
+//         <input 
+//           type="checkbox"
+//           checked={isActive}
+//           onChange={onClick}
+//           className="w-5 h-5 accent-blue-500"
+//         />
+//       ) : (
+//         <div className="text-gray-400">
+//           {isPro ? (
+//             <span className="text-amber-400">⭐</span>
+//           ) : (
+//             <span>⟩</span>
+//           )}
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
 
 const PremiumFeatureModal: React.FC<PremiumFeatureModalProps> = ({
   title,
@@ -244,7 +245,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       const goalData: CreateGoalRequest = {
         title,
         description: description || undefined,
-        category: category.toUpperCase() as any,
+        category: category.toUpperCase() as 'FINANCE' | 'SCHEDULE' | 'CAREER' | 'AUDIO_BOOKS',
         deadline: selectedDate || undefined,
         tags: selectedTag || undefined,
         reminderDate: reminder || undefined,
@@ -255,11 +256,11 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       
       if (mode === 'edit' && initialData?.id) {
         // Update existing goal
-        result = await updateGoal(initialData.id, goalData);
+        result = await updateGoal(initialData.id, goalData, initialData.userId);
         toast.success('Goal updated successfully');
       } else {
         // Create new goal
-        result = await createGoal(goalData);
+        result = await createGoal(goalData, initialData?.userId || 'system');
         toast.success('Goal created successfully');
       }
       

@@ -3,7 +3,6 @@ import {
   getConversation, 
   sendDirectMessage, 
   markMessageAsRead, 
-  deleteDirectMessage 
 } from '@/src/services/appwrite/messaging';
 import { getCurrentUser } from '@/src/services/appwrite/auth';
 

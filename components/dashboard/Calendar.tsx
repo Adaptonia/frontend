@@ -40,7 +40,7 @@ const Calendar: React.FC<CalendarProps> = ({ onDateSelect }) => {
 
   function generateCalendarDates(): CalendarDate[] {
     const today = new Date()
-    const currentDay = today.getDate()
+    // const currentDay = today.getDate()
     const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     
     // Generate 9 dates centered around today (-4 days to +4 days)

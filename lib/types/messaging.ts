@@ -85,7 +85,7 @@ export interface Conversation {
 // WebSocket types
 export interface WebSocketMessage {
   type: string;
-  data: any;
+  data: unknown;
 }
 
 export interface TypingIndicator {

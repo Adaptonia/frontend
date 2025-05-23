@@ -3,7 +3,6 @@
 import React, { ReactNode, useState } from 'react'
 import { Plus } from 'lucide-react'
 import GoalFormModal from '../goals/GoalFormModal'
-import { toast } from 'sonner'
 import { Goal } from '@/lib/types'
 
 interface CategoryCardProps {

@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Send, ArrowLeft, MoreVertical } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { chatApi } from '@/lib/api/chat';
 import { getInitials, formatTime } from '@/lib/utils';
 
 interface ChatRoomProps {
