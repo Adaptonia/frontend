@@ -2,7 +2,6 @@
 
 import React, { useRef, useEffect } from 'react';
 import { useChannelMessaging } from '@/hooks/useChannelMessaging';
-import { Message } from '@/lib/api/chat';
 import { useAuth } from '@/context/AuthContext';
 import { ChannelMessage } from '@/lib/types/messaging';
 
