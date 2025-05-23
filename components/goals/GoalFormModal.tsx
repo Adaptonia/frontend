@@ -256,7 +256,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       
       if (mode === 'edit' && initialData?.id) {
         // Update existing goal
-        result = await updateGoal(initialData.id, goalData, initialData.userId);
+        result = await updateGoal(initialData.id, goalData);
         toast.success('Goal updated successfully');
       } else {
         // Create new goal

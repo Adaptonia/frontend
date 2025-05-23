@@ -3,14 +3,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useChannelMessaging } from '@/hooks/useChannelMessaging';
 import { format } from 'date-fns';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, ArrowLeft, Users, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
 import { TypingIndicator } from '@/components/ui/TypingIndicator';
-import { getInitials, formatTime } from '@/lib/utils';
 import { Channel } from '@/lib/types/messaging';
 interface ChannelRoomProps {
   channelId: string;
@@ -24,7 +21,6 @@ export default function ChannelRoom({ channelId, onBack }: ChannelRoomProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
-  const { user } = useAuth();
   
   // Use the WebSocket-enabled hook for channel messaging
   const {
@@ -143,7 +139,7 @@ export default function ChannelRoom({ channelId, onBack }: ChannelRoomProps) {
             <p className="text-gray-400 text-sm">Be the first to send a message in this channel</p>
           </div>
         ) : (
-          Object.entries(messagesByDate).map(([date, dateMessages]) => (
+          Object.entries(messagesByDate).map(([date]) => (
             <div key={date} className="mb-6">
               <div className="text-center mb-4">
                 <span className="bg-gray-100 text-gray-500 text-xs px-2 py-1 rounded-full">

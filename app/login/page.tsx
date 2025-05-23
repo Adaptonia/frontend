@@ -4,7 +4,6 @@ import { useAuth } from '@/context/AuthContext'
 import { loginUser, loginWithGoogle } from '../../src/services/appwrite'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import React, { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -195,7 +194,7 @@ const Page = () => {
 
           <div className="text-center mt-8">
             <p>
-              Don't have an account?{" "}
+              Don&apos;t have an account?
               <Link href="/signup" className="text-blue-500 font-medium">
                 Sign Up
               </Link>

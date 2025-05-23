@@ -16,6 +16,7 @@ interface ChannelHeaderProps {
 
 export function ChannelHeader({ channel, isAdmin }: ChannelHeaderProps) {
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [inviteCode, setInviteCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 

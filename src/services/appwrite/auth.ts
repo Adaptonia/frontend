@@ -230,6 +230,7 @@ export const logoutUser = async (): Promise<void> => {
       await account.deleteSession('current');
       console.log('Successfully logged out current session');
     } catch (sessionError) {
+      console.error('❌ Error deleting session:', sessionError);
       // If deleting current session fails, log but don't throw
       console.log('No active session found or session already expired');
     }
