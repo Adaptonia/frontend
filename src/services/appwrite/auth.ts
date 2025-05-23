@@ -3,7 +3,6 @@ import { account, databases, USERS_COLLECTION_ID, DATABASE_ID } from './client';
 import { User, UserRole } from '@/lib/types';
 
 // Import the correct OAuthProvider type
-import { Models } from 'appwrite';
 
 /**
  * Register a new user
