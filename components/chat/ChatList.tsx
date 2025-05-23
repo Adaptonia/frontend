@@ -67,45 +67,45 @@ export default function ChatList() {
         
         
         // Set up new listeners for each chat
-        chats.forEach(chat => {
-          const unsubscribe = subscribeToDirectMessages(
-            user.id!, 
-            chat.user.id,
-            (messageEvent) => {
-              if (messageEvent.type === 'new_message') {
-                // Update the chat list with the new message
-                setChats(prevChats => {
-                  return prevChats.map(prevChat => {
-                    if (prevChat.user.id === chat.user.id) {
-                      // This is the chat that has a new message
-                      const isFromCurrentUser = messageEvent.data.senderId === user.id;
+        // chats.forEach(chat => {
+        //   const unsubscribe = subscribeToDirectMessages(
+        //     user.id!, 
+        //     chat.user.id,
+        //     (messageEvent) => {
+        //       if (messageEvent.type === 'new_message') {
+        //         // Update the chat list with the new message
+        //         setChats(prevChats => {
+        //           return prevChats.map(prevChat => {
+        //             if (prevChat.user.id === chat.user.id) {
+        //               // This is the chat that has a new message
+        //               const isFromCurrentUser = messageEvent.data.senderId === user.id;
                       
-                      return {
-                        ...prevChat,
-                        lastMessage: {
-                          id: messageEvent.data.id,
-                          content: messageEvent.data.content,
-                          createdAt: messageEvent.data.createdAt,
-                          isFromCurrentUser,
-                          read: isFromCurrentUser || messageEvent.data.isRead,
-                        },
-                        unreadCount: isFromCurrentUser 
-                          ? prevChat.unreadCount
-                          : prevChat.unreadCount + 1
-                      };
-                    }
-                    return prevChat;
-                  });
-                });
-              }
-            },
-            (error) => {
-              console.error(`Error in direct message subscription for ${chat.user.id}:`, error);
-            }
-          );
+        //               return {
+        //                 ...prevChat,
+        //                 lastMessage: {
+        //                   id: messageEvent.data.id,
+        //                   content: messageEvent.data.content,
+        //                   createdAt: messageEvent.data.createdAt,
+        //                   isFromCurrentUser,
+        //                   read: isFromCurrentUser || messageEvent.data.isRead,
+        //                 },
+        //                 unreadCount: isFromCurrentUser 
+        //                   ? prevChat.unreadCount
+        //                   : prevChat.unreadCount + 1
+        //               };
+        //             }
+        //             return prevChat;
+        //           });
+        //         });
+        //       }
+        //     },
+        //     (error) => {
+        //       console.error(`Error in direct message subscription for ${chat.user.id}:`, error);
+        //     }
+        //   );
           
-          unsubscribers.push(unsubscribe);
-        });
+        //   unsubscribers.push(unsubscribe);
+        // });
       };
       
       // Set up listeners when chats are loaded
