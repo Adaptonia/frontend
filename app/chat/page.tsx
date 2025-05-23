@@ -2,9 +2,7 @@
 import React from 'react';
 import ChatList from '@/components/chat/ChatList';
 
-interface ChatDetailPageProps {
-  params: Promise<{ userId: string }>;
-}
+
 
 export default async function ChatPage() {
   // const { userId } = await params;
