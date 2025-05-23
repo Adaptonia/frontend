@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
-import { userApi } from '@/lib/api/users';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,10 +30,10 @@ export default function AdminPage() {
 
     setIsLoading(true);
     try {
-      const result = await userApi.promoteToAdmin(email.trim());
-      toast.success('User promoted', {
-        description: result.message
-      });
+      // const result = await userApi.promoteToAdmin(email.trim());
+      // toast.success('User promoted', {
+      //   description: result.message
+      // });
       setEmail('');
     } catch (error) {
       if (error instanceof Error) {
