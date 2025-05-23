@@ -1,6 +1,9 @@
-import { ID, Query } from 'appwrite';
+import { ID, OAuthProvider, Query } from 'appwrite';
 import { account, databases, USERS_COLLECTION_ID, DATABASE_ID } from './client';
 import { User, UserRole } from '@/lib/types';
+
+// Import the correct OAuthProvider type
+import { Models } from 'appwrite';
 
 /**
  * Register a new user
@@ -307,8 +310,7 @@ export const loginWithGoogle = async (): Promise<void> => {
     // Create OAuth session with Google
     // This will redirect the user to Google's login page
     account.createOAuth2Session(
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      'google' ,   // Using type assertion to bypass type checking
+       OAuthProvider.Google, // Cast to string to avoid type errors
       `${origin}/dashboard`,  // Success URL - redirect here after successful login
       `${origin}/login`       // Failure URL - redirect here if login fails
     );
