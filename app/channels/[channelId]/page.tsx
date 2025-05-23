@@ -43,7 +43,13 @@ const typingAnimationStyles = `
   }
 `;
 
-export default function ChannelPage({ params }: { params: { channelId: string } }) {
+type Props = {
+  params: {
+    channelId: string
+  }
+}
+
+export default function ChannelPage({ params }: Props) {
   // Get channel ID directly from params
   const channelId = params.channelId;
   
