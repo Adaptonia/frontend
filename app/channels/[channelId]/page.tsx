@@ -1,9 +1,11 @@
 import ChannelClientPage from '@/components/channel/ChannelClientPage';
 
-export default function ChannelPage({
-  params
-}: {
-  params: { channelId: string }
-}) {
-  return <ChannelClientPage channelId={params.channelId} />;
+interface PageProps {
+  params: Promise<{ channelId: string }>;
+}
+
+export default async function ChannelPage({ params }: PageProps) {
+  const { channelId } = await params;
+  
+  return <ChannelClientPage channelId={channelId} />;
 }
