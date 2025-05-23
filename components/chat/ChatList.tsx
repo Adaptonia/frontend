@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { subscribeToDirectMessages } from '@/src/services/appwrite/realtime';
+// import { subscribeToDirectMessages } from '@/src/services/appwrite/realtime';
 import { useAuth } from '@/context/AuthContext';
 import { getCurrentUser } from '@/src/services/appwrite/auth';
 
