@@ -11,7 +11,7 @@ interface ChatDetailPageProps {
   };
 }
 
-export default function ChatDetailPage({ params }: ChatDetailPageProps) {
+export default async function ChatDetailPage({ params }: ChatDetailPageProps) {
   const { user } = useAuth();
   const router = useRouter();
   
