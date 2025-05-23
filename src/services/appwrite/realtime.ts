@@ -23,7 +23,7 @@ export type ChannelEventType =
 // Define response type for realtime events
 export type RealtimeResponse = {
   events: string[];
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
 };
 
 /**

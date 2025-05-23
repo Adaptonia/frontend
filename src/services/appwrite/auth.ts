@@ -118,7 +118,6 @@ export const loginUser = async (email: string, password: string): Promise<User> 
     return user;
   } catch (error: unknown) {
     console.error('❌ Login error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Login failed';
     throw error;
     
   }
@@ -308,7 +307,7 @@ export const loginWithGoogle = async (): Promise<void> => {
     // This will redirect the user to Google's login page
     account.createOAuth2Session(
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      'google' as any ,   // Using type assertion to bypass type checking
+      'google' ,   // Using type assertion to bypass type checking
       `${origin}/dashboard`,  // Success URL - redirect here after successful login
       `${origin}/login`       // Failure URL - redirect here if login fails
     );

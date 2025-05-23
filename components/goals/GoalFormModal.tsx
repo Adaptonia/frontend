@@ -5,7 +5,7 @@ import { Calendar as CalendarIcon, Tag as TagIcon, Bell as BellIcon, Settings, F
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-  import { ActionButtonProps, CreateGoalRequest, GoalFormModalProps, ModalTab, OptionItemProps, PremiumFeatureModalProps } from '@/lib/types';
+  import { ActionButtonProps, CreateGoalRequest, GoalFormModalProps, ModalTab, PremiumFeatureModalProps } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { createGoal } from '@/src/services/appwrite/database';
 import { updateGoal } from '@/src/services/appwrite';
