@@ -45,52 +45,60 @@ export function useChannelTyping(channelId: string): UseChannelTypingResult {
   useEffect(() => {
     if (!socket || !isConnected) return;
 
-    const handleTyping = (data: { userId: string; channelId: string; isTyping: boolean; userName: string }) => {
-      console.log('Received typing event:', data);
-      
-      // Validate channelId match and filter out self-typing events
-      if (data.channelId !== channelId) {
-        console.log(`Ignoring typing event - wrong channel (received ${data.channelId}, expected ${channelId})`);
-        return;
-      }
-      
-      if (data.userId === user?.id) {
-        console.log('Ignoring self typing event');
-        return;
-      }
-
-      if (data.isTyping) {
-        console.log(`Adding typing user: ${data.userName} (${data.userId})`);
-        setTypingUsers(prev => {
-          // Remove existing user if present
-          const filtered = prev.filter(u => u.id !== data.userId);
-          return [...filtered, { 
-            id: data.userId, 
-            name: data.userName || 'Anonymous',
-            timestamp: Date.now() 
-          }];
-        });
-
-        // Clear existing timeout for this user
-        if (typingTimeoutRef.current[data.userId]) {
-          clearTimeout(typingTimeoutRef.current[data.userId]);
+    const handleTypingMessage = (event: MessageEvent) => {
+      try {
+        const parsedData = JSON.parse(event.data);
+        if (parsedData.event !== 'user_typing') return;
+        
+        const data = parsedData.data;
+        console.log('Received typing event:', data);
+        
+        // Validate channelId match and filter out self-typing events
+        if (data.channelId !== channelId) {
+          console.log(`Ignoring typing event - wrong channel (received ${data.channelId}, expected ${channelId})`);
+          return;
+        }
+        
+        if (data.userId === user?.id) {
+          console.log('Ignoring self typing event');
+          return;
         }
 
-        // Set new timeout
-        typingTimeoutRef.current[data.userId] = setTimeout(() => {
-          console.log(`Typing timeout for user: ${data.userId}`);
+        if (data.isTyping) {
+          console.log(`Adding typing user: ${data.userName} (${data.userId})`);
+          setTypingUsers(prev => {
+            // Remove existing user if present
+            const filtered = prev.filter(u => u.id !== data.userId);
+            return [...filtered, { 
+              id: data.userId, 
+              name: data.userName || 'Anonymous',
+              timestamp: Date.now() 
+            }];
+          });
+
+          // Clear existing timeout for this user
+          if (typingTimeoutRef.current[data.userId]) {
+            clearTimeout(typingTimeoutRef.current[data.userId]);
+          }
+
+          // Set new timeout
+          typingTimeoutRef.current[data.userId] = setTimeout(() => {
+            console.log(`Typing timeout for user: ${data.userId}`);
+            removeTypingUser(data.userId);
+          }, 3000);
+        } else {
+          console.log(`User stopped typing: ${data.userId}`);
           removeTypingUser(data.userId);
-        }, 3000);
-      } else {
-        console.log(`User stopped typing: ${data.userId}`);
-        removeTypingUser(data.userId);
+        }
+      } catch (error) {
+        console.error('Error parsing typing message:', error);
       }
     };
 
-    socket.on('user_typing', handleTyping);
+    socket.addEventListener('message', handleTypingMessage);
 
     return () => {
-      socket.off('user_typing', handleTyping);
+      socket.removeEventListener('message', handleTypingMessage);
       // Clear all timeouts
       Object.values(typingTimeoutRef.current).forEach(clearTimeout);
     };
@@ -105,11 +113,14 @@ export function useChannelTyping(channelId: string): UseChannelTypingResult {
       }
 
       console.log('Emitting typing event:', { channelId, isTyping, userName: user.name || user.email || 'Anonymous' });
-      socket.emit('typing', {
-        channelId,
-        isTyping,
-        userName: user.name || user.email || 'Anonymous'
-      });
+      socket.send(JSON.stringify({
+        event: 'typing',
+        data: {
+          channelId,
+          isTyping,
+          userName: user.name || user.email || 'Anonymous'
+        }
+      }));
     }, 300),
     [socket, isConnected, channelId, user]
   );

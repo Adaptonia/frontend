@@ -72,6 +72,32 @@ export function useChannelMessaging(channelId: string) {
     const unsubscribe = subscribeToChannelMessages(
       channelId,
       (message) => {
+        // Type guard function to verify message structure
+        const isValidMessage = (msg: any): msg is {
+          type: string;
+          data: {
+            id: string;
+            senderId: string;
+            content: string;
+            createdAt: string;
+            updatedAt: string;
+            isDeleted: boolean;
+          }
+        } => {
+          return msg && 
+                 typeof msg === 'object' && 
+                 'type' in msg && 
+                 'data' in msg && 
+                 typeof msg.data === 'object' &&
+                 'id' in msg.data;
+        };
+        
+        // Check if message has the expected structure
+        if (!isValidMessage(message)) {
+          console.error('Invalid message format received');
+          return;
+        }
+        
         if (message.type === 'new_message') {
           // Check if this message is already in our state to prevent duplicates
           setMessages(prev => {
@@ -93,6 +119,7 @@ export function useChannelMessaging(channelId: string) {
               const updatedMessages = [...prev];
               updatedMessages[tempMessageIndex] = {
                 ...message.data,
+                channelId,
                 sender: {
                   firstName: 'User',
                   lastName: '',
@@ -105,6 +132,7 @@ export function useChannelMessaging(channelId: string) {
             // If no temporary message to replace, add as new
             const newMessage: ChannelMessage = {
               ...message.data,
+              channelId,
               sender: {
                 firstName: 'User',
                 lastName: '',

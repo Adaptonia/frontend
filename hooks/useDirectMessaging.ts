@@ -77,6 +77,34 @@ export function useDirectMessaging(otherUserId: string): UseDirectMessagingResul
       user.id,
       otherUserId,
       (messageEvent) => {
+        // Type guard function to verify message structure
+        const isValidMessage = (msg: any): msg is {
+          type: string;
+          data: {
+            id: string;
+            content: string;
+            senderId: string;
+            recipientId?: string;
+            createdAt: string;
+            isRead: boolean;
+            isDeleted: boolean;
+            replyToId?: string | null;
+          }
+        } => {
+          return msg && 
+                 typeof msg === 'object' && 
+                 'type' in msg && 
+                 'data' in msg && 
+                 typeof msg.data === 'object' &&
+                 'id' in msg.data;
+        };
+        
+        // Check if message has the expected structure
+        if (!isValidMessage(messageEvent)) {
+          console.error('Invalid message format received');
+          return;
+        }
+        
         if (messageEvent.type === 'new_message') {
           const newMessage = messageEvent.data;
           
