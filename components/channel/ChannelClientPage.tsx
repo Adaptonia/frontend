@@ -83,7 +83,6 @@ export default function ChannelClientPage({ channelId }: ChannelClientPageProps)
     messages,
     isLoading: messagesLoading,
     isSending,
-    typingUsers,
     sendMessage,
     sendTypingIndicator,
     joinChannel,
@@ -92,7 +91,7 @@ export default function ChannelClientPage({ channelId }: ChannelClientPageProps)
   } = useChannelMessaging(channelId);
   
   // Log for debugging
-  const { socket, isConnected } = useWebSocket();
+//   const { socket, isConnected } = useWebSocket();
   
   // Ensure we join the channel on mount
   useEffect(() => {
