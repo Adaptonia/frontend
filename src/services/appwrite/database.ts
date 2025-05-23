@@ -116,7 +116,7 @@ export const getGoalById = async (goalId: string, userId: string): Promise<Goal>
 export const updateGoal = async (
   goalId: string, 
   goalData: UpdateGoalRequest, 
-  userId: string
+  // userId: string
 ): Promise<Goal> => {
   try {
     // First verify the user owns this goal

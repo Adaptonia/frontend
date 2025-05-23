@@ -66,8 +66,8 @@ export const loginUser = async (email: string, password: string): Promise<User> 
       console.log('📤 Found existing session, deleting it...');
       await account.deleteSession('current');
     } catch (sessionError) {
+      console.error('❌ Error deleting session:', sessionError);
       // No active session or error getting session, which is fine for login
-      console.log('ℹ️ No active session found or session already expired');
     }
     
     // Now create a new session
@@ -116,10 +116,11 @@ export const loginUser = async (email: string, password: string): Promise<User> 
     
     console.log("🎉 Login successful, returning user:", user.email);
     return user;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Login error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Login failed';
     throw error;
+    
   }
 };
 
@@ -213,7 +214,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
       
       return null;
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('No active session found:', error);
     return null;
   }
@@ -306,7 +307,8 @@ export const loginWithGoogle = async (): Promise<void> => {
     // Create OAuth session with Google
     // This will redirect the user to Google's login page
     account.createOAuth2Session(
-      'google' as any,   // Using type assertion to bypass type checking
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      'google' as any ,   // Using type assertion to bypass type checking
       `${origin}/dashboard`,  // Success URL - redirect here after successful login
       `${origin}/login`       // Failure URL - redirect here if login fails
     );

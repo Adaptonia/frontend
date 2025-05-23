@@ -135,4 +135,6 @@ NEXT_PUBLIC_APPWRITE_GOALS_COLLECTION_ID=<your-goals-collection-id>
 NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID=<your-users-collection-id>
 ```
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 *This document will be updated as we progress through development.* 
