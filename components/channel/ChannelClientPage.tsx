@@ -12,7 +12,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useChannelMessaging } from '@/hooks/useChannelMessaging';
 import { format } from 'date-fns';
 import { getInitials } from '@/lib/utils';
-import { useWebSocket } from '@/context/WebSocketContext';
 import { ChannelHeader } from '@/components/channel/ChannelHeader';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { toast } from 'sonner';
