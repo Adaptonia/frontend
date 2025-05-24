@@ -1,10 +1,22 @@
 "use client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useTheme } from "@/src/context/ThemeContext";
 
 export default function AdaptoniaOnboarding() {
   const [currentScreen, setCurrentScreen] = useState(0);
+  const { setThemeColor } = useTheme();
+  
+  useEffect(() => {
+    // Set the theme color to match the background
+    setThemeColor('#229FDB');
+    
+    // Clean up when component unmounts
+    return () => {
+      setThemeColor('#ffffff'); // Reset to default
+    };
+  }, [setThemeColor]);
 
   const screens = [
     // Splash Screen

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google"; 
 import "./globals.css";
 import { Providers } from "./providers";
+import { ThemeProvider } from "@/src/context/ThemeContext";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -13,7 +14,6 @@ export const metadata: Metadata = {
   title: "Adaptonia - Chat & Collaboration",
   description: "Chat, collaborate, and manage tasks with Adaptonia",
   manifest: "/manifest.json",
-  // themeColor: "#229FDB",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -31,8 +31,6 @@ export const metadata: Metadata = {
   },
 };
 
-// Root layout - this is where the app starts for each page navigation
-// The AuthContext in Providers will check for existing Appwrite sessions
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -46,7 +44,6 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Adaptonia" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="theme-color" content="#229FDB" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
@@ -55,7 +52,9 @@ export default function RootLayout({
         className={`${poppins.variable} font-sans antialiased h-full overscroll-none`}
       >
         <Providers>
-          {children}
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
         </Providers>
       </body>
     </html>

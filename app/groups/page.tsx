@@ -1,9 +1,22 @@
 'use client'
-import React from 'react';
+import React, { useEffect } from 'react';
 import ChannelList from '@/components/channel/ChannelList';
 import { motion } from 'framer-motion';
+import { useTheme } from '@/src/context/ThemeContext';
 
 export default function GroupsPage() {
+  const { setThemeColor } = useTheme();
+
+  useEffect(() => {
+    // Set the theme color to match the background
+    setThemeColor('#ffffff');
+    
+    // Clean up when component unmounts
+    return () => {
+      setThemeColor('#ffffff'); // Reset to default
+    };
+  }, [setThemeColor]);
+
   return (
     <div className="flex h-full">
       {/* Channel List Sidebar */}
