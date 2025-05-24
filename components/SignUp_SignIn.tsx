@@ -54,7 +54,7 @@ const SignUp_SignIn = () => {
 
               <button
                 onClick={() =>
-                  (window.location.href = "http://localhost:3001/auth/google")
+                  (window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google`)
                 }
                 className="w-full py-4 bg-white text-black rounded-full font-semibold flex items-center justify-center shadow-md"
               >

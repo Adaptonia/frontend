@@ -78,7 +78,7 @@ export function JoinChannel() {
               type="text"
               value={inviteLink}
               onChange={(e) => setInviteLink(e.target.value)}
-              placeholder="http://localhost:3000/channels/join?code=your-invite-code"
+              placeholder={`${process.env.NEXT_PUBLIC_APP_URL}/channels/join?code=your-invite-code`}
               className={`w-full p-3 border rounded-lg mb-2 transition-colors ${
                 error 
                   ? 'border-red-500 dark:border-red-500' 
