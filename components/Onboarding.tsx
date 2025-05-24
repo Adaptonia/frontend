@@ -37,7 +37,7 @@ export default function AdaptoniaOnboarding() {
       title: "Lorem Ipsum dolor sit amet",
       content: (
         <div className="w-full h-full relative">
-          <div className="absolute inset-0 -mx-6 mt-16">
+          <div className="absolute inset-0 -mx-6 mt-10">
             <Image
               src="/first-onboarding-one/Group 95.png"
               alt="food"
@@ -60,7 +60,7 @@ export default function AdaptoniaOnboarding() {
       title: "Welcome to adaptonia",
       content: (
         <div className="w-full h-full relative">
-          <div className="absolute inset-0 -mx-6 mt-16">
+          <div className="absolute inset-0 -mx-6 mt-10">
             <Image
               src="/first-onboarding-one/Group 96.png"
               alt="food"
