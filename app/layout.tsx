@@ -14,6 +14,7 @@ export const metadata: Metadata = {
   title: "Adaptonia - Chat & Collaboration",
   description: "Chat, collaborate, and manage tasks with Adaptonia",
   manifest: "/manifest.json",
+  
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
