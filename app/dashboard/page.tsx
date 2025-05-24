@@ -12,6 +12,8 @@ import CategoryCard from '@/components/dashboard/CategoryCard'
 import TaskItem from '@/components/dashboard/TaskItem'
 import BottomNav from '@/components/dashboard/BottomNav'
 import GoalFormModal from '@/components/goals/GoalFormModal'
+import { PWAInstallPrompt } from '@/components/pwa/PWAInstallPrompt'
+import { NotificationToggle } from '@/components/pwa/NotificationToggle'
 
 // Appwrite services
 import { getGoals, toggleGoalCompletion } from '../../src/services/appwrite/database'
@@ -145,11 +147,13 @@ const Dashboard = () => {
 
   return (
     <div className="bg-gray-100 min-h-screen pb-20">
+      {/* PWA Installation Prompt will automatically show based on criteria */}
+      <PWAInstallPrompt />
+      
       {/* Calendar Section */}
       <DashboardCalendar onDateSelect={handleDateSelect} />
       <div className="p-4">
         
-
         {/* Goal Metrics Card */}
         <div className="bg-white rounded-xl p-5 mb-6 shadow-sm">
           <h2 className="text-blue-500 text-lg font-medium mb-3">Goal metrics</h2>
@@ -177,6 +181,11 @@ const Dashboard = () => {
               />
             </div>
           </div>
+        </div>
+
+        {/* Notification Settings */}
+        <div className="mb-6">
+          <NotificationToggle />
         </div>
 
         {/* Category Cards */}
