@@ -18,7 +18,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         </div>
         
         {/* Main Content - this is what changes between pages */}
-        <div className="flex-grow scrollable">
+        <div className="flex-grow">
           {children}
         </div>
       </div>
