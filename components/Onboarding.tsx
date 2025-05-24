@@ -119,7 +119,7 @@ export default function AdaptoniaOnboarding() {
   };
 
   return (
-    <div className='relative page-container h-100dvh w-full overflow-hidden bg-[#229FDB]'>
+    <div className='relative extend-to-edges page-container h-100dvh w-full overflow-hidden bg-[#229FDB]'>
       {/* Content Area */}
       <div className="h-full flex flex-col px-6 pt-6 pb-16">
         {screens[currentScreen].type === "signup" ? (
