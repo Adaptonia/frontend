@@ -40,12 +40,12 @@ export const PWAInstallPrompt: React.FC = () => {
                   To install, follow these steps:
                 </p>
                 <ol className="text-sm text-gray-500 dark:text-gray-400 list-decimal ml-4 space-y-1">
-                  <li>Tap the browser's share button <span className="inline-block">
+                  <li>Tap the browser&apos;s share button <span className="inline-block">
                     <svg className="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                     </svg>
                   </span> at the top</li>
-                  <li>Scroll down and tap "Add to Home Screen" <span className="inline-block">
+                  <li>Scroll down and tap &quot;Add to Home Screen&quot; <span className="inline-block">
                     <svg className="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m0-16l-4 4m4-4l4 4" />
                     </svg>
