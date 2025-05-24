@@ -129,7 +129,7 @@
 }
 
 /* Prevent pull-to-refresh and make app feel native */
-html,
+/* html,
 body {
   position: fixed;
   width: 100%;
@@ -140,22 +140,21 @@ body {
   touch-action: none;
   padding: 0;
   margin: 0;
-  /* Add padding for iOS safe areas */
   padding-top: var(--sat);
   padding-right: var(--sar);
   padding-bottom: var(--sab);
   padding-left: var(--sal);
-}
+} */
 
 /* Enable scrolling for content areas */
-main,
+/* main,
 [role="main"],
 .scrollable {
   height: 100%;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
-}
+} */
 
 /* Hide scrollbars while keeping functionality */
 .scrollable {
