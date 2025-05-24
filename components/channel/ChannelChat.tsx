@@ -56,28 +56,28 @@ export function ChannelChat({ channelId }: ChannelChatProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Messages container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-      {messages.map((message: ChannelMessage) => (
-  <div
-    key={message.id}
-    className={`flex ${message.senderId === user?.id ? 'justify-end' : 'justify-start'}`}
-  >
-    <div
-      className={`max-w-[70%] rounded-lg p-3 ${
-        message.senderId === user?.id
-          ? 'bg-blue-500 text-white'
-          : 'bg-gray-100 dark:bg-gray-800'
-      }`}
-    >
-      {message.senderId !== user?.id && message.sender && (
-        <div className="text-sm font-medium mb-1 text-gray-500 dark:text-gray-400">
-          {message.sender.firstName} {message.sender.lastName}
-        </div>
-      )}
-      <div className="break-words">{message.content}</div>
-    </div>
-  </div>
-))}
+      <div className="flex-1 scrollable p-4 space-y-4">
+        {messages.map((message: ChannelMessage) => (
+          <div
+            key={message.id}
+            className={`flex ${message.senderId === user?.id ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-[70%] rounded-lg p-3 ${
+                message.senderId === user?.id
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 dark:bg-gray-800'
+              }`}
+            >
+              {message.senderId !== user?.id && message.sender && (
+                <div className="text-sm font-medium mb-1 text-gray-500 dark:text-gray-400">
+                  {message.sender.firstName} {message.sender.lastName}
+                </div>
+              )}
+              <div className="break-words">{message.content}</div>
+            </div>
+          </div>
+        ))}
         <div ref={messagesEndRef} />
       </div>
 

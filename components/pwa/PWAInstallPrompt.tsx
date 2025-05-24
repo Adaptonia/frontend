@@ -1,7 +1,7 @@
 'use client';
 
-import { usePWA } from '@/src/context/PWAContext';
 import React, { useState, useEffect } from 'react';
+import { usePWA } from '@/src/context/PWAContext';
 
 export const PWAInstallPrompt: React.FC = () => {
   const { isPWAInstalled, promptInstall } = usePWA();
@@ -9,18 +9,12 @@ export const PWAInstallPrompt: React.FC = () => {
   const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
-    // Detect iOS devices
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    // const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as unknown as { MSStream: unknown }).MSStream;
-    // Detect standalone mode (already installed)
     const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches;
     
     setIsIOSDevice(isIOS);
     
-    // Only show prompt if not installed and not on iOS (or on iOS and not in standalone)
     if (!isPWAInstalled && (!isIOS || !isInStandaloneMode)) {
-      // Wait a bit before showing the prompt to avoid annoying users immediately
       const timer = setTimeout(() => {
         setShowPrompt(true);
       }, 5000);

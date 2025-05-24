@@ -7,12 +7,12 @@ export default function GroupsPage() {
   return (
     <div className="flex h-full">
       {/* Channel List Sidebar */}
-      <div className="flex-shrink-0 w-72 border-r rounded-tl-3xl border-gray-200 dark:border-gray-800 overflow-y-auto">
+      <div className="flex-shrink-0 w-72 border-r rounded-tl-3xl border-gray-200 dark:border-gray-800 scrollable">
         <ChannelList />
       </div>
 
       {/* Main Content Area (Right - placeholder) */}
-      <div className="flex-grow bg-white dark:bg-gray-900 overflow-y-auto">
+      <div className="flex-grow bg-white dark:bg-gray-900 scrollable">
         {/* Content for the selected channel would go here */}
         <div className="p-6">
           <motion.h1 
