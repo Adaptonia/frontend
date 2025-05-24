@@ -4,7 +4,7 @@ import { Account, Avatars, Client, Databases, Storage, Functions } from 'appwrit
 export const client = new Client();
 
 client
-  .setEndpoint('https://fra.cloud.appwrite.io/v1')  // Your Appwrite endpoint
+  .setEndpoint('https://cloud.appwrite.io/v1')  // Your Appwrite endpoint
   .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || '');  // Your project ID from environment variables
 
 // Initialize Appwrite services
