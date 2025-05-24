@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Access-Control-Allow-Origin',
-            value: 'https://cloud.appwrite.io',
+            value: 'https://fra.cloud.appwrite.io/v1',
           },
           {
             key: 'Access-Control-Allow-Methods',
