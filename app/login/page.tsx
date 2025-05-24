@@ -67,7 +67,7 @@ const Page = () => {
     };
     
     return (
-      <div className="flex flex-col min-h-screen  p-6">
+      <div className="flex flex-col min-h-screen scrollable p-6">
         {/* Back Button */}
         <div className="mb-8">
             <Link href="/home">

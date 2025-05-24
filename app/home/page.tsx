@@ -1,13 +1,32 @@
 'use client'
 import Image from 'next/image'
 import Link from 'next/link'
-import React from 'react'
+import React, { useState } from 'react'
 import { signIn } from 'next-auth/react'
+import { toast } from 'sonner'
+import { loginWithGoogle } from '@/src/services/appwrite/auth'
 
 const Page = () => {
-  const handleGoogleSignIn = () => {
-    signIn('google', { callbackUrl: '/dashboard' });
-  };
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    try {
+        setIsGoogleLoading(true);
+        toast.info('Redirecting to Google...');
+        
+        // This will redirect the user to Google's OAuth page
+        await loginWithGoogle();
+        
+        // The code below won't execute until the user returns from Google OAuth
+        // because the browser navigates away from this page
+    } catch (error) {
+        setIsGoogleLoading(false);
+        const errorMessage = error instanceof Error ? error.message : 'Google login failed';
+        toast.error(errorMessage);
+    }
+};
 
   return (
     <div>
@@ -60,8 +79,15 @@ const Page = () => {
       
                     <button
                       onClick={handleGoogleSignIn}
+                      disabled={isGoogleLoading}  
                       className="w-full py-4 bg-white text-black rounded-full font-semibold flex items-center justify-center shadow-md"
                     >
+                      {isGoogleLoading ? (
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-900 dark:border-white" />
+                        </div>
+                      ) : (
+                        <>
                       <svg
                         className="mr-2"
                         width="20"
@@ -86,6 +112,8 @@ const Page = () => {
                         />
                       </svg>
                       Signup with Google
+                      </>
+                      )}
                     </button>
       
                     <div className="text-center mt-4">

@@ -155,7 +155,7 @@ const Dashboard = () => {
       <div className="p-4">
 
         {/* Goal Metrics Card */}
-        <div className="bg-white rounded-xl p-5 mb-6 shadow-sm">
+        <div className="bg-white rounded-xl p-5 mb-6 shadow-sm scrollable">
           <h2 className="text-blue-500 text-lg font-medium mb-3">Goal metrics</h2>
           
           <div className="flex justify-between items-center">

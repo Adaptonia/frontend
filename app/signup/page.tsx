@@ -37,7 +37,7 @@ const Page = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-white p-6">
+    <div className="flex flex-col min-h-screen bg-white p-6 scrollable">
       {/* Back Button */}
       <div className="mb-8">
         <button className="p-1">
