@@ -91,7 +91,7 @@ export function useChannelMessaging(channelId: string) {
                  typeof msg.data === 'object' &&
                  'id' in msg.data;
         };
-        
+
         // Check if message has the expected structure
         if (!isValidMessage(message)) {
           console.error('Invalid message format received');
@@ -167,7 +167,7 @@ export function useChannelMessaging(channelId: string) {
           setMessages(prev => 
             prev.filter(msg => msg.id !== message.data.id)
           );
-        }
+      }
       },
       (error) => {
         console.error('Channel messages subscription error:', error);
@@ -249,7 +249,7 @@ export function useChannelMessaging(channelId: string) {
       
       // Create a temporary ID for optimistic update
       const tempId = `temp-${Date.now()}`;
-      
+
       // Add optimistic message immediately
       const optimisticMessage: ChannelMessage = {
         id: tempId,
@@ -315,7 +315,7 @@ export function useChannelMessaging(channelId: string) {
   // Send typing indicator via WebSocket
   const sendTypingIndicator = useCallback((isTyping: boolean) => {
     if (!isConnected || !user?.id || !channelIdRef.current) return;
-
+    
     sendWebSocketMessage({
       type: 'typing',
       data: {

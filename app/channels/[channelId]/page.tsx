@@ -8,4 +8,4 @@ export default async function ChannelPage({ params }: PageProps) {
   const { channelId } = await params;
   
   return <ChannelClientPage channelId={channelId} />;
-}
+} 

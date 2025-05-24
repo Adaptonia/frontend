@@ -184,12 +184,12 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         body: 'This is a test notification from Adaptonia',
         icon: '/icons/icon-192x192.png',
         badge: '/icons/icon-72x72.png',
-        // vibrate: [100, 50, 100],
+        vibrate: [100, 50, 100],
         data: {
           dateOfArrival: Date.now(),
           url: window.location.href
         }
-      });
+      } as NotificationOptions);
     } else {
       console.log('Cannot send notification: service worker or notifications not enabled');
     }
