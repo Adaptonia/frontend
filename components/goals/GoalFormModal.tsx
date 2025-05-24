@@ -245,12 +245,17 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       const goalData: CreateGoalRequest = {
         title,
         description: description || undefined,
-        category: category.toUpperCase() as 'FINANCE' | 'SCHEDULE' | 'CAREER' | 'AUDIO_BOOKS',
+        category: category.toLowerCase() as 'finance' | 'schedule' | 'career' | 'audio_books',
         deadline: selectedDate || undefined,
         tags: selectedTag || undefined,
         reminderDate: reminder || undefined,
         location: location || undefined
       };
+      
+      // Ensure the category is one of the allowed values
+      if (!['schedule', 'finance', 'career', 'audio_books'].includes(goalData.category)) {
+        throw new Error(`Invalid category: ${goalData.category}. Must be one of: schedule, finance, career, audio_books`);
+      }
       
       let result;
       
@@ -271,7 +276,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       }
     } catch (error) {
       console.error('Error saving goal:', error);
-      toast.error('Failed to save goal. Please try again.');
+      toast.error(`Failed to save goal: ${error instanceof Error ? error.message : 'Please try again.'}`);
     } finally {
       setIsSubmitting(false);
     }

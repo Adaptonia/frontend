@@ -77,7 +77,7 @@ export interface Goal {
 export interface CreateGoalRequest {
   title: string;
   description?: string;
-  category: 'SCHEDULE' | 'FINANCE' | 'CAREER' | 'AUDIO_BOOKS';
+  category: 'schedule' | 'finance' | 'career' | 'audio_books';
   deadline?: string;
   location?: string;
   tags?: string;
@@ -88,7 +88,7 @@ export interface CreateGoalRequest {
 export interface UpdateGoalRequest {
   title?: string;
   description?: string;
-  category?: 'SCHEDULE' | 'FINANCE' | 'CAREER' | 'AUDIO_BOOKS';
+  category?: 'schedule' | 'finance' | 'career' | 'audio_books';
   deadline?: string;
   location?: string;
   tags?: string;
