@@ -23,23 +23,6 @@ export const PWAInstallPrompt: React.FC = () => {
     }
   }, [isPWAInstalled]);
 
-  const handleShare = async () => {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: 'Install Adaptonia',
-          text: 'Install Adaptonia app for a better experience',
-          url: window.location.href,
-        });
-      } else {
-        // Fallback for browsers that don't support Web Share API
-        alert('To install: tap the share icon in your browser and select "Add to Home Screen"');
-      }
-    } catch (error) {
-      console.error('Error sharing:', error);
-    }
-  };
-
   if (isPWAInstalled || !showPrompt) {
     return null;
   }
@@ -51,11 +34,29 @@ export const PWAInstallPrompt: React.FC = () => {
           <img src="/logo.png" alt="Adaptonia Logo" className="w-10 h-10" />
           <div>
             <h3 className="font-semibold dark:text-white">Install Adaptonia</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {isIOSDevice 
-                ? 'Click Share below and select "Add to Home Screen"' 
-                : 'Install our app for a better experience'}
-            </p>
+            {isIOSDevice ? (
+              <div className="space-y-2">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  To install, follow these steps:
+                </p>
+                <ol className="text-sm text-gray-500 dark:text-gray-400 list-decimal ml-4 space-y-1">
+                  <li>Tap the browser's share button <span className="inline-block">
+                    <svg className="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                  </span> at the top</li>
+                  <li>Scroll down and tap "Add to Home Screen" <span className="inline-block">
+                    <svg className="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m0-16l-4 4m4-4l4 4" />
+                    </svg>
+                  </span></li>
+                </ol>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Install our app for a better experience
+              </p>
+            )}
           </div>
         </div>
         <div className="flex space-x-2">
@@ -65,27 +66,7 @@ export const PWAInstallPrompt: React.FC = () => {
           >
             Not now
           </button>
-          {isIOSDevice ? (
-            <button 
-              onClick={handleShare}
-              className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
-            >
-              <svg 
-                className="w-4 h-4 mr-1" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                />
-              </svg>
-              Share
-            </button>
-          ) : (
+          {!isIOSDevice && (
             <button 
               onClick={promptInstall} 
               className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
