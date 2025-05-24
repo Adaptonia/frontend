@@ -37,20 +37,21 @@ export default function AdaptoniaOnboarding() {
       title: "Lorem Ipsum dolor sit amet",
       content: (
         <div className="w-full h-full relative">
-          <div className="absolute inset-0 -mx-6 mt-4">
-            <Image
-              src="/first-onboarding-one/Group 95.png"
-              alt="food"
-              className="w-full h-auto object-contain"
-              width={1000}
-              height={1000}
-              priority
-            />
-          </div>
-          <div className="relative z-10 h-full">
-            {/* Empty div to maintain proper spacing and ensure the content area remains accessible */}
-          </div>
-        </div>
+  <div className="absolute inset-0 -mx-6 mt-4">
+    <div className="relative w-full h-full">
+      <Image
+        src="/first-onboarding-one/Group 95.png"
+        alt="food"
+        className="object-contain"
+        fill
+        priority
+      />
+    </div>
+  </div>
+  <div className="relative z-10 h-full">
+    {/* Empty div to maintain proper spacing and ensure the content area remains accessible */}
+  </div>
+</div>
       ),
       description:
         "Lorem ipsum dolor sit amet consectetur. At laoreet morbi amet aliquam arcu pharetra tellus elit. Eget integer duis tortor amet purus.",
@@ -60,20 +61,21 @@ export default function AdaptoniaOnboarding() {
       title: "Welcome to adaptonia",
       content: (
         <div className="w-full h-full relative">
-          <div className="absolute inset-0 -mx-6 mt-4">
+        <div className="absolute inset-0 -mx-6 mt-4">
+          <div className="relative w-full h-full">
             <Image
               src="/first-onboarding-one/Group 96.png"
               alt="food"
-              className="w-full h-auto object-contain"
-              width={1000}
-              height={1000}
+              className="object-contain"
+              fill
               priority
             />
           </div>
-          <div className="relative z-10 h-full">
-            {/* Empty div to maintain proper spacing and ensure the content area remains accessible */}
-          </div>
         </div>
+        <div className="relative z-10 h-full">
+          {/* Empty div to maintain proper spacing and ensure the content area remains accessible */}
+        </div>
+      </div>
       ),
       description:
         "Lorem ipsum dolor sit amet consectetur. At laoreet morbi amet aliquam arcu pharetra tellus elit. Eget integer duis tortor amet purus.",
@@ -142,10 +144,10 @@ export default function AdaptoniaOnboarding() {
                   {screens[currentScreen].content}
                 </div>
                 <div className="mb-6">
-                  <h1 className="text-white text-4xl font-bold text-center mb-4">
+                  <h1 className="text-white text-3xl font-bold text-center mb-4">
                     {screens[currentScreen].title}
                   </h1>
-                  <p className="text-white text-center">
+                  <p className="text-white text-center text-sm">
                     {screens[currentScreen].description}
                   </p>
                 </div>
