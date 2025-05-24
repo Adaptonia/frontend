@@ -6,7 +6,7 @@ import { registerServiceWorker } from '../lib/pwa';
 import { requestNotificationPermission } from '../lib/pwa';
 import { subscribeToPushNotifications } from '../lib/pwa';
 import { unsubscribeFromPushNotifications } from '../lib/pwa';
-
+import { BeforeInstallPromptEvent } from '../lib/pwa-types';
 
 // Define the context type
 type PWAContextType = {
@@ -27,15 +27,15 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isPWAInstalled, setIsPWAInstalled] = useState<boolean>(false);
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState<boolean>(false);
   const [serviceWorkerRegistration, setServiceWorkerRegistration] = useState<ServiceWorkerRegistration | null>(null);
-  const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   // Handle the beforeinstallprompt event
   useEffect(() => {
-    const handleBeforeInstallPrompt = (e: Event) => {
+    const handleBeforeInstallPrompt = (e: BeforeInstallPromptEvent) => {
       // Prevent Chrome from automatically showing the prompt
       e.preventDefault();
       // Stash the event so it can be triggered later
-      setInstallPrompt(e as Event);
+      setInstallPrompt(e);
     };
 
     // Check if the app is already installed by checking display-mode
@@ -67,7 +67,12 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     // Add event listener for beforeinstallprompt event
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('beforeinstallprompt', ((e: Event) => {
+      // Cast e to BeforeInstallPromptEvent
+      const promptEvent = e as BeforeInstallPromptEvent;
+      promptEvent.preventDefault();
+      setInstallPrompt(promptEvent);
+    }) as EventListener);
     
     // Add event listener for appinstalled event
     window.addEventListener('appinstalled', () => {
@@ -84,7 +89,7 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Clean up
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt as EventListener);
     };
   }, []);
 
@@ -92,10 +97,10 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const promptInstall = () => {
     if (installPrompt) {
       // Show the install prompt
-      (installPrompt as any).prompt();
+      (installPrompt as BeforeInstallPromptEvent).prompt();
       
       // Wait for the user to respond to the prompt
-      (installPrompt as any).userChoice.then((choiceResult: { outcome: string }) => {
+      (installPrompt as BeforeInstallPromptEvent).userChoice.then((choiceResult: { outcome: string }) => {
         if (choiceResult.outcome === 'accepted') {
           console.log('User accepted the install prompt');
           setIsPWAInstalled(true);
@@ -179,7 +184,7 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         body: 'This is a test notification from Adaptonia',
         icon: '/icons/icon-192x192.png',
         badge: '/icons/icon-72x72.png',
-        vibrate: [100, 50, 100],
+        // vibrate: [100, 50, 100],
         data: {
           dateOfArrival: Date.now(),
           url: window.location.href

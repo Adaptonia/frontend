@@ -11,8 +11,8 @@ export const PWAInstallPrompt: React.FC = () => {
   useEffect(() => {
     // Detect iOS devices
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    
+    // const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     // Detect standalone mode (already installed)
     const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches;
     

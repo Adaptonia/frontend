@@ -1,6 +1,6 @@
 // Type declarations for PWA-related interfaces
 
-interface BeforeInstallPromptEvent extends Event {
+export interface BeforeInstallPromptEvent extends Event {
   /**
    * Returns a Promise that resolves to a DOMString containing either "accepted" or "dismissed".
    */
