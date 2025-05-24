@@ -29,7 +29,7 @@ interface NotificationOptions {
   body?: string;
   
   /** Arbitrary data that you want associated with the notification. */
-  data?: any;
+  data?: unknown;
   
   /** The direction of the notification; it can be auto, ltr, or rtl. */
   dir?: 'auto' | 'ltr' | 'rtl';

@@ -27,7 +27,7 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isPWAInstalled, setIsPWAInstalled] = useState<boolean>(false);
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState<boolean>(false);
   const [serviceWorkerRegistration, setServiceWorkerRegistration] = useState<ServiceWorkerRegistration | null>(null);
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
 
   // Handle the beforeinstallprompt event
   useEffect(() => {
@@ -35,7 +35,7 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Prevent Chrome from automatically showing the prompt
       e.preventDefault();
       // Stash the event so it can be triggered later
-      setInstallPrompt(e);
+      setInstallPrompt(e as Event);
     };
 
     // Check if the app is already installed by checking display-mode
@@ -92,10 +92,10 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const promptInstall = () => {
     if (installPrompt) {
       // Show the install prompt
-      installPrompt.prompt();
+      (installPrompt as any).prompt();
       
       // Wait for the user to respond to the prompt
-      installPrompt.userChoice.then((choiceResult: { outcome: string }) => {
+      (installPrompt as any).userChoice.then((choiceResult: { outcome: string }) => {
         if (choiceResult.outcome === 'accepted') {
           console.log('User accepted the install prompt');
           setIsPWAInstalled(true);
