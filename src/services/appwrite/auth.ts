@@ -303,17 +303,22 @@ export const verifyEmail = async (
  */
 export const loginWithGoogle = async (): Promise<void> => {
   try {
-    // Get the current URL for success and failure redirects
+    // Get the current URL for redirects
     const origin = window.location.origin;
+    const successUrl = `${origin}/dashboard`;
+    const failureUrl = `${origin}/login`;
+    
+    console.log('Google OAuth login initiated');
+    console.log('Success redirect URL:', successUrl);
     
     // Create OAuth session with Google
-    // This will redirect the user to Google's login page
-    account.createOAuth2Session(
-       OAuthProvider.Google, // Cast to string to avoid type errors
-      `${origin}/dashboard`,  // Success URL - redirect here after successful login
-      `${origin}/login`       // Failure URL - redirect here if login fails
+    await account.createOAuth2Session(
+      OAuthProvider.Google,
+      successUrl,
+      failureUrl
     );
   } catch (error: unknown) {
+    console.error('Google login error details:', error);
     const errorMessage = error instanceof Error ? error.message : 'Google login failed';
     console.error('Google login error:', errorMessage);
     throw error;

@@ -41,13 +41,14 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const { user } = useAuth();
   
+  // Main connection effect
   useEffect(() => {
     // Only connect if the user is logged in
     if (!user?.id) {
       if (socket) {
         socket.close();
         setSocket(null);
-    setIsConnected(false);
+        setIsConnected(false);
       }
       return;
     }
@@ -123,37 +124,6 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
     });
     
-    // Add handler for online status messages
-    useEffect(() => {
-      if (!socket) return;
-      
-      const handleMessage = (event: MessageEvent) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'online_status') {
-            const { userId, isOnline } = data.data;
-            setOnlineUsers(prev => {
-              const newSet = new Set(prev);
-              if (isOnline) {
-                newSet.add(userId);
-              } else {
-                newSet.delete(userId);
-              }
-              return newSet;
-            });
-          }
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
-        }
-      };
-      
-      socket.addEventListener('message', handleMessage);
-      
-      return () => {
-        socket.removeEventListener('message', handleMessage);
-      };
-    }, [socket]);
-    
     // Clean up on unmount
     return () => {
       // Send offline status before closing
@@ -178,6 +148,37 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
     };
   }, [user?.id]);
+
+  // Separate effect for handling messages (was nested before)
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'online_status') {
+          const { userId, isOnline } = data.data;
+          setOnlineUsers(prev => {
+            const newSet = new Set(prev);
+            if (isOnline) {
+              newSet.add(userId);
+            } else {
+              newSet.delete(userId);
+            }
+            return newSet;
+          });
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    };
+    
+    socket.addEventListener('message', handleMessage);
+    
+    return () => {
+      socket.removeEventListener('message', handleMessage);
+    };
+  }, [socket]);
 
   // Method to send messages
   const sendMessage = (message: WebSocketMessage) => {
