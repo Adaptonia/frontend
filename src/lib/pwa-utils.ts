@@ -50,7 +50,6 @@ export const isSafari = (): boolean => {
 export const canInstallPWA = (): boolean => {
   if (typeof window === 'undefined') return false;
   
-  // @ts-ignore: BeforeInstallPromptEvent is not in standard lib
   return !isRunningAsPWA() && ('BeforeInstallPromptEvent' in window || (isIOS() && isSafari()));
 };
 
