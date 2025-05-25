@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode } from 'react';
 import { ThemeProvider } from 'next-themes';
 import { AuthProvider } from '@/context/AuthContext';
 import { WebSocketProvider } from '@/context/WebSocketContext';

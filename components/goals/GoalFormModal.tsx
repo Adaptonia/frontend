@@ -189,7 +189,8 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
   category = 'finance',
   mode = 'create'
 }) => {
-  const router = useRouter();
+  
+  // const router = useRouter();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<ModalTab>('main');
   const [title, setTitle] = useState('');
@@ -308,14 +309,14 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           <div className="flex flex-col gap-1">
             <span className="font-medium">Notification permission denied</span>
             <span className="text-sm text-gray-600">
-              You won't receive notification alerts for this reminder
+              You won&apos;t receive notification alerts for this reminder
             </span>
           </div>
         );
       }
       
       const [hours, minutes] = reminderSettings.time.split(':').map(Number);
-      let reminderDate = new Date(reminderSettings.date);
+      const reminderDate = new Date(reminderSettings.date);
       
       // Set reminder time
       reminderDate.setHours(hours, minutes, 0, 0);
@@ -331,7 +332,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       // For multiple reminders, calculate additional dates
       if (reminderSettings.interval !== "once" && reminderSettings.count > 1) {
         for (let i = 1; i < reminderSettings.count; i++) {
-          let nextDate = new Date(reminderDate);
+          const nextDate = new Date(reminderDate);
           
           switch (reminderSettings.interval) {
             case "daily":

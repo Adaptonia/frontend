@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 
 // Component to register service worker
 const ServiceWorkerRegistration = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isSubscribed, setIsSubscribed] = useState(false);
   
   useEffect(() => {
@@ -110,10 +111,10 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
     // This is a placeholder - replace with your actual VAPID public key
     const publicVapidKey = 'YOUR_PUBLIC_VAPID_KEY';
     
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
-    });
+    // const subscription = await registration.pushManager.subscribe({
+    //   userVisibleOnly: true,
+    //   applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+    // });
     
     // Send the subscription to your server
     // await fetch('/api/subscribe', {
