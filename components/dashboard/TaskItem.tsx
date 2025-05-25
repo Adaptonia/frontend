@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { Clock } from 'lucide-react'
+import { format } from 'date-fns'
 
 interface TaskItemProps {
   id: string
@@ -9,8 +10,21 @@ interface TaskItemProps {
   description?: string
   dueDate?: string
   completed?: boolean
-  onToggleComplete?: (id: string, completed: boolean) => void
+  onToggleComplete?: (id: string) => void
 }
+
+// Helper function to format dates nicely
+const formatDisplayDate = (dateString: string): string => {
+  if (!dateString) return '';
+  
+  try {
+    const date = new Date(dateString);
+    return format(date, 'MMM d, yyyy'); // Format as "Jan 1, 2023"
+  } catch (e) {
+    console.error('Error formatting date:', e);
+    return dateString;
+  }
+};
 
 const TaskItem: React.FC<TaskItemProps> = ({
   id,
@@ -25,7 +39,9 @@ const TaskItem: React.FC<TaskItemProps> = ({
   const handleToggleComplete = () => {
     const newCompletedState = !isCompleted
     setIsCompleted(newCompletedState)
-    onToggleComplete?.(id, newCompletedState)
+    if (onToggleComplete) {
+      onToggleComplete(id)
+    }
   }
 
   return (
@@ -55,7 +71,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
           {dueDate && (
             <div className="flex items-center text-sm text-gray-500 mt-1">
               <Clock className="w-4 h-4 mr-1" />
-              <span>{dueDate}</span>
+              <span>{dueDate.includes('T00:00:00') ? formatDisplayDate(dueDate) : dueDate}</span>
             </div>
           )}
         </div>

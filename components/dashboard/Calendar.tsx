@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import { format } from 'date-fns'
 
 interface CalendarDate {
   date: Date
@@ -26,7 +27,7 @@ const Calendar: React.FC<CalendarProps> = ({ onDateSelect }) => {
     
     // Get current month name
     const today = new Date()
-    setCurrentMonth(today.toLocaleString('default', { month: 'long' }))
+    setCurrentMonth(format(today, 'MMMM'))
     
     // Only notify parent of initial date selection once
     if (!initialSelectionMade.current && onDateSelect) {
@@ -40,7 +41,6 @@ const Calendar: React.FC<CalendarProps> = ({ onDateSelect }) => {
 
   function generateCalendarDates(): CalendarDate[] {
     const today = new Date()
-    // const currentDay = today.getDate()
     const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     
     // Generate 9 dates centered around today (-4 days to +4 days)
@@ -62,7 +62,7 @@ const Calendar: React.FC<CalendarProps> = ({ onDateSelect }) => {
         isSelected: isToday, // Select today by default
         isToday,
         // Only show month name if it's the first day of a month or first date in our array
-        month: day === 1 || i === 0 ? date.toLocaleString('default', { month: 'long' }) : undefined
+        month: day === 1 || i === 0 ? format(date, 'MMMM') : undefined
       }
     })
   }

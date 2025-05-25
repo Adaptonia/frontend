@@ -217,7 +217,7 @@ const Dashboard = () => {
                       id={goal.id}
                       title={goal.title}
                       description={goal.description || ''}
-                      dueDate={goal.deadline ? new Date(goal.deadline).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }) : undefined}
+                      dueDate={goal.deadline || undefined}
                       completed={goal.isCompleted}
                       onToggleComplete={(id) => {
                         // Stop event propagation

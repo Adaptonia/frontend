@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { format as formatDateFns, parseISO } from 'date-fns';
 
 /**
  * Combines multiple class names into a single string, handling conditional classes
@@ -15,12 +16,13 @@ export function cn(...inputs: ClassValue[]) {
 export function formatDate(date: Date | string): string {
   if (!date) return '';
   
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  try {
+    const d = typeof date === 'string' ? parseISO(date) : date;
+    return formatDateFns(d, 'MMM d, yyyy'); // Format as "Jan 1, 2023"
+  } catch (e) {
+    console.error('Error formatting date:', e);
+    return typeof date === 'string' ? date : date.toString();
+  }
 }
 
 /**
@@ -29,12 +31,13 @@ export function formatDate(date: Date | string): string {
 export function formatTime(date: Date | string): string {
   if (!date) return '';
   
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
+  try {
+    const d = typeof date === 'string' ? parseISO(date) : date;
+    return formatDateFns(d, 'h:mm a'); // Format as "3:30 pm"
+  } catch (e) {
+    console.error('Error formatting time:', e);
+    return typeof date === 'string' ? date : date.toString();
+  }
 }
 
 /**

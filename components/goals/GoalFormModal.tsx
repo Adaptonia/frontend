@@ -1,28 +1,51 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Calendar as CalendarIcon, Tag as TagIcon, Bell as BellIcon, Settings, Flag, Loader2, MapPin } from 'lucide-react';
+import { Calendar, Tag as TagIcon, Bell as BellIcon, Settings, Flag, Loader2, MapPin, Clock, Check,  } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-  import { ActionButtonProps, CreateGoalRequest, GoalFormModalProps, ModalTab, PremiumFeatureModalProps } from '@/lib/types';
+import { ActionButtonProps, CreateGoalRequest, GoalFormModalProps, ModalTab, PremiumFeatureModalProps } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { createGoal } from '@/src/services/appwrite/database';
 import { updateGoal } from '@/src/services/appwrite';
 import { useAuth } from '@/context/AuthContext';
+import { reminderService } from '@/src/services/appwrite/reminderService';
+import { format } from 'date-fns';
+import { requestNotificationPermission, scheduleReminderNotificationWithAlarm } from '@/app/sw-register';
+
+// Helper function to format dates nicely
+const formatDisplayDate = (dateString: string): string => {
+  if (!dateString) return '';
+  
+  try {
+    const date = new Date(dateString);
+    return format(date, 'MMM d, yyyy'); // Format as "Jan 1, 2023"
+  } catch (e) {
+    console.error('Error formatting date:', e);
+    return dateString;
+  }
+};
 
 // Action button component
-const ActionButton: React.FC<ActionButtonProps> = ({ icon, label, onClick, selected }) => (
-  <button 
-    onClick={onClick}
-    className={`flex items-center gap-2 px-1 py-1 rounded-md border-2  text-xs w-full ${
-      selected ? 'bg-blue-100 text-blue-600' : 'bg-white text-gray-700'
-    }`}
-  >
-    {icon}
-    <span>{label}</span>
-  </button>
-);
+const ActionButton: React.FC<ActionButtonProps> = ({ icon, label, onClick, selected }) => {
+  // Format date if it looks like an ISO date string
+  const displayLabel = label && label.includes('T00:00:00') 
+    ? formatDisplayDate(label)
+    : label;
+    
+  return (
+    <button 
+      onClick={onClick}
+      className={`flex items-center gap-2 px-1 py-1 rounded-md border-2 text-xs w-full ${
+        selected ? 'bg-blue-100 text-blue-600' : 'bg-white text-gray-700'
+      }`}
+    >
+      {icon}
+      <span>{displayLabel}</span>
+    </button>
+  );
+};
 
 // Header component with title and done button
 const ModalHeader: React.FC<{ title: string; onBack: () => void }> = ({ title, onBack }) => (
@@ -145,6 +168,18 @@ const PremiumFeatureModal: React.FC<PremiumFeatureModalProps> = ({
   );
 };
 
+// Define the reminder types
+type ReminderInterval = "once" | "daily" | "weekly" | "biweekly" | "monthly";
+
+// Enhanced reminder settings interface
+interface ReminderSettings {
+  enabled: boolean;
+  interval: ReminderInterval;
+  count: number;
+  time: string;
+  date: string;
+}
+
 // Main component
 const GoalFormModal: React.FC<GoalFormModalProps> = ({
   isOpen,
@@ -174,10 +209,18 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
     icon: React.ReactNode | string;
   } | null>(null);
   
+  // Enhanced reminder settings
+  const [reminderSettings, setReminderSettings] = useState<ReminderSettings>({
+    enabled: false,
+    interval: "once",
+    count: 1,
+    time: "09:00",
+    date: new Date().toISOString().split('T')[0]
+  });
+  
   const modalRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-
+  const reminderToastShown = useRef(false);
 
   // Reset form when modal opens/closes or initialData changes
   useEffect(() => {
@@ -189,6 +232,16 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       setSelectedTag(initialData.tags || '');
       setReminder(initialData.reminderDate || '');
       setLocation(initialData.location || '');
+      
+      // Set reminder settings if available
+      if (initialData.reminderSettings) {
+        try {
+          const parsedSettings = JSON.parse(initialData.reminderSettings as string);
+          setReminderSettings(parsedSettings);
+        } catch (e) {
+          console.error("Failed to parse reminder settings", e);
+        }
+      }
     } else if (isOpen && !initialData) {
       // Reset form when opening for creation
       setTitle('');
@@ -197,12 +250,20 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       setSelectedTag('');
       setReminder('');
       setLocation('');
+      setReminderSettings({
+        enabled: false,
+        interval: "once",
+        count: 1,
+        time: "09:00",
+        date: new Date().toISOString().split('T')[0]
+      });
     }
     
     // Reset modal state when opening/closing
     setActiveTab('main');
     setPremiumFeature(null);
     setShowOptionsDropdown(false);
+    reminderToastShown.current = false;
   }, [isOpen, initialData]);
 
   // Lock scroll when modal is open
@@ -232,6 +293,117 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
     };
   }, []);
 
+  // Schedule reminders based on the settings
+  const scheduleReminders = async (goalId: string) => {
+    if (!reminderSettings.enabled) return;
+    
+    try {
+      // First, request notification permission if not already granted
+      const permissionGranted = await requestNotificationPermission();
+      
+      if (!permissionGranted) {
+        // If permission was denied, still create the reminder in the database
+        // but inform the user they won't receive notifications
+        toast.warning(
+          <div className="flex flex-col gap-1">
+            <span className="font-medium">Notification permission denied</span>
+            <span className="text-sm text-gray-600">
+              You won't receive notification alerts for this reminder
+            </span>
+          </div>
+        );
+      }
+      
+      const [hours, minutes] = reminderSettings.time.split(':').map(Number);
+      let reminderDate = new Date(reminderSettings.date);
+      
+      // Set reminder time
+      reminderDate.setHours(hours, minutes, 0, 0);
+      
+      // If the time has passed for today and it's a one-time reminder, set for tomorrow
+      if (reminderSettings.interval === "once" && reminderDate < new Date()) {
+        reminderDate.setDate(reminderDate.getDate() + 1);
+      }
+      
+      // Calculate reminder dates based on interval
+      const reminderDates = [reminderDate.toISOString()];
+      
+      // For multiple reminders, calculate additional dates
+      if (reminderSettings.interval !== "once" && reminderSettings.count > 1) {
+        for (let i = 1; i < reminderSettings.count; i++) {
+          let nextDate = new Date(reminderDate);
+          
+          switch (reminderSettings.interval) {
+            case "daily":
+              nextDate.setDate(nextDate.getDate() + i);
+              break;
+            case "weekly":
+              nextDate.setDate(nextDate.getDate() + (i * 7));
+              break;
+            case "biweekly":
+              nextDate.setDate(nextDate.getDate() + (i * 14));
+              break;
+            case "monthly":
+              nextDate.setMonth(nextDate.getMonth() + i);
+              break;
+          }
+          
+          reminderDates.push(nextDate.toISOString());
+        }
+      }
+      
+      // Create reminders using the reminderService
+      const reminderPromises = reminderDates.map(sendDate => 
+        reminderService.createReminder({
+          goalId,
+          userId: user?.id,
+          title: `Reminder: ${title}`,
+          description: description || 'Time to work on your goal!',
+          sendDate,
+          dueDate: selectedDate || undefined
+        })
+      );
+      
+      await Promise.all(reminderPromises);
+      
+      // If notification permission is granted, also schedule in service worker for alarm
+      if (permissionGranted) {
+        // Schedule the notifications in the service worker for alarm functionality
+        const serviceWorkerPromises = reminderDates.map(sendDate => 
+          scheduleReminderNotificationWithAlarm({
+            goalId,
+            title: `Reminder: ${title}`,
+            description: description || 'Time to work on your goal!',
+            sendDate,
+            alarm: true
+          })
+        );
+        
+        await Promise.all(serviceWorkerPromises);
+      }
+      
+      const formattedTime = new Date(`2000-01-01T${reminderSettings.time}`).toLocaleTimeString([], {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      
+      toast.success(
+        <div className="flex flex-col gap-1">
+          <span className="font-medium">Reminder Set! ⏰</span>
+          <span className="text-sm text-gray-600">
+            {reminderSettings.count} {reminderSettings.count === 1 ? 'reminder' : 'reminders'} scheduled at {formattedTime}
+            {permissionGranted ? '' : ' (notifications blocked by browser)'}
+          </span>
+        </div>
+      );
+      
+    } catch (error) {
+      console.error('Error scheduling reminders:', error);
+      toast.error('Failed to schedule reminders');
+    }
+  };
+
   const handleSave = async () => {
     // Clear previous validation errors
     setValidationError('');
@@ -253,7 +425,8 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
         deadline: selectedDate || undefined,
         tags: selectedTag || undefined,
         reminderDate: reminder || undefined,
-        location: location || undefined
+        location: location || undefined,
+        reminderSettings: reminderSettings.enabled ? JSON.stringify(reminderSettings) : undefined
       };
       
       // Ensure the category is one of the allowed values
@@ -266,10 +439,22 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       if (mode === 'edit' && initialData?.id) {
         // Update existing goal
         result = await updateGoal(initialData.id, goalData);
+        
+        // Schedule reminders if enabled
+        if (reminderSettings.enabled) {
+          await scheduleReminders(initialData.id);
+        }
+        
         toast.success('Goal updated successfully');
       } else {
         // Create new goal
-        result = await createGoal(goalData, user?.id || initialData?.userId ||'system');
+        result = await createGoal(goalData, user?.id || initialData?.userId || 'system');
+        
+        // Schedule reminders if enabled and we have a goal ID
+        if (reminderSettings.enabled && result?.id) {
+          await scheduleReminders(result.id);
+        }
+        
         toast.success('Goal created successfully');
       }
       
@@ -298,8 +483,8 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
         {/* Action buttons */}
         <div className="flex overflow-x-auto gap-3 mb-6 pb-2 w-full">
           <ActionButton 
-            icon={<CalendarIcon size={16} />} 
-            label={selectedDate || 'Date'} 
+            icon={<Calendar size={16} />} 
+            label={selectedDate ? formatDisplayDate(selectedDate) : 'Date'} 
             onClick={() => setActiveTab('date')}
             selected={!!selectedDate}
           />
@@ -470,8 +655,8 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
     const daysUntilWeekend = 6 - today.getDay(); // Saturday is 6
     weekend.setDate(today.getDate() + daysUntilWeekend);
     
-    const formatDate = (date: Date) => {
-      return date.toLocaleDateString('en-US', { weekday: 'short' });
+    const formatButtonDate = (date: Date) => {
+      return format(date, 'EEE, MMM d'); // Format as "Mon, Jan 1"
     };
     
     return (
@@ -482,53 +667,53 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           <div className="space-y-3 mb-6">
             <button 
               onClick={() => {
-                const todayStr = today.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
+                const todayStr = format(today, 'yyyy-MM-dd');
                 setSelectedDate(todayStr);
                 setActiveTab('main');
               }}
-              className={`flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg ${selectedDate === 'Today' ? 'bg-gray-50' : ''}`}
+              className={`flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg ${selectedDate === format(today, 'yyyy-MM-dd') ? 'bg-gray-50' : ''}`}
             >
               <div className="flex items-center">
                 <div className="w-10 h-10 mr-3 rounded-md bg-yellow-100 flex items-center justify-center">
-                  <CalendarIcon className="text-yellow-500" size={20} />
+                  <Calendar size={20} className="text-yellow-500" />
                 </div>
                 <span className="font-medium">Today</span>
               </div>
-              <span className="text-gray-400">{formatDate(today)}</span>
+              <span className="text-gray-400">{formatButtonDate(today)}</span>
             </button>
             
             <button 
               onClick={() => {
-                const tomorrowStr = tomorrow.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
+                const tomorrowStr = format(tomorrow, 'yyyy-MM-dd');
                 setSelectedDate(tomorrowStr);
                 setActiveTab('main');
               }}
-              className={`flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg ${selectedDate === 'Tomorrow' ? 'bg-gray-50' : ''}`}
+              className={`flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg ${selectedDate === format(tomorrow, 'yyyy-MM-dd') ? 'bg-gray-50' : ''}`}
             >
               <div className="flex items-center">
                 <div className="w-10 h-10 mr-3 rounded-md bg-orange-100 flex items-center justify-center">
-                  <CalendarIcon className="text-orange-500" size={20} />
+                  <Calendar size={20} className="text-orange-500" />
                 </div>
                 <span className="font-medium">Tomorrow</span>
               </div>
-              <span className="text-gray-400">{formatDate(tomorrow)}</span>
+              <span className="text-gray-400">{formatButtonDate(tomorrow)}</span>
             </button>
             
             <button 
               onClick={() => {
-                const weekendStr = weekend.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
+                const weekendStr = format(weekend, 'yyyy-MM-dd');
                 setSelectedDate(weekendStr);
                 setActiveTab('main');
               }}
-              className={`flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg ${selectedDate === 'This Weekend' ? 'bg-gray-50' : ''}`}
+              className={`flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg ${selectedDate === format(weekend, 'yyyy-MM-dd') ? 'bg-gray-50' : ''}`}
             >
               <div className="flex items-center">
                 <div className="w-10 h-10 mr-3 rounded-md bg-green-100 flex items-center justify-center">
-                  <CalendarIcon className="text-green-500" size={20} />
+                  <Calendar size={20} className="text-green-500" />
                 </div>
                 <span className="font-medium">This Weekend</span>
               </div>
-              <span className="text-gray-400">{formatDate(weekend)}</span>
+              <span className="text-gray-400">{formatButtonDate(weekend)}</span>
             </button>
           </div>
           
@@ -568,43 +753,292 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
     <div className="h-full flex flex-col">
       <ModalHeader title="Reminder" onBack={() => setActiveTab('main')} />
       
-      <div className="px-5 flex-1">
-        <div className="mb-5">
-          <label className="block text-sm font-medium mb-2" htmlFor="reminder-option">
-            Choose when to be reminded
-          </label>
-          
-          <select 
-            id="reminder-option"
-            className="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={reminder}
-            onChange={(e) => setReminder(e.target.value)}
+      <div className="px-5 pb-5 flex-1">
+        {/* Enable/Disable Reminders Toggle */}
+        <div className="flex items-center justify-between mb-6 p-2 rounded-lg bg-gray-50">
+          <div className="flex items-center">
+            <div className="mr-3 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+              <BellIcon size={20} className="text-blue-500" />
+            </div>
+            <div>
+              <p className="font-medium">Enable Reminders</p>
+              <p className="text-xs text-gray-500">Get notified about this goal</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setReminderSettings(prev => ({...prev, enabled: !prev.enabled}))}
+            className={`w-12 h-6 rounded-full relative ${reminderSettings.enabled ? 'bg-blue-500' : 'bg-gray-300'}`}
           >
-            <option value="">Select a reminder option</option>
-            <option value="10 minutes">In 10 minutes</option>
-            <option value="1 hour">In 1 hour</option>
-            <option value="tomorrow">Tomorrow</option>
-            <option value="weekend">This weekend</option>
-          </select>
+            <span 
+              className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${
+                reminderSettings.enabled ? 'right-0.5' : 'left-0.5'
+              }`}
+            />
+          </button>
         </div>
         
-        <div 
-          className="flex items-center p-4 rounded-lg bg-gray-50 cursor-pointer"
-          onClick={() => router.push('/premium')}
-        >
-          <Image 
-            src="/icons/medal.png" 
-            alt="Premium" 
-            width={30} 
-            height={30} 
-            className="mr-3"
-          />
-          <div>
-            <p className="font-medium">Need multiple reminders?</p>
-            <p className="text-sm text-gray-600">Upgrade adaptonia to access a variety of other types of reminders</p>
+        {reminderSettings.enabled && (
+          <div className="space-y-5 animate-in fade-in-50">
+            {/* Reminder Date */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <Calendar className="mr-2" size={16} />
+                Start Date
+              </label>
+              <input
+                type="date"
+                className="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={reminderSettings.date}
+                onChange={(e) => setReminderSettings(prev => ({...prev, date: e.target.value}))}
+              />
+              <p className="text-xs text-gray-500">When should the reminder start?</p>
+            </div>
+            
+            {/* Reminder Time */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <Clock className="mr-2" size={16} />
+                Reminder Time
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="time"
+                  className="flex-1 p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={reminderSettings.time}
+                  onChange={(e) => {
+                    setReminderSettings(prev => ({...prev, time: e.target.value}));
+                    
+                    // Show toast for time update
+                    if (!reminderToastShown.current) {
+                      const formattedTime = new Date(`2000-01-01T${e.target.value}`).toLocaleTimeString([], {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      });
+                      
+                      toast.success(`Reminder time set to ${formattedTime}`);
+                      reminderToastShown.current = true;
+                    }
+                  }}
+                />
+                <div className="text-sm text-gray-500">
+                  {new Date(`2000-01-01T${reminderSettings.time}`).toLocaleTimeString([], {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                  })}
+                </div>
+              </div>
+            </div>
+            
+            {/* Reminder Interval */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <BellIcon className="mr-2" size={16} />
+                Repeat
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {(["once", "daily", "weekly", "biweekly", "monthly"] as ReminderInterval[]).map(interval => (
+                  <button
+                    key={interval}
+                    onClick={() => setReminderSettings(prev => ({...prev, interval}))}
+                    className={`flex items-center justify-between p-3 rounded-lg border ${
+                      reminderSettings.interval === interval 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-200'
+                    }`}
+                  >
+                    <span className="capitalize">{interval}</span>
+                    {reminderSettings.interval === interval && (
+                      <Check size={16} className="text-blue-500" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Number of Reminders */}
+            {reminderSettings.interval !== "once" && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center">
+                  <BellIcon className="mr-2" size={16} />
+                  Number of Reminders
+                </label>
+                <div className="flex items-center border rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setReminderSettings(prev => ({
+                      ...prev, 
+                      count: Math.max(1, prev.count - 1)
+                    }))}
+                    className="p-3 bg-gray-100 hover:bg-gray-200"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={reminderSettings.count}
+                    onChange={(e) => setReminderSettings(prev => ({
+                      ...prev,
+                      count: Math.min(10, Math.max(1, parseInt(e.target.value) || 1))
+                    }))}
+                    className="flex-1 p-3 text-center border-none focus:outline-none"
+                  />
+                  <button
+                    onClick={() => setReminderSettings(prev => ({
+                      ...prev, 
+                      count: Math.min(10, prev.count + 1)
+                    }))}
+                    className="p-3 bg-gray-100 hover:bg-gray-200"
+                  >
+                    +
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500">
+                  {reminderSettings.count > 1 
+                    ? `You'll receive ${reminderSettings.count} reminders`
+                    : "You'll receive 1 reminder"}
+                </p>
+              </div>
+            )}
+            
+            {/* Preview Section */}
+            <div className="p-4 rounded-lg bg-gray-50 mt-6">
+              <h4 className="font-medium mb-2">Reminder Preview</h4>
+              <div className="text-sm text-gray-600 space-y-1">
+                <div className="flex items-center">
+                  <Calendar size={14} className="mr-2" />
+                  <span>
+                    {format(new Date(reminderSettings.date), 'EEEE, MMMM d, yyyy')}
+                  </span>
+                </div>
+                <div className="flex items-center">
+                  <Clock size={14} className="mr-2" />
+                  <span>
+                    {new Date(`2000-01-01T${reminderSettings.time}`).toLocaleTimeString([], {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true
+                    })}
+                  </span>
+                </div>
+                {reminderSettings.interval !== "once" && (
+                  <div className="flex items-center">
+                    <BellIcon size={14} className="mr-2" />
+                    <span>
+                      Repeats {reminderSettings.interval}, {reminderSettings.count} {reminderSettings.count === 1 ? 'time' : 'times'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+        
+        {/* Call to action for quick setup */}
+        {!reminderSettings.enabled && (
+          <div className="space-y-3 mt-4">
+            <button 
+              onClick={() => {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                tomorrow.setHours(9, 0, 0, 0);
+                
+                setReminderSettings({
+                  enabled: true,
+                  interval: "once",
+                  count: 1,
+                  time: "09:00",
+                  date: tomorrow.toISOString().split('T')[0]
+                });
+                
+                toast.success("Reminder set for tomorrow at 9:00 AM");
+              }}
+              className="flex items-center justify-between w-full p-4 rounded-lg border border-gray-200 hover:bg-gray-50"
+            >
+              <div className="flex items-center">
+                <div className="w-10 h-10 mr-3 rounded-full bg-blue-100 flex items-center justify-center">
+                  <BellIcon size={18} className="text-blue-500" />
+                </div>
+                <span className="font-medium">Tomorrow morning</span>
+              </div>
+              <span className="text-gray-400">9:00 AM</span>
+            </button>
+            
+            <button 
+              onClick={() => {
+                const today = new Date();
+                today.setHours(18, 0, 0, 0);
+                
+                setReminderSettings({
+                  enabled: true,
+                  interval: "once",
+                  count: 1,
+                  time: "18:00",
+                  date: today.toISOString().split('T')[0]
+                });
+                
+                toast.success("Reminder set for today at 6:00 PM");
+              }}
+              className="flex items-center justify-between w-full p-4 rounded-lg border border-gray-200 hover:bg-gray-50"
+            >
+              <div className="flex items-center">
+                <div className="w-10 h-10 mr-3 rounded-full bg-orange-100 flex items-center justify-center">
+                  <BellIcon size={18} className="text-orange-500" />
+                </div>
+                <span className="font-medium">This evening</span>
+              </div>
+              <span className="text-gray-400">6:00 PM</span>
+            </button>
+            
+            <button 
+              onClick={() => {
+                const nextWeek = new Date();
+                nextWeek.setDate(nextWeek.getDate() + 7);
+                nextWeek.setHours(9, 0, 0, 0);
+                
+                setReminderSettings({
+                  enabled: true,
+                  interval: "once",
+                  count: 1,
+                  time: "09:00",
+                  date: nextWeek.toISOString().split('T')[0]
+                });
+                
+                toast.success("Reminder set for next week");
+              }}
+              className="flex items-center justify-between w-full p-4 rounded-lg border border-gray-200 hover:bg-gray-50"
+            >
+              <div className="flex items-center">
+                <div className="w-10 h-10 mr-3 rounded-full bg-green-100 flex items-center justify-center">
+                  <BellIcon size={18} className="text-green-500" />
+                </div>
+                <span className="font-medium">Next week</span>
+              </div>
+              <span className="text-gray-400">
+                {format(new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000), 'EEE, MMM d')}
+              </span>
+            </button>
+          </div>
+        )}
       </div>
+      
+      {/* Done button */}
+      {reminderSettings.enabled && (
+        <div className="mt-auto p-5 border-t">
+          <button 
+            onClick={() => {
+              // Fix - use the actual date:
+setReminder(new Date(reminderSettings.date).toISOString());
+              setActiveTab('main');
+            }}
+            className="w-full py-3 bg-blue-500 text-white font-medium rounded-full hover:bg-blue-600"
+          >
+            Done
+          </button>
+        </div>
+      )}
     </div>
   );
 
@@ -700,7 +1134,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           <div className="grid grid-cols-4 gap-2 mb-8">
             <div className="flex flex-col items-center">
               <div className="w-8 h-8 flex items-center justify-center rounded-md bg-gray-100 mb-1">
-                <CalendarIcon size={18} />
+                <Calendar size={18} />
               </div>
               <span className="text-xs">Date</span>
             </div>
@@ -736,7 +1170,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                   <span className="text-red-500 text-sm">−</span>
                 </button>
                 <div className="flex items-center">
-                  <CalendarIcon size={18} className="mr-2" />
+                  <Calendar size={18} className="mr-2" />
                   <span>Date</span>
                 </div>
               </div>
@@ -785,7 +1219,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                   <span className="text-green-500 text-sm">+</span>
                 </button>
                 <div className="flex items-center">
-                  <CalendarIcon size={18} className="mr-2" />
+                  <Calendar size={18} className="mr-2" />
                   <span>Deadline</span>
                 </div>
               </div>

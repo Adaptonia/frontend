@@ -63,26 +63,27 @@ export interface Goal {
   id: string;
   title: string;
   description?: string;
-  category: 'SCHEDULE' | 'FINANCE' | 'CAREER' | 'AUDIO_BOOKS';
+  category: 'finance' | 'schedule' | 'career' | 'audio_books';
   deadline?: string;
-  location?: string;
   tags?: string;
   reminderDate?: string;
-  isCompleted: boolean;
+  location?: string;
+  isCompleted?: boolean;
   userId: string;
   createdAt: string;
   updatedAt: string;
+  reminderSettings?: string; // JSON stringified reminder settings
 }
 
 export interface CreateGoalRequest {
   title: string;
   description?: string;
-  category: 'schedule' | 'finance' | 'career' | 'audio_books';
+  category: 'finance' | 'schedule' | 'career' | 'audio_books';
   deadline?: string;
-  location?: string;
   tags?: string;
-  reminderDate?: string;
-  isCompleted?: boolean;
+  reminderDate?: string; // Keep optional for backward compatibility
+  location?: string;
+  reminderSettings?: string; // JSON stringified reminder settings
 }
 
 export interface UpdateGoalRequest {
