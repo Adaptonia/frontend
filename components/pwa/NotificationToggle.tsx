@@ -46,7 +46,7 @@ export const NotificationToggle: React.FC = () => {
                   body: 'You will now receive reminders for your goals!',
                   icon: '/icons/icon-192x192.png',
                   badge: '/icons/icon-72x72.png',
-                  // @ts-ignore - vibrate is valid for mobile but not in TS types
+                  // @ts-expect-error - vibrate is valid for mobile but not in TS types
                   vibrate: [100, 50, 100]
                 });
               });

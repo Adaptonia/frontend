@@ -105,11 +105,11 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
   }
   
   try {
-    const registration = await navigator.serviceWorker.ready;
+    // const registration = await navigator.serviceWorker.ready;
     
     // You would typically get this from your server
     // This is a placeholder - replace with your actual VAPID public key
-    const publicVapidKey = 'YOUR_PUBLIC_VAPID_KEY';
+    // const publicVapidKey = 'YOUR_PUBLIC_VAPID_KEY';
     
     // const subscription = await registration.pushManager.subscribe({
     //   userVisibleOnly: true,
@@ -135,21 +135,21 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
 
 // Helper function to convert base64 string to Uint8Array
 // (required for applicationServerKey)
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
+// function urlBase64ToUint8Array(base64String: string): Uint8Array {
+//   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+//   const base64 = (base64String + padding)
+//     .replace(/-/g, '+')
+//     .replace(/_/g, '/');
 
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
+//   const rawData = window.atob(base64);
+//   const outputArray = new Uint8Array(rawData.length);
 
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
+//   for (let i = 0; i < rawData.length; ++i) {
+//     outputArray[i] = rawData.charCodeAt(i);
+//   }
   
-  return outputArray;
-}
+//   return outputArray;
+// }
 
 // Play a notification sound when a reminder is triggered
 export const playNotificationSound = async (): Promise<void> => {
