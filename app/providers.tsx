@@ -1,23 +1,26 @@
 'use client';
 
-import React from 'react';
-import { AuthProvider } from '@/context/AuthContext';
-import { WebSocketProvider } from '@/context/WebSocketContext';
+import { ReactNode, useEffect } from 'react';
 import { ThemeProvider } from 'next-themes';
-import { Toaster } from 'sonner';
-import { PWAProvider } from '@/src/context/PWAContext';
+import { registerServiceWorker } from '@/src/lib/pwa';
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ children }: { children: ReactNode }) {
+  // Register service worker for PWA functionality
+  useEffect(() => {
+    registerServiceWorker()
+      .then(registration => {
+        if (registration) {
+          console.log('Service worker registered successfully for PWA');
+        }
+      })
+      .catch(error => {
+        console.error('Error registering service worker:', error);
+      });
+  }, []);
+
   return (
-    <AuthProvider>
-      <WebSocketProvider>
-        <PWAProvider>
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-            {children}
-            <Toaster position="bottom-center" />
-          </ThemeProvider>
-        </PWAProvider>
-      </WebSocketProvider>
-    </AuthProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      {children}
+    </ThemeProvider>
   );
 } 

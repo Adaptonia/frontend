@@ -4,6 +4,7 @@ import { ArrowLeft, Camera } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { EditProfileType } from "@/lib/types";
+import Image from "next/image";
 
 
 
@@ -66,7 +67,9 @@ export default function EditProfile({ isOpen, onClose }: EditProfileType) {
               <div className="relative">
                 <div className="w-24 h-24 rounded-full bg-orange-300 overflow-hidden">
                   {user?.profilePicture ? (
-                    <img
+                    <Image
+                      width={100}
+                      height={100}
                       src={user.profilePicture}
                       alt="Profile"
                       className="w-full h-full object-cover"

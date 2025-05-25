@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { usePWA } from '@/src/context/PWAContext';
+import Image from 'next/image';
 
 export const PWAInstallPrompt: React.FC = () => {
   const { isPWAInstalled, promptInstall } = usePWA();
@@ -31,7 +32,7 @@ export const PWAInstallPrompt: React.FC = () => {
     <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-4 shadow-lg z-50 border-t border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <img src="/logo.png" alt="Adaptonia Logo" className="w-10 h-10" />
+          <Image width={40} height={40} src="/logo.png" alt="Adaptonia Logo" className="w-10 h-10" />
           <div>
             <h3 className="font-semibold dark:text-white">Install Adaptonia</h3>
             {isIOSDevice ? (

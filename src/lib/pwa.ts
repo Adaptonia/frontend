@@ -1,12 +1,12 @@
-// Check if the browser supports service workers
-export const isPWASupported = () => {
+// Check if the browser supports PWA features
+export const isPWASupported = (): boolean => {
   return 'serviceWorker' in navigator && 'PushManager' in window;
 };
 
-// Register service worker
+// Register the service worker
 export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration | null> => {
   if (!isPWASupported()) {
-    console.log('Service workers are not supported in this browser');
+    console.warn('Service workers are not supported in this browser');
     return null;
   }
 
@@ -15,27 +15,62 @@ export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration
       scope: '/',
       updateViaCache: 'none',
     });
-    
-    console.log('Service Worker registered successfully:', registration.scope);
-    
-    if (registration.installing) {
-      console.log('Service Worker installing');
-    } else if (registration.waiting) {
-      console.log('Service Worker installed but waiting');
-      // You can notify the user that there's an update available
-    } else if (registration.active) {
-      console.log('Service Worker active');
-    }
-    
+
+    // Reload the page if a new service worker is installed 
+    // to ensure the user gets the latest version
+    registration.onupdatefound = () => {
+      const installingWorker = registration.installing;
+      if (installingWorker) {
+        installingWorker.onstatechange = () => {
+          if (installingWorker.state === 'installed') {
+            if (navigator.serviceWorker.controller) {
+              // At this point, the updated precached content has been fetched,
+              // but the previous service worker will still serve the older
+              // content until all client tabs are closed.
+              console.log('New content is available; please refresh.');
+              
+              // Optionally show a notification to the user
+              if (window.confirm('New version available! Reload to update?')) {
+                window.location.reload();
+              }
+            } else {
+              // At this point, everything has been precached.
+              console.log('Content is cached for offline use.');
+            }
+          }
+        };
+      }
+    };
+
+    console.log('Service worker registered successfully');
     return registration;
   } catch (error) {
-    console.error('Service Worker registration failed:', error);
+    console.error('Service worker registration failed:', error);
     return null;
   }
 };
 
-// Convert a URL-safe base64 string to Uint8Array for the application server key
-export function urlBase64ToUint8Array(base64String: string): Uint8Array {
+// Request notification permission
+export const requestNotificationPermission = async (): Promise<NotificationPermission> => {
+  if (!('Notification' in window)) {
+    console.warn('This browser does not support notifications');
+    return 'denied';
+  }
+
+  if (Notification.permission === 'granted') {
+    return 'granted';
+  }
+
+  try {
+    return await Notification.requestPermission();
+  } catch (error) {
+    console.error('Error requesting notification permission:', error);
+    return 'denied';
+  }
+};
+
+// Helper function to convert base64 string to Uint8Array for VAPID key
+export const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding)
     .replace(/-/g, '+')
@@ -47,36 +82,22 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
   for (let i = 0; i < rawData.length; ++i) {
     outputArray[i] = rawData.charCodeAt(i);
   }
-  
+
   return outputArray;
-}
+};
 
 // Subscribe to push notifications
 export const subscribeToPushNotifications = async (
   registration: ServiceWorkerRegistration,
-  publicVapidKey: string
+  vapidPublicKey: string
 ): Promise<PushSubscription | null> => {
   try {
-    // Check for existing subscription
-    let subscription = await registration.pushManager.getSubscription();
-    
-    if (subscription) {
-      console.log('Already subscribed to push notifications');
-      return subscription;
-    }
-    
-    // Create new subscription
-    subscription = await registration.pushManager.subscribe({
+    const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicVapidKey),
+      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
     });
-    
-    console.log('Subscribed to push notifications:', subscription);
-    
-    // Here you would typically send the subscription to your backend
-    // This depends on your backend setup
-    // await sendSubscriptionToBackend(subscription);
-    
+
+    console.log('Push notification subscription successful');
     return subscription;
   } catch (error) {
     console.error('Failed to subscribe to push notifications:', error);
@@ -90,22 +111,15 @@ export const unsubscribeFromPushNotifications = async (
 ): Promise<boolean> => {
   try {
     const subscription = await registration.pushManager.getSubscription();
-    
-    if (!subscription) {
-      console.log('No subscription to unsubscribe from');
+
+    if (subscription) {
+      await subscription.unsubscribe();
+      console.log('Successfully unsubscribed from push notifications');
       return true;
     }
-    
-    // Unsubscribe
-    const unsubscribed = await subscription.unsubscribe();
-    
-    if (unsubscribed) {
-      console.log('Successfully unsubscribed from push notifications');
-      // Here you would typically inform your backend
-      // await removeSubscriptionFromBackend(subscription);
-    }
-    
-    return unsubscribed;
+
+    console.log('No push notification subscription to unsubscribe from');
+    return false;
   } catch (error) {
     console.error('Failed to unsubscribe from push notifications:', error);
     return false;
@@ -120,25 +134,4 @@ export const checkNotificationPermission = async (): Promise<NotificationPermiss
   }
   
   return Notification.permission;
-};
-
-// Request permission for notifications
-export const requestNotificationPermission = async (): Promise<NotificationPermission> => {
-  if (!('Notification' in window)) {
-    console.log('This browser does not support notifications');
-    return 'denied';
-  }
-  
-  // Check if permission is already granted
-  if (Notification.permission === 'granted') {
-    return 'granted';
-  }
-  
-  try {
-    const permission = await Notification.requestPermission();
-    return permission;
-  } catch (error) {
-    console.error('Error requesting notification permission:', error);
-    return 'denied';
-  }
 }; 

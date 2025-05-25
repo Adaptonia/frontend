@@ -1,92 +1,99 @@
-// Service Worker Version
-const SW_VERSION = 'v1.0.0';
-const CACHE_NAME = `adaptonia-app-${SW_VERSION}`;
-
-// Assets to cache initially
-const INITIAL_CACHED_RESOURCES = [
+// Service Worker for Adaptonia PWA
+const CACHE_NAME = 'adaptonia-cache-v1';
+const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/logo.png',
-  '/blueLogo.png',
-  '/Mlogo.png',
-  // Add your app's essential files here
+  '/favicon.ico',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
+  // Add other important assets here
 ];
 
-// Install Event - Cache the initial resources
+// Install event - cache basic assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Installing and caching initial resources');
-      return cache.addAll(INITIAL_CACHED_RESOURCES);
-    })
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('Opened cache');
+        return cache.addAll(urlsToCache);
+      })
+      .catch(err => console.error('Cache open failed:', err))
   );
-  // Force the waiting service worker to become the active service worker
+  // Activate immediately
   self.skipWaiting();
 });
 
-// Activate Event - Clean up old caches
+// Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
+  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('[Service Worker] Removing old cache:', cacheName);
+          if (cacheWhitelist.indexOf(cacheName) === -1) {
             return caches.delete(cacheName);
           }
+          return null;
         })
       );
-    }).then(() => {
-      console.log('[Service Worker] Activated and claiming clients');
-      // Take control of all clients
-      return self.clients.claim();
     })
   );
+  // Claim clients to ensure updates are applied immediately
+  self.clients.claim();
 });
 
-// Fetch Event - Serve from cache, fall back to network
+// Fetch event - network first with cache fallback strategy
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests and Appwrite API requests (let them go directly to network)
+  // Skip non-GET requests
+  if (event.request.method !== 'GET') return;
+  
+  // Skip browser extensions and chrome-extension requests
   if (
-    event.request.method !== 'GET' || 
-    event.request.url.includes('appwrite') ||
-    event.request.url.includes('websocket')
+    event.request.url.startsWith('chrome-extension') ||
+    event.request.url.includes('extension') ||
+    event.request.url.includes('chrome')
   ) {
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      // Return cached response if found
-      if (response) {
-        return response;
-      }
-
-      // Clone the request (it's a one-time use stream)
-      const fetchRequest = event.request.clone();
-
-      // Make network request
-      return fetch(fetchRequest).then((response) => {
-        // Check if valid response
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
-        }
-
-        // Clone the response (it's a one-time use stream)
+    fetch(event.request)
+      .then((response) => {
+        // Clone the response since we'll use it twice
         const responseToCache = response.clone();
-
-        // Cache the fetched response
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-
+        
+        // Open the cache and store the new response
+        caches.open(CACHE_NAME)
+          .then((cache) => {
+            // Only cache successful responses
+            if (response.status === 200) {
+              cache.put(event.request, responseToCache);
+            }
+          });
+          
         return response;
-      }).catch((error) => {
-        console.error('[Service Worker] Fetch failed:', error);
-        // You could return a custom offline page here
-      });
-    })
+      })
+      .catch(() => {
+        // If network fetch fails, try to serve from cache
+        return caches.match(event.request)
+          .then((cachedResponse) => {
+            if (cachedResponse) {
+              return cachedResponse;
+            }
+            
+            // For navigation requests, return the cached homepage as a fallback
+            if (event.request.mode === 'navigate') {
+              return caches.match('/');
+            }
+            
+            // Otherwise fail
+            return new Response('Network error happened', {
+              status: 408,
+              headers: { 'Content-Type': 'text/plain' }
+            });
+          });
+      })
   );
 });
 
