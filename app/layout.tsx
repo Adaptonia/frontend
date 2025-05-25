@@ -3,7 +3,6 @@ import { Poppins } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { ThemeProvider } from "@/src/context/ThemeContext";
-import Script from "next/script";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -41,12 +40,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className="h-full">
       <head>
-        {/* Early loading script to prevent PWA white flash */}
-        <Script
-          id="prevent-flash"
-          strategy="beforeInteractive"
-          src="/noflash.js"
-        />
         <meta name="application-name" content="Adaptonia" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -57,8 +50,6 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar" content="#229FDB" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-        {/* Ensure immediate PWA loading */}
-        <link rel="preload" as="image" href="/icons/icon-192x192.png" />
       </head>
       <body
         className={`${poppins.variable} font-sans antialiased h-full overscroll-none full-screen`}

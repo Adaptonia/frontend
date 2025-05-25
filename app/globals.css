@@ -243,34 +243,4 @@ textarea,
     background-color: var(--background);
     z-index: -1;
   }
-  
-  /* Force dark theme in standalone mode to ensure consistent appearance */
-  html {
-    background-color: #000000 !important;
-    color: #ffffff !important;
-  }
-  
-  body {
-    background-color: #000000 !important;
-    color: #ffffff !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-  }
-  
-  /* Ensure the app renders immediately in PWA mode */
-  #__next, 
-  main, 
-  .app-container {
-    background-color: #000000 !important;
-    color: #ffffff !important;
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-  }
-  
-  /* Remove any loading spinners that might delay rendering */
-  .loading-spinner,
-  .initial-loader {
-    display: none !important;
-  }
 }

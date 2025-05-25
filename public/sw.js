@@ -1,28 +1,24 @@
 // Service Worker for Adaptonia PWA
-const CACHE_NAME = 'adaptonia-cache-v2';
+const CACHE_NAME = 'adaptonia-cache-v1';
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
-  '/noflash.js', // Important for PWA startup
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
-  '/_next/static/css/app/layout.css', // Critical CSS
-  '/globals.css',
   // Add other important assets here
 ];
 
 // Install event - cache basic assets
 self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Installing new service worker');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('[Service Worker] Pre-caching critical assets');
+        console.log('Opened cache');
         return cache.addAll(urlsToCache);
       })
-      .catch(err => console.error('[Service Worker] Cache open failed:', err))
+      .catch(err => console.error('Cache open failed:', err))
   );
   // Activate immediately
   self.skipWaiting();
@@ -30,31 +26,25 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activating new service worker');
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheWhitelist.indexOf(cacheName) === -1) {
-            console.log('[Service Worker] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
           return null;
         })
       );
     })
-    .then(() => {
-      console.log('[Service Worker] Claiming clients');
-      return self.clients.claim();
-    })
   );
+  // Claim clients to ensure updates are applied immediately
+  self.clients.claim();
 });
 
-// Fetch event - cache-first for static assets, network-first for API/dynamic content
+// Fetch event - network first with cache fallback strategy
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-  
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
   
@@ -67,114 +57,38 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Special handling for critical resources - cache-first strategy
-  const isCriticalResource = 
-    url.pathname.endsWith('.css') || 
-    url.pathname.endsWith('.js') || 
-    url.pathname.endsWith('.png') || 
-    url.pathname.endsWith('.jpg') || 
-    url.pathname.endsWith('.svg') || 
-    url.pathname.endsWith('.ico') ||
-    url.pathname.endsWith('manifest.json') ||
-    url.pathname.endsWith('noflash.js');
-
-  if (isCriticalResource) {
-    event.respondWith(
-      caches.match(event.request)
-        .then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          
-          return fetch(event.request)
-            .then((response) => {
-              // Clone the response
-              const responseToCache = response.clone();
-              
-              // Cache the fetched response
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-              
-              return response;
-            })
-            .catch(() => {
-              // For images or other assets, return a fallback
-              if (url.pathname.endsWith('.png') || url.pathname.endsWith('.jpg')) {
-                return caches.match('/icons/icon-192x192.png');
-              }
-              
-              return new Response('Network error occurred', {
-                status: 408,
-                headers: { 'Content-Type': 'text/plain' }
-              });
-            });
-        })
-    );
-    return;
-  }
-
-  // For HTML navigation requests (pages) - network-first strategy
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          // Clone the response to store in cache
-          const responseToCache = response.clone();
-          
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-            
-          return response;
-        })
-        .catch(() => {
-          // If network fails, try to serve from cache
-          return caches.match(event.request)
-            .then((cachedResponse) => {
-              if (cachedResponse) {
-                return cachedResponse;
-              }
-              
-              // If no cached version, return cached homepage as fallback
-              return caches.match('/');
-            });
-        })
-    );
-    return;
-  }
-
-  // Default network-first strategy for other requests
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Don't cache non-successful responses
-        if (!response || response.status !== 200) {
-          return response;
-        }
-        
-        // Clone the response
+        // Clone the response since we'll use it twice
         const responseToCache = response.clone();
         
-        // Cache the successful response
+        // Open the cache and store the new response
         caches.open(CACHE_NAME)
           .then((cache) => {
-            cache.put(event.request, responseToCache);
+            // Only cache successful responses
+            if (response.status === 200) {
+              cache.put(event.request, responseToCache);
+            }
           });
           
         return response;
       })
       .catch(() => {
-        // If network fails, try to serve from cache
+        // If network fetch fails, try to serve from cache
         return caches.match(event.request)
           .then((cachedResponse) => {
             if (cachedResponse) {
               return cachedResponse;
             }
             
-            // Otherwise fail gracefully
-            return new Response('Network error occurred', {
+            // For navigation requests, return the cached homepage as a fallback
+            if (event.request.mode === 'navigate') {
+              return caches.match('/');
+            }
+            
+            // Otherwise fail
+            return new Response('Network error happened', {
               status: 408,
               headers: { 'Content-Type': 'text/plain' }
             });
