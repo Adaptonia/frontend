@@ -112,6 +112,8 @@ const Dashboard = () => {
   }
 
   const handleGoalClick = (goal: Goal) => {
+    console.log('Goal clicked:', goal);
+  console.log('Goal has properties:', Object.keys(goal));
     setActiveGoal(goal);
     setIsEditModalOpen(true);
   };

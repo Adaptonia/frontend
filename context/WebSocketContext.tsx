@@ -48,7 +48,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (socket) {
         socket.close();
         setSocket(null);
-        setIsConnected(false);
+    setIsConnected(false);
       }
       return;
     }
@@ -162,7 +162,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             const newSet = new Set(prev);
             if (isOnline) {
               newSet.add(userId);
-            } else {
+    } else {
               newSet.delete(userId);
             }
             return newSet;

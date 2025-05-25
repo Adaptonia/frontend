@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { createGoal } from '@/src/services/appwrite/database';
 import { updateGoal } from '@/src/services/appwrite';
+import { useAuth } from '@/context/AuthContext';
 
 // Action button component
 const ActionButton: React.FC<ActionButtonProps> = ({ icon, label, onClick, selected }) => (
@@ -154,6 +155,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
   mode = 'create'
 }) => {
   const router = useRouter();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<ModalTab>('main');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -174,6 +176,8 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
   
   const modalRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+
 
   // Reset form when modal opens/closes or initialData changes
   useEffect(() => {
@@ -265,7 +269,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
         toast.success('Goal updated successfully');
       } else {
         // Create new goal
-        result = await createGoal(goalData, initialData?.userId || 'system');
+        result = await createGoal(goalData, user?.id || initialData?.userId ||'system');
         toast.success('Goal created successfully');
       }
       

@@ -41,17 +41,17 @@ export default function AdaptoniaOnboarding() {
     <div className="relative w-full h-full">
       <Image
         src="/first-onboarding-one/Group 95.png"
-        alt="food"
+                  alt="food"
         className="object-contain"
         fill
         priority
-      />
-    </div>
-  </div>
+                />
+              </div>
+            </div>
   <div className="relative z-10 h-full">
     {/* Empty div to maintain proper spacing and ensure the content area remains accessible */}
-  </div>
-</div>
+          </div>
+        </div>
       ),
       description:
         "Lorem ipsum dolor sit amet consectetur. At laoreet morbi amet aliquam arcu pharetra tellus elit. Eget integer duis tortor amet purus.",
@@ -69,13 +69,13 @@ export default function AdaptoniaOnboarding() {
               className="object-contain"
               fill
               priority
-            />
-          </div>
-        </div>
+                  />
+                </div>
+              </div>
         <div className="relative z-10 h-full">
           {/* Empty div to maintain proper spacing and ensure the content area remains accessible */}
         </div>
-      </div>
+        </div>
       ),
       description:
         "Lorem ipsum dolor sit amet consectetur. At laoreet morbi amet aliquam arcu pharetra tellus elit. Eget integer duis tortor amet purus.",
@@ -94,7 +94,7 @@ export default function AdaptoniaOnboarding() {
               height={1000}
               priority
             />
-          </div>
+            </div>
           <div className="relative z-10 h-full">
             {/* Empty div to maintain proper spacing and ensure the content area remains accessible */}
           </div>
@@ -119,7 +119,7 @@ export default function AdaptoniaOnboarding() {
   };
 
   return (
-    <div className='relative extend-to-edges h-100dvh w-full overflow-hidden bg-[#229FDB]'>
+    <div className='relative h-screen w-full overflow-hidden bg-[#229FDB]'>
       {/* Content Area */}
       <div className="h-full flex flex-col px-6 pt-6 pb-16">
         {screens[currentScreen].type === "signup" ? (
@@ -163,8 +163,8 @@ export default function AdaptoniaOnboarding() {
                     cx="38" 
                     cy="38" 
                     r="34" 
-                    fill="none" 
-                    stroke="#3B82F6" 
+                  fill="none"
+                  stroke="#3B82F6"
                     strokeWidth="4" 
                     strokeDasharray="213.52" 
                     strokeDashoffset={213.52 - (213.52 * progress / 100)} 
@@ -179,7 +179,7 @@ export default function AdaptoniaOnboarding() {
                   aria-label="Next"
                 >
                   {/* No arrow icon here */}
-                </button>
+              </button>
               </div>
             </div>
           </div>

@@ -128,60 +128,42 @@
   }
 }
 
-/* PWA Full Screen Setup */
-html {
-  height: 100%;
-  /* Use all available screen space */
-  height: -webkit-fill-available;
-  /* Support for iOS */
-  height: 100vh;
-  height: 100dvh;
-  /* Dynamic viewport height */
-  overflow: hidden;
-  overscroll-behavior: none;
-}
-
+/* Prevent pull-to-refresh and make app feel native */
+/* html,
 body {
+  position: fixed;
+  width: 100%;
   height: 100%;
-  height: -webkit-fill-available;
-  height: 100vh;
-  height: 100dvh;
-  margin: 0;
-  padding: 0;
   overflow: hidden;
   overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
-  /* Account for safe areas - the notch, home indicator, etc. */
+  touch-action: none;
+  padding: 0;
+  margin: 0;
   padding-top: var(--sat);
   padding-right: var(--sar);
   padding-bottom: var(--sab);
   padding-left: var(--sal);
-}
-
-/* Main app container should fill remaining space */
-#__next {
-  height: 100%;
-  overflow: hidden;
-}
+} */
 
 /* Enable scrolling for content areas */
-main,
+/* main,
 [role="main"],
 .scrollable {
   height: 100%;
-  overscroll-behavior-y: contain;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-}
+  touch-action: pan-y;
+} */
 
 /* Hide scrollbars while keeping functionality */
 .scrollable {
-  scrollbar-width: none;
+  scrollbar-width: none; 
   -ms-overflow-style: none;
 }
 
 .scrollable::-webkit-scrollbar {
-  display: none;
+  display: none; /* Chrome, Safari, Opera */
 }
 
 /* Prevent text selection for app-like feel */
@@ -195,51 +177,24 @@ main,
 /* Allow text selection in specific elements */
 input,
 textarea,
-[contenteditable="true"],
-.selectable {
+[contenteditable="true"] {
   -webkit-user-select: text;
   user-select: text;
 }
 
-/* Page container for full viewport usage */
-.page-container {
-  height: 100%;
-  height: -webkit-fill-available;
-  height: 100vh;
-  height: 100dvh;
-  width: 100%;
-  overflow: hidden;
-  position: relative;
-}
-
-/* Content area that accounts for safe areas */
-.content-area {
-  height: calc(100% - var(--sat) - var(--sab));
-  width: calc(100% - var(--sal) - var(--sar));
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
-}
-
-/* Utility class for pages that need to extend behind safe areas */
-.extend-to-edges {
-  margin-top: calc(-1 * var(--sat));
-  margin-right: calc(-1 * var(--sar));
-  margin-bottom: calc(-1 * var(--sab));
-  margin-left: calc(-1 * var(--sal));
+/* Full-screen container class */
+.full-screen {
+  min-height: 100vh;
+  /* Fill the viewport and account for safe areas */
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
+  width: 100vw;
+  position: fixed;
+  top: 0;
+  left: 0;
+  /* Account for safe areas */
   padding-top: var(--sat);
   padding-right: var(--sar);
   padding-bottom: var(--sab);
   padding-left: var(--sal);
-}
-
-/* For status bar background matching */
-.status-bar-background {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: var(--sat);
-  z-index: 9999;
-  background: inherit;
 }
