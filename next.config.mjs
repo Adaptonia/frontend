@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
   
   // Ensure proper handling of PWA routes
   async headers() {
@@ -62,7 +61,6 @@ const nextConfig = {
   
   // Experimental features
   experimental: {
-    optimizeCss: true,
     scrollRestoration: true,
   },
 };
