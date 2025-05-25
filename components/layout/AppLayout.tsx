@@ -10,7 +10,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   return (
-    <div className="flex flex-col h-screen">
+    <div className="app-container">
       <div className="flex overflow-hidden pt-16">
         {/* Icon Sidebar (Left) - stays fixed */}
         <div className="sticky top-0 h-screen">

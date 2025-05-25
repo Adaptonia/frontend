@@ -46,11 +46,13 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Adaptonia" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
+        <meta name="theme-color" content="#229FDB" />
+        <meta name="apple-mobile-web-app-status-bar" content="#229FDB" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body
-        className={`${poppins.variable} font-sans antialiased h-full overscroll-none`}
+        className={`${poppins.variable} font-sans antialiased h-full overscroll-none full-screen`}
       >
         <Providers>
           <ThemeProvider>

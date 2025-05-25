@@ -185,16 +185,44 @@ textarea,
 /* Full-screen container class */
 .full-screen {
   min-height: 100vh;
-  /* Fill the viewport and account for safe areas */
   min-height: -webkit-fill-available;
   min-height: 100dvh;
   width: 100vw;
   position: fixed;
   top: 0;
   left: 0;
-  /* Account for safe areas */
-  padding-top: var(--sat);
-  padding-right: var(--sar);
-  padding-bottom: var(--sab);
-  padding-left: var(--sal);
+  padding-top: env(safe-area-inset-top);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  -webkit-touch-callout: none;
+  overflow: hidden;
+}
+
+/* Specifically for iOS status bar */
+@supports (-webkit-touch-callout: none) {
+  .full-screen {
+    padding-top: constant(safe-area-inset-top);
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* For app containers that need to set a background that extends under the status bar */
+.app-container {
+  background-color: var(--app-bg-color, #229FDB);
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Fix iOS 100vh issue */
+@supports (-webkit-touch-callout: none) {
+  body, 
+  html {
+    height: -webkit-fill-available;
+  }
 }
