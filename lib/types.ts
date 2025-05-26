@@ -84,6 +84,7 @@ export interface CreateGoalRequest {
   reminderDate?: string; // Keep optional for backward compatibility
   location?: string;
   reminderSettings?: string; // JSON stringified reminder settings
+  isCompleted?: boolean;
 }
 
 export interface UpdateGoalRequest {
