@@ -13,7 +13,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <AuthProvider>
       <WebSocketProvider>
         <PWAProvider>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
             {children}
             <Toaster position="bottom-center" />
             <ServiceWorkerRegistration />
