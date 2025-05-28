@@ -2,7 +2,6 @@
 
 import InputField from "@/components/reuseable/InputField";
 import { registerUser } from "@/src/services/appwrite";
-import axios from "axios";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
