@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
-import { Poppins } from "next/font/google"; 
+import { Poppins } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { ThemeProvider } from "@/src/context/ThemeContext";
+import ServiceWorkerRegistration from "./sw-register";
+import { ReminderChecker } from "@/src/components/ReminderChecker";
+// import { TestReminder } from "@/src/components/TestReminder";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -14,7 +17,6 @@ export const metadata: Metadata = {
   title: "Adaptonia - Chat & Collaboration",
   description: "Chat, collaborate, and manage tasks with Adaptonia",
   manifest: "/manifest.json",
-  
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -58,6 +60,14 @@ export default function RootLayout({
         <Providers>
           <ThemeProvider>
             {children}
+            {/* Service Worker Registration for PWA and notifications */}
+            <ServiceWorkerRegistration />
+            {/* Background Reminder Checker - runs globally */}
+            <ReminderChecker />
+            {/* Test Reminder Component - for debugging (remove in production) */}
+            {/* <div className="fixed bottom-4 right-4 z-50">
+              <TestReminder />
+            </div> */}
           </ThemeProvider>
         </Providers>
       </body>

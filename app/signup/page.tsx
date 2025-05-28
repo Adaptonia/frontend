@@ -1,15 +1,18 @@
 'use client'
 
 import InputField from "@/components/reuseable/InputField";
+import { registerUser } from "@/src/services/appwrite";
 import axios from "axios";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 
 const Page = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const router = useRouter()
 
   
 
@@ -17,19 +20,19 @@ const Page = () => {
     e.preventDefault()
 
     try {
-         const res = await axios.post('/api/auth/register', {
-           email,
-           password,
-           confirmPassword
-        })
+         const account = await registerUser(email,
+          password,)
 
-        console.log(res.data)
+          if(account){
+            router.push('/login')
+          }
+
+        console.log(account)
     } catch (error){
         console.error(error)
 
     }
 
-   
 
   }
   const handleGoogleSignIn = () => {

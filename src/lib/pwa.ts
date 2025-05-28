@@ -30,9 +30,9 @@ export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration
               console.log('New content is available; please refresh.');
               
               // Optionally show a notification to the user
-              if (window.confirm('New version available! Reload to update?')) {
-                window.location.reload();
-              }
+              // if (window.confirm('New version available! Reload to update?')) {
+              //   window.location.reload();
+              // }
             } else {
               // At this point, everything has been precached.
               console.log('Content is cached for offline use.');
