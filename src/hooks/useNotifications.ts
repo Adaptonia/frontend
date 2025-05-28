@@ -8,7 +8,7 @@ import {
   cancelReminderNotification,
   playNotificationSound
 } from '@/app/sw-register';
-import { CreateReminderRequest, Reminder, reminderService } from '../services/appwrite/reminderService';
+import { CreateReminderRequest, reminderService } from '../services/appwrite/reminderService';
 
 export interface NotificationState {
   permission: NotificationPermission | null;
