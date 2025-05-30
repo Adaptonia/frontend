@@ -127,7 +127,7 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
                 text: inviteMessage,
                 url: 'https://adaptonia.app/invite'
               })
-            } catch (shareError) {
+            } catch {
               console.log('Share cancelled or failed for:', contact.name)
             }
           }

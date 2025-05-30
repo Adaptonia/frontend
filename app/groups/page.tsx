@@ -31,6 +31,14 @@ import {
 } from '../../components/SkeletonLoader'
 import BottomNav from '@/components/dashboard/BottomNav'
 
+interface Contact {
+  id: string
+  name: string
+  phoneNumbers?: string[]
+  emailAddresses?: string[]
+  selected?: boolean
+}
+
 const GroupsPageContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('channels')
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null)
@@ -42,7 +50,6 @@ const GroupsPageContent: React.FC = () => {
 
   // Get authenticated user
   const { user, loading: authLoading } = useAuth()
-  console.log('user', user)
 
   // Utility hooks
   const { theme, toggleTheme } = useTheme()
@@ -51,6 +58,128 @@ const GroupsPageContent: React.FC = () => {
   const { saveFocus, restoreFocus } = useFocusManagement()
   const isMobile = useMediaQuery('(max-width: 768px)')
   const debouncedSearchQuery = useDebounce(searchQuery, 300)
+
+  // Custom hooks - initialize with undefined when user not ready
+  const {
+    userChannels,
+    publicChannels,
+    isLoading: channelsLoading,
+    isCreating,
+    isJoining,
+    createChannel,
+    joinChannel,
+    error: channelsError,
+    clearError: clearChannelsError
+  } = useChannels(userInitialized ? user?.id : undefined)
+
+  const {
+    messages,
+    isLoading: messagesLoading,
+    isSending,
+    sendMessage,
+    error: messagesError,
+    clearError: clearMessagesError
+  } = useChannelMessages(selectedChannelId, userInitialized ? user?.id : undefined)
+
+  const {
+    startTyping,
+    stopTyping,
+    typingText
+  } = useTypingIndicator(selectedChannelId, userInitialized ? user?.id : undefined, user?.name)
+
+  // Calculate total unread count for sidebar badge
+  const totalUnreadCount = useMemo(() => 
+    userChannels.reduce((total, uc) => total + (uc.unreadCount || 0), 0),
+    [userChannels]
+  )
+
+  // Filtered messages based on search
+  const filteredMessages = useMemo(() => {
+    if (!debouncedSearchQuery) return messages
+    return messages.filter(msg =>
+      msg.content.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      msg.sender.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+    )
+  }, [messages, debouncedSearchQuery])
+
+  // Refs to track if errors have been shown to prevent duplicates
+  const channelsErrorShownRef = useRef<string | null>(null)
+  const messagesErrorShownRef = useRef<string | null>(null)
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    'cmd+k': () => {
+      setShowSearch(true)
+      announce('Search opened', 'polite')
+    },
+    'escape': () => {
+      if (showSearch) {
+        setShowSearch(false)
+        setSearchQuery('')
+        announce('Search closed', 'polite')
+      }
+      if (isCreateModalOpen) {
+        setIsCreateModalOpen(false)
+        restoreFocus()
+      }
+      if (isContactsModalOpen) {
+        setIsContactsModalOpen(false)
+        restoreFocus()
+      }
+    },
+    'cmd+shift+n': () => {
+      if (user?.role === 'admin') {
+        saveFocus()
+        setIsCreateModalOpen(true)
+        announce('Create channel modal opened', 'polite')
+      }
+    },
+    'cmd+shift+t': () => {
+      toggleTheme()
+      announce(`Switched to ${theme === 'light' ? 'dark' : 'light'} theme`, 'polite')
+    }
+  })
+
+  // Error handling
+  useEffect(() => {
+    if (channelsError && channelsError !== channelsErrorShownRef.current) {
+      channelsErrorShownRef.current = channelsError
+      addToast({
+        type: 'error',
+        title: 'Channel Error',
+        message: channelsError,
+        action: {
+          label: 'Retry',
+          onClick: () => {
+            clearChannelsError()
+            channelsErrorShownRef.current = null
+          }
+        }
+      })
+    } else if (!channelsError) {
+      channelsErrorShownRef.current = null
+    }
+  }, [channelsError, addToast, clearChannelsError])
+
+  useEffect(() => {
+    if (messagesError && messagesError !== messagesErrorShownRef.current) {
+      messagesErrorShownRef.current = messagesError
+      addToast({
+        type: 'error',
+        title: 'Message Error',
+        message: messagesError,
+        action: {
+          label: 'Retry',
+          onClick: () => {
+            clearMessagesError()
+            messagesErrorShownRef.current = null
+          }
+        }
+      })
+    } else if (!messagesError) {
+      messagesErrorShownRef.current = null
+    }
+  }, [messagesError, addToast, clearMessagesError])
 
   // Initialize user in database on component mount
   useEffect(() => {
@@ -118,86 +247,6 @@ const GroupsPageContent: React.FC = () => {
       </div>
     )
   }
-
-  // Custom hooks - only initialize after user is ready
-  const {
-    userChannels,
-    publicChannels,
-    isLoading: channelsLoading,
-    isCreating,
-    isJoining,
-    createChannel,
-    joinChannel,
-    leaveChannel,
-    error: channelsError,
-    clearError: clearChannelsError
-  } = useChannels(userInitialized ? user.id : undefined)
-
-  const {
-    messages,
-    isLoading: messagesLoading,
-    isSending,
-    sendMessage,
-    error: messagesError,
-    clearError: clearMessagesError
-  } = useChannelMessages(selectedChannelId, userInitialized ? user.id : undefined)
-
-  const {
-    startTyping,
-    stopTyping,
-    typingText
-  } = useTypingIndicator(selectedChannelId, userInitialized ? user.id : undefined, user.name)
-
-  // const { isOnline, onlineUsers } = useOnlineStatus(userInitialized ? user.id : undefined)
-
-  // Calculate total unread count for sidebar badge
-  const totalUnreadCount = useMemo(() => 
-    userChannels.reduce((total, uc) => total + (uc.unreadCount || 0), 0),
-    [userChannels]
-  )
-
-  // Filtered messages based on search
-  const filteredMessages = useMemo(() => {
-    if (!debouncedSearchQuery) return messages
-    return messages.filter(msg =>
-      msg.content.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-      msg.sender.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-    )
-  }, [messages, debouncedSearchQuery])
-
-  // Keyboard shortcuts
-  useKeyboardShortcuts({
-    'cmd+k': () => {
-      setShowSearch(true)
-      announce('Search opened', 'polite')
-    },
-    'escape': () => {
-      if (showSearch) {
-        setShowSearch(false)
-        setSearchQuery('')
-        announce('Search closed', 'polite')
-      }
-      if (isCreateModalOpen) {
-        setIsCreateModalOpen(false)
-        restoreFocus()
-      }
-      if (isContactsModalOpen) {
-        setIsContactsModalOpen(false)
-        restoreFocus()
-      }
-    },
-    'cmd+shift+n': () => {
-      if (user.role === 'admin') {
-        saveFocus()
-        setIsCreateModalOpen(true)
-        announce('Create channel modal opened', 'polite')
-      }
-    },
-    'cmd+shift+t': () => {
-      toggleTheme()
-      announce(`Switched to ${theme === 'light' ? 'dark' : 'light'} theme`, 'polite')
-    }
-  })
 
   // Handle tab changes
   const handleTabChange = (tab: string) => {
@@ -293,7 +342,7 @@ const GroupsPageContent: React.FC = () => {
   }
 
   // Handle contact selection (for chat tab)
-  const handleContactSelect = (contactId: string) => {
+  const handleContactSelect = () => {
     addToast({
       type: 'info',
       title: 'Direct Message',
@@ -309,7 +358,7 @@ const GroupsPageContent: React.FC = () => {
   }
 
   // Handle contacts imported
-  const handleContactsImported = (contacts: any[]) => {
+  const handleContactsImported = (contacts: Contact[]) => {
     restoreFocus()
     addToast({
       type: 'success',
@@ -318,51 +367,6 @@ const GroupsPageContent: React.FC = () => {
     })
     announce(`${contacts.length} contacts imported`, 'assertive')
   }
-
-  // Refs to track if errors have been shown to prevent duplicates
-  const channelsErrorShownRef = useRef<string | null>(null)
-  const messagesErrorShownRef = useRef<string | null>(null)
-
-  // Error handling
-  useEffect(() => {
-    if (channelsError && channelsError !== channelsErrorShownRef.current) {
-      channelsErrorShownRef.current = channelsError
-      addToast({
-        type: 'error',
-        title: 'Channel Error',
-        message: channelsError,
-        action: {
-          label: 'Retry',
-          onClick: () => {
-            clearChannelsError()
-            channelsErrorShownRef.current = null
-          }
-        }
-      })
-    } else if (!channelsError) {
-      channelsErrorShownRef.current = null
-    }
-  }, [channelsError, addToast, clearChannelsError])
-
-  useEffect(() => {
-    if (messagesError && messagesError !== messagesErrorShownRef.current) {
-      messagesErrorShownRef.current = messagesError
-      addToast({
-        type: 'error',
-        title: 'Message Error',
-        message: messagesError,
-        action: {
-          label: 'Retry',
-          onClick: () => {
-            clearMessagesError()
-            messagesErrorShownRef.current = null
-          }
-        }
-      })
-    } else if (!messagesError) {
-      messagesErrorShownRef.current = null
-    }
-  }, [messagesError, addToast, clearMessagesError])
 
   // Get selected channel info
   const selectedChannel = userChannels.find(uc => uc.channel?.$id === selectedChannelId)?.channel ||
