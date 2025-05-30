@@ -37,32 +37,32 @@ interface MemberManagementPanelProps {
   onRemoveMember?: (userId: string) => Promise<boolean>
   onChangeRole?: (userId: string, role: string) => Promise<boolean>
   onInviteMember?: (email: string, role: string) => Promise<void>
+  canManageMembers: boolean
 }
 
 const MemberManagementPanel: React.FC<MemberManagementPanelProps> = ({
   isOpen,
   onClose,
-  // channelId,
+  channelId,
   channelName,
   currentUserRole,
   members = [],
   onAddMember,
   onRemoveMember,
   onChangeRole,
-  onInviteMember
+  onInviteMember,
+  canManageMembers
 }) => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedRole, setSelectedRole] = useState<'member' | 'admin'>('member')
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isInviting, setIsInviting] = useState(false)
   const [showAddMember, setShowAddMember] = useState(false)
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   // Filter members based on search
   const filteredMembers = useMemo(() => {

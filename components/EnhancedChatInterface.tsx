@@ -3,20 +3,22 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
+  Hash, 
   Search, 
-  MessageSquare, 
   Plus, 
   Smile, 
   Send, 
-  Mic,
-  ArrowDown,
+  Mic, 
+  ArrowLeft, 
+  Users, 
+  MoreVertical,
   Reply,
-  X,
-  Upload,
-  Image as ImageIcon,
-  Settings,
-  Users,
-  ArrowLeft
+  Heart,
+  ThumbsUp,
+  Laugh,
+  Angry,
+  File,
+  Paperclip
 } from 'lucide-react'
 import { MessageWithSender, SendMessageData, Channel } from '../types/channel'
 import { ChatInterfaceSkeleton } from './SkeletonLoader'
@@ -270,7 +272,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
               <ArrowLeft size={20} className="text-gray-600" />
             </button>
           )}
-          <MessageSquare size={20} className="text-gray-600" />
+          <Hash size={20} className="text-gray-600" />
           <h1 className="text-lg font-semibold">{channelName}</h1>
           <span className="text-gray-400">💬</span>
         </div>
@@ -287,7 +289,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
             onClick={() => setShowMemberPanel(!showMemberPanel)}
           />
           {canManageChannel && (
-            <Settings 
+            <MoreVertical 
               size={20} 
               className="text-gray-500 cursor-pointer hover:text-gray-700"
             />
@@ -344,7 +346,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
         {!isUserMember && (
           <div className="text-center py-8">
             <div className="max-w-md mx-auto bg-gray-50 rounded-lg p-6 border border-gray-200">
-              <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <Hash className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">Join to see messages</h3>
               <p className="text-gray-600 text-sm">
                 This channel has message history, but you need to join to view and participate in conversations.
@@ -366,7 +368,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
                   className="absolute inset-0 bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg flex items-center justify-center z-10"
                 >
                   <div className="text-center">
-                    <Upload className="mx-auto mb-2 text-blue-500" size={32} />
+                    <File className="mx-auto mb-2 text-blue-500" size={32} />
                     <p className="text-blue-700 font-medium">Drop files here to upload</p>
                   </div>
                 </motion.div>
@@ -538,7 +540,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
                 onClick={() => setReplyingTo(null)}
                 className="text-gray-400 hover:text-gray-600"
               >
-                <X size={16} />
+                <Heart size={16} className="text-gray-400" />
               </button>
             </div>
           </motion.div>
@@ -556,7 +558,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
           >
             <div className="flex items-center justify-center">
               <span className="text-sm text-blue-500">{typingText}</span>
-              <ArrowDown size={16} className="ml-2 text-gray-400" />
+              <ArrowLeft size={16} className="ml-2 text-gray-400" />
             </div>
           </motion.div>
         )}
@@ -570,7 +572,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
               onClick={() => fileInputRef.current?.click()}
               className="text-gray-500 hover:text-gray-700"
             >
-              <Plus size={20} />
+              <File size={20} />
             </button>
             
             <div className="flex-1 relative">
