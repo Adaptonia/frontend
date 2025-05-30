@@ -42,7 +42,7 @@ interface MemberManagementPanelProps {
 const MemberManagementPanel: React.FC<MemberManagementPanelProps> = ({
   isOpen,
   onClose,
-  channelId,
+  // channelId,
   channelName,
   currentUserRole,
   members = [],
@@ -128,22 +128,22 @@ const MemberManagementPanel: React.FC<MemberManagementPanelProps> = ({
     }
   }
 
-  const handleInvite = async () => {
-    if (!inviteEmail.trim() || !onInviteMember) return
+  // const handleInvite = async () => {
+  //   if (!inviteEmail.trim() || !onInviteMember) return
 
-    setIsInviting(true)
-    try {
-      await onInviteMember(inviteEmail, selectedRole)
-      setInviteEmail('')
-      setShowInviteModal(false)
-      // Show success message or handle in parent
-    } catch (error) {
-      console.error('Failed to invite member:', error)
-      // Show error message
-    } finally {
-      setIsInviting(false)
-    }
-  }
+  //   setIsInviting(true)
+  //   try {
+  //     await onInviteMember(inviteEmail, selectedRole)
+  //     setInviteEmail('')
+  //     setShowInviteModal(false)
+  //     // Show success message or handle in parent
+  //   } catch (error) {
+  //     console.error('Failed to invite member:', error)
+  //     // Show error message
+  //   } finally {
+  //     setIsInviting(false)
+  //   }
+  // }
 
   // Get role icon
   const getRoleIcon = (role: string) => {

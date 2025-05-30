@@ -115,7 +115,8 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
         })
       }
       return success
-    } catch (error) {
+    } catch (error: unknown) {
+      console.error('error', error)
       addToast({
         type: 'error',
         title: 'Join Failed',

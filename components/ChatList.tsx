@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Users, Search, Plus, MessageSquare } from 'lucide-react'
+import { Search, Plus, MessageSquare } from 'lucide-react'
 
 interface Contact {
   id: string

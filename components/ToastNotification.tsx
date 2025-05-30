@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, createContext, useContext } from 'react'
+import React, { useState, createContext, useContext } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, X, AlertCircle, Info, AlertTriangle } from 'lucide-react'
+import { Check, X,  Info, AlertTriangle } from 'lucide-react'
 
 interface Toast {
   id: string

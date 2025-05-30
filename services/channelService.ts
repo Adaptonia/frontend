@@ -456,7 +456,7 @@ class ChannelService {
         success: true,
         data: messageWithSender
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error sending message:', error)
       return this.handleError(error)
     }

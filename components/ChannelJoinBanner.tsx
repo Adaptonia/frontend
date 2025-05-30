@@ -62,7 +62,7 @@ const ChannelJoinBanner: React.FC<ChannelJoinBannerProps> = ({
             <div className="flex items-center space-x-2 text-sm">
               <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
               <span className="text-gray-600">
-                <strong>You're not a member of this channel.</strong> Join to participate in discussions and see message history.
+                <strong>You&lsquo;re not a member of this channel.</strong> Join to participate in discussions and see message history.
               </span>
             </div>
           </div>

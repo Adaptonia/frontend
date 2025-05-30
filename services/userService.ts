@@ -142,7 +142,7 @@ class UserService {
         success: true,
         data: users.documents as unknown as User[]
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error getting users by IDs:', error)
       return this.handleError(error)
     }

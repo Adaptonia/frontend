@@ -21,6 +21,12 @@ interface Contact {
   selected?: boolean
 }
 
+interface NativeContact {
+  name?: string[]
+  tel?: string[]
+  email?: string[]
+}
+
 interface ContactsIntegrationProps {
   isOpen: boolean
   onClose: () => void
@@ -59,7 +65,7 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
 
     try {
       // Check permission
-      const permission = await navigator.permissions.query({ name: 'contacts' as any })
+      const permission = await navigator.permissions.query({ name: 'contacts' as PermissionName })
       
       if (permission.state === 'denied') {
         setError('Contacts permission was denied. Please enable it in your browser settings.')
@@ -71,10 +77,10 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
       const props = ['name', 'tel', 'email']
       const opts = { multiple: true }
       
-      const contactList = await (navigator as any).contacts.select(props, opts)
+      const contactList = await (navigator as unknown as { contacts: { select: (props: string[], opts: { multiple: boolean }) => Promise<NativeContact[]> } }).contacts.select(props, opts)
       
       // Transform contacts to our format
-      const transformedContacts: Contact[] = contactList.map((contact: any, index: number) => ({
+      const transformedContacts: Contact[] = contactList.map((contact: NativeContact, index: number) => ({
         id: `contact_${index}`,
         name: contact.name?.[0] || 'Unknown Contact',
         phoneNumbers: contact.tel || [],
@@ -217,7 +223,7 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
                 <div>
                   <h3 className="text-lg font-medium mb-2">Access Your Contacts</h3>
                   <p className="text-gray-600 text-sm leading-relaxed">
-                    We'll help you invite friends and colleagues to join Adaptonia Finance. 
+                    We&lsquo;ll help you invite friends and colleagues to join Adaptonia Finance. 
                     Your contact information stays private and secure.
                   </p>
                 </div>
@@ -362,7 +368,7 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
                   <h3 className="text-lg font-medium mb-2">Invites Sent!</h3>
                   <p className="text-gray-600 text-sm leading-relaxed">
                     Your invites have been sent to {selectedContacts.size} contacts. 
-                    They'll receive a link to join Adaptonia Finance.
+                    They&lsquo;ll receive a link to join Adaptonia Finance.
                   </p>
                 </div>
 
