@@ -101,33 +101,33 @@ self.addEventListener('push', (event) => {
   
   try {
     const data = event.data ? event.data.json() : {};
-    
-    const options = {
-      body: data.description || 'Reminder for your goal',
-      icon: '/icons/logo-192x192.png',
-      badge: '/icons/badge-72x72.png',
-      vibrate: [100, 50, 100],
-      data: {
-        url: data.url || '/dashboard',
+  
+  const options = {
+    body: data.description || 'Reminder for your goal',
+    icon: '/icons/logo-192x192.png',
+    badge: '/icons/badge-72x72.png',
+    vibrate: [100, 50, 100],
+    data: {
+      url: data.url || '/dashboard',
         goalId: data.goalId,
         timestamp: Date.now()
+    },
+    actions: [
+      {
+        action: 'view',
+        title: 'View Goal'
       },
-      actions: [
-        {
-          action: 'view',
-          title: 'View Goal'
-        },
-        {
-          action: 'complete',
-          title: 'Mark Complete'
-        }
+      {
+        action: 'complete',
+        title: 'Mark Complete'
+      }
       ],
       silent: false,
       requireInteraction: true
-    };
-    
-    event.waitUntil(
-      self.registration.showNotification(data.title || 'Adaptonia Reminder', options)
+  };
+  
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Adaptonia Reminder', options)
         .catch((error) => {
           console.error('Service Worker: Failed to show push notification:', error);
         })
@@ -193,29 +193,29 @@ class ReminderManager {
   showNotification(reminder) {
     try {
       const options = {
-        body: reminder.description || 'Time for your goal!',
-        icon: '/icons/logo-192x192.png',
-        badge: '/icons/badge-72x72.png',
+    body: reminder.description || 'Time for your goal!',
+    icon: '/icons/logo-192x192.png',
+    badge: '/icons/badge-72x72.png',
         vibrate: [200, 100, 200],
-        data: {
-          url: '/dashboard',
-          goalId: reminder.goalId,
+    data: {
+      url: '/dashboard',
+      goalId: reminder.goalId,
           alarm: reminder.alarm,
           timestamp: Date.now()
-        },
-        actions: [
-          {
-            action: 'view',
-            title: 'View Goal'
-          },
-          {
-            action: 'complete',
-            title: 'Mark Complete'
-          },
-          {
-            action: 'snooze',
-            title: 'Snooze 5 min'
-          }
+    },
+    actions: [
+      {
+        action: 'view',
+        title: 'View Goal'
+      },
+      {
+        action: 'complete',
+        title: 'Mark Complete'
+      },
+      {
+        action: 'snooze',
+        title: 'Snooze 5 min'
+      }
         ],
         silent: false,
         requireInteraction: true,
@@ -230,11 +230,11 @@ class ReminderManager {
           return self.clients.matchAll();
         })
         .then((clients) => {
-          clients.forEach(client => {
+    clients.forEach(client => {
             try {
-              client.postMessage({
-                type: 'PLAY_NOTIFICATION_SOUND',
-                data: {
+      client.postMessage({
+        type: 'PLAY_NOTIFICATION_SOUND',
+        data: {
                   goalId: reminder.goalId,
                   alarm: reminder.alarm
                 }
@@ -270,13 +270,13 @@ class ReminderManager {
       self.clients.matchAll().then(clients => {
         clients.forEach(client => {
           try {
-            client.postMessage({
-              type: 'REMINDER_SNOOZED',
-              data: {
-                goalId,
-                snoozeTime: snoozeTime.toISOString()
-              }
-            });
+          client.postMessage({
+            type: 'REMINDER_SNOOZED',
+            data: {
+              goalId,
+              snoozeTime: snoozeTime.toISOString()
+            }
+          });
           } catch (error) {
             console.error('Service Worker: Failed to send snooze message:', error);
           }
@@ -345,18 +345,18 @@ self.addEventListener('notificationclick', (event) => {
         
       case 'view':
         const viewUrl = goalId ? `/dashboard?goal=${goalId}` : url || '/dashboard';
-        event.waitUntil(
+    event.waitUntil(
           self.clients.matchAll({ type: 'window' }).then((clientList) => {
             // Try to focus existing window
-            for (const client of clientList) {
-              if (client.url.includes('/dashboard') && 'focus' in client) {
-                client.postMessage({
-                  type: 'VIEW_GOAL',
-                  goalId: goalId
-                });
-                return client.focus();
-              }
-            }
+        for (const client of clientList) {
+          if (client.url.includes('/dashboard') && 'focus' in client) {
+            client.postMessage({
+              type: 'VIEW_GOAL',
+              goalId: goalId
+            });
+            return client.focus();
+          }
+        }
             // Open new window if none exists
             if (self.clients.openWindow) {
               return self.clients.openWindow(viewUrl);
@@ -368,9 +368,9 @@ self.addEventListener('notificationclick', (event) => {
         break;
         
       case 'complete':
-        if (goalId) {
-          event.waitUntil(
-            self.registration.sync.register(`complete-goal-${goalId}`)
+    if (goalId) {
+      event.waitUntil(
+        self.registration.sync.register(`complete-goal-${goalId}`)
               .catch((error) => {
                 console.error('Service Worker: Failed to register sync:', error);
               })
@@ -380,16 +380,16 @@ self.addEventListener('notificationclick', (event) => {
         
       default:
         // Default action - open app
-        event.waitUntil(
+    event.waitUntil(
           self.clients.matchAll({ type: 'window' }).then((clientList) => {
-            if (clientList.length > 0) {
-              return clientList[0].focus();
-            }
+        if (clientList.length > 0) {
+          return clientList[0].focus();
+        }
             return self.clients.openWindow('/dashboard');
           }).catch((error) => {
             console.error('Service Worker: Failed to handle default action:', error);
-          })
-        );
+      })
+    );
     }
   } catch (error) {
     console.error('Service Worker: Notification click handling failed:', error);
@@ -401,21 +401,21 @@ self.addEventListener('sync', (event) => {
   console.log('Service Worker: Sync event', event.tag);
   
   try {
-    if (event.tag.startsWith('complete-goal-')) {
-      const goalId = event.tag.replace('complete-goal-', '');
-      
-      event.waitUntil(
-        fetch(`/api/goals/${goalId}/complete`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
+  if (event.tag.startsWith('complete-goal-')) {
+    const goalId = event.tag.replace('complete-goal-', '');
+    
+    event.waitUntil(
+      fetch(`/api/goals/${goalId}/complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
             completed: true,
             completedAt: new Date().toISOString()
-          })
-        }).then((response) => {
-          if (!response.ok) {
+        })
+      }).then((response) => {
+        if (!response.ok) {
             throw new Error(`Failed to complete goal: ${response.status}`);
           }
           return response.json();

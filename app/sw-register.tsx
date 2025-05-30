@@ -26,7 +26,7 @@ const ServiceWorkerRegistration = () => {
       // Wait for service worker to be ready
       await navigator.serviceWorker.ready;
       console.log('✅ Service Worker is ready');
-      
+
       // Listen for messages from service worker
       navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
       
@@ -328,8 +328,8 @@ export const playNotificationSound = async (): Promise<void> => {
           // Stop after 3 seconds to prevent long-running audio
           setTimeout(() => {
             if (audio) {
-              audio.pause();
-              audio.currentTime = 0;
+            audio.pause();
+            audio.currentTime = 0;
             }
           }, 3000);
         })
