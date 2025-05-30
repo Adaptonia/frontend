@@ -11,29 +11,55 @@ const Page = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter()
-
-  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    try {
-         const account = await registerUser(email,
-          password,)
-
-          if(account){
-            router.push('/login')
-          }
-
-        console.log(account)
-    } catch (error){
-        console.error(error)
-
+    
+    // Clear previous errors
+    setError("")
+    
+    // Validation
+    if (!email.trim()) {
+      setError("Email is required")
+      return
+    }
+    
+    if (!password.trim()) {
+      setError("Password is required")
+      return
+    }
+    
+    if (password !== confirmPassword) {
+      setError("Passwords do not match")
+      return
+    }
+    
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters")
+      return
     }
 
+    setIsLoading(true)
 
+    try {
+      const account = await registerUser(email.trim(), password)
+
+      if(account){
+        router.push('/login')
+      }
+
+      console.log(account)
+    } catch (error) {
+      console.error(error)
+      setError("Failed to create account. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
+
   const handleGoogleSignIn = () => {
     signIn('google', { callbackUrl: '/dashboard' });
   };
@@ -85,7 +111,14 @@ const Page = () => {
       <div className="flex-1">
         <h1 className="text-3xl font-bold mb-8">Sign up</h1>
 
-        <div className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Error Message */}
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+
           <InputField
             label="Email"
             type="email"
@@ -103,36 +136,24 @@ const Page = () => {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="-- Create a password --"
           />
+          
           <InputField
             label="Confirm Password"
-            type="Password"
+            type="password"
             id="confirmPassword"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="-- Re-type your password --"
           />
 
-          {/* <div>
-            <label
-              htmlFor="confirmPassword"
-              className="block text-lg font-medium mb-2"
-            >
-              Confirm Password
-            </label>
-            <input
-              type="password"
-              id="confirmPassword"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="-- Re-type your password --"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-500"
-            />
-          </div> */}
-
-          <button onClick={handleSubmit} className="w-full bg-blue-400 text-white font-medium py-4 rounded-full mt-4">
-            Sign Up
+          <button 
+            type="submit" 
+            disabled={isLoading}
+            className="w-full bg-blue-400 text-white font-medium py-4 rounded-full mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? 'Creating Account...' : 'Sign Up'}
           </button>
-        </div>
+        </form>
 
         <div className="flex items-center my-8">
           <div className="flex-grow h-px bg-gray-300"></div>
