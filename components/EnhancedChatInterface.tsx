@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Hash, 
   Search, 
-  Plus, 
+  // Plus, 
   Smile, 
   Send, 
   Mic, 
@@ -14,11 +14,11 @@ import {
   MoreVertical,
   Reply,
   Heart,
-  ThumbsUp,
-  Laugh,
-  Angry,
+  // ThumbsUp,
+  // Laugh,
+  // Angry,
   File,
-  Paperclip
+  // Paperclip
 } from 'lucide-react'
 import { MessageWithSender, SendMessageData, Channel } from '../types/channel'
 import { ChatInterfaceSkeleton } from './SkeletonLoader'
