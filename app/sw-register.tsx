@@ -6,6 +6,14 @@ import { toast } from 'sonner';
 // Component to register service worker
 const ServiceWorkerRegistration = () => {
   useEffect(() => {
+    // TEMPORARY: Disable service worker to test signup issues
+    const DISABLE_SW_FOR_TESTING = true;
+    
+    if (DISABLE_SW_FOR_TESTING) {
+      console.log('🚫 Service Worker registration disabled for testing');
+      return;
+    }
+    
     // Register service worker in both production and development for testing
     if ('serviceWorker' in navigator) {
       registerServiceWorker();

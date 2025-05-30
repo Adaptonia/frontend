@@ -54,10 +54,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // IMPORTANT: Skip caching for authentication and form pages
+  const url = new URL(event.request.url);
+  const pathname = url.pathname;
+  
+  // Don't cache authentication pages, API routes, or pages with query params
+  if (pathname.includes('/signup') || 
+      pathname.includes('/login') || 
+      pathname.includes('/api/') || 
+      url.search.length > 0) {
+    console.log('Service Worker: Bypassing cache for:', pathname);
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((response) => {
       // Return cached response if found
       if (response) {
+        console.log('Service Worker: Serving from cache:', event.request.url);
         return response;
       }
       
@@ -69,7 +83,7 @@ self.addEventListener('fetch', (event) => {
         }
         
         // Don't cache API requests or dynamic content
-        if (event.request.url.includes('/api/') || event.request.url.includes('?')) {
+        if (pathname.includes('/api/') || url.search.length > 0) {
           return response;
         }
         

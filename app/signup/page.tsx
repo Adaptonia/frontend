@@ -1,11 +1,12 @@
 'use client'
 
 import InputField from "@/components/reuseable/InputField";
-import { registerUser } from "@/src/services/appwrite";
+import { loginWithGoogle, registerUser } from "@/src/services/appwrite";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
+import { toast } from "sonner";
 
 const Page = () => {
   const [email, setEmail] = useState("");
@@ -60,9 +61,24 @@ const Page = () => {
     }
   }
 
-  const handleGoogleSignIn = () => {
-    signIn('google', { callbackUrl: '/dashboard' });
-  };
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    try {
+        setIsGoogleLoading(true);
+        toast.info('Redirecting to Google...');
+        
+        // This will redirect the user to Google's OAuth page
+        await loginWithGoogle();
+        
+        // The code below won't execute until the user returns from Google OAuth
+        // because the browser navigates away from this page
+    } catch (error) {
+        setIsGoogleLoading(false);
+        const errorMessage = error instanceof Error ? error.message : 'Google login failed';
+        toast.error(errorMessage);
+    }
+};
 
   return (
     <div className="flex flex-col min-h-screen bg-white p-6 scrollable">
@@ -183,8 +199,13 @@ const Page = () => {
               <path d="M16.365 12.778c-.002-1.198.396-2.315 1.195-3.187-.293-.752-.745-1.435-1.327-1.996-1.039-.996-2.28-1.598-3.631-1.598-1.331 0-2.148.564-2.873.564-.745 0-1.888-.534-2.762-.534-1.753.018-3.458 1.024-4.351 2.596-1.685 2.928-.432 7.256 1.189 9.628.809 1.158 1.756 2.448 2.995 2.407 1.211-.043 1.663-.771 3.131-.771 1.435 0 1.879.771 3.13.751 1.309-.02 2.122-1.161 2.926-2.32.504-.762.944-1.613 1.304-2.511-1.507-.592-2.54-2.015-2.517-3.695.019-1.104.396-2.139 1.12-2.978-.595-.556-1.389-.872-2.208-.872-1.003 0-1.978.472-2.608 1.288.63.317 1.19.823 1.593 1.478.422.663.653 1.436.663 2.223.009.79-.235 1.566-.7 2.22-.466.652-1.129 1.144-1.901 1.402.815.976 2.03 1.536 3.305 1.511 1.163-.011 2.267-.515 3.075-1.398.807-.884 1.244-2.053 1.219-3.268l-.038-.422zm-3.619-7.595c.546.005 1.084.14 1.562.393.477.252.89.615 1.197 1.057.307.443.497.953.553 1.485.053.505-.02 1.019-.211 1.489-.191.47-.491.892-.879 1.229.062-.175.119-.353.169-.533.142-.576.142-1.173 0-1.749-.142-.578-.435-1.104-.84-1.516-.422-.396-.962-.66-1.551-.757z" />
             </svg>
           </button>
-          <button onClick={handleGoogleSignIn} className="flex-1 border border-gray-300 py-3 rounded-lg flex items-center justify-center">
-            <svg
+          <button disabled={isGoogleLoading} onClick={handleGoogleSignIn} className="flex-1 border border-gray-300 py-3 rounded-lg flex items-center justify-center">
+            {isGoogleLoading ? (
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-900 dark:border-white" />
+              </div>
+            ) : (
+              <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
               height="24"
@@ -207,6 +228,8 @@ const Page = () => {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
+            )
+          }
           </button>
         </div>
 
