@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Plus, Calendar, User, BookOpen, BarChart3 } from 'lucide-react'
 import Image from 'next/image'
 import { Toaster, toast } from 'sonner'
-import { useAuth } from '@/context/AuthContext'
+import { useRequireAuth } from '@/hooks/useRequireAuth'
 
 // Custom components
 import DashboardCalendar from '@/components/dashboard/Calendar'
@@ -17,7 +17,6 @@ import { NotificationToggle } from '@/components/pwa/NotificationToggle'
 
 // Appwrite services
 import { getGoals, toggleGoalCompletion } from '../../src/services/appwrite/database'
-import { getCurrentUser } from '../../src/services/appwrite/auth'
 import { Goal } from '@/lib/types'
 
 const Dashboard = () => {
@@ -27,7 +26,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true)
   const [activeGoal, setActiveGoal] = useState<Goal | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const { user, setUser } = useAuth()
+  const { user, loading: authLoading } = useRequireAuth()
   
   // Categories for the dashboard
   const categories = [
@@ -37,44 +36,25 @@ const Dashboard = () => {
     { id: 'audio_books', name: 'Audio books', icon: <BookOpen className="w-5 h-5 text-gray-500" /> },
   ]
 
-  // Effect to check and update user auth state after OAuth redirects
+  // Load goals when user is available
   useEffect(() => {
-    const checkAuthState = async () => {
-      try {
-        console.log("📊 Dashboard: Checking auth state...");
-        console.log("📊 Current user state:", user?.email || "No user in context");
-        
-        // If we don't have a user in context but might have a valid Appwrite session
-        if (!user) {
-          console.log("📊 No user in context, checking Appwrite session...");
-          const currentUser = await getCurrentUser();
-          
-          if (currentUser) {
-            console.log("📊 Found Appwrite session for:", currentUser.email);
-            setUser(currentUser);
-            toast.success("Welcome back!");
-          } else {
-            console.log("📊 No Appwrite session found");
-          }
-        } else {
-          console.log("📊 User already in context:", user.email);
-        }
-      } catch (error) {
-        console.error('Error checking auth state:', error);
-      }
-    };
-    
-    checkAuthState();
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      console.log("📊 User available, loading goals for:", user.email);
+    if (user && !authLoading) {
+      console.log("📊 User authenticated, loading goals for:", user.email);
       loadGoals();
-    } else {
-      console.log("📊 No user available, skipping goal loading");
     }
-  }, [user]);
+  }, [user, authLoading]);
+
+  // Show loading state while authenticating
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const loadGoals = async () => {
     if (!user?.id) return;

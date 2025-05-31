@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MessageSquare, Moon, Sun, Command } from 'lucide-react'
+import { MessageSquare, Moon, Command } from 'lucide-react'
 import Sidebar from '../../components/Sidebar'
 import ChannelList from '../../components/ChannelList'
 import ChatList from '../../components/ChatList'
@@ -22,7 +22,7 @@ import {
   useFocusManagement,
   useMediaQuery 
 } from '../../hooks/useUtils'
-import { useAuth } from '../../context/AuthContext'
+import { useRequireAuth } from '../../hooks/useRequireAuth'
 import userService from '../../services/userService'
 import { CreateChannelData, SendMessageData } from '../../types/channel'
 import { 
@@ -49,7 +49,7 @@ const GroupsPageContent: React.FC = () => {
   const [userInitialized, setUserInitialized] = useState(false)
 
   // Get authenticated user
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useRequireAuth()
 
   // Utility hooks
   const { theme, toggleTheme } = useTheme()
@@ -236,23 +236,16 @@ const GroupsPageContent: React.FC = () => {
     )
   }
 
-  // Redirect to login if no user
+  // Guard clause to ensure user is available (useRequireAuth handles redirects)
   if (!user) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Authentication Required</h2>
-          <p className="text-gray-600">Please log in to access the groups.</p>
-        </div>
-      </div>
-    )
+    return null
   }
 
   // Handle tab changes
   const handleTabChange = (tab: string) => {
     if (tab === 'add') {
       saveFocus()
-      if (user.role === 'admin') {
+      if (user?.role === 'admin') {
         setIsCreateModalOpen(true)
         announce('Create channel modal opened', 'polite')
       } else {
@@ -386,22 +379,20 @@ const GroupsPageContent: React.FC = () => {
   }
 
   return (
-    <div className={`flex h-screen ${theme === 'dark' ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
+    <div className="flex h-screen bg-gray-50">
       {/* User Initialization Loading */}
-      {!userInitialized && (
+      {/* {!userInitialized && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className={`p-6 rounded-lg shadow-xl ${
-            theme === 'dark' ? 'bg-gray-800' : 'bg-white'
-          }`}>
+          <div className="p-6 rounded-lg shadow-xl bg-white">
             <div className="flex items-center space-x-3">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
-              <span className={theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}>
+              <span className="text-gray-700">
                 Initializing user...
               </span>
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Screen reader announcements */}
       <div id="announcements" aria-live="polite" aria-atomic="true" className="sr-only" />
@@ -428,14 +419,10 @@ const GroupsPageContent: React.FC = () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={toggleTheme}
-            className={`absolute bottom-4 left-2 p-2 rounded-lg transition-colors ${
-              theme === 'dark' 
-                ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600' 
-                : 'bg-white text-gray-600 hover:bg-gray-100'
-            } shadow-lg`}
+            className="absolute bottom-4 left-2 p-2 rounded-lg transition-colors bg-white text-gray-600 hover:bg-gray-100 shadow-lg"
             aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
           >
-            {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+             <Moon size={16} /> 
           </motion.button>
         </div>
       )}
@@ -504,7 +491,7 @@ const GroupsPageContent: React.FC = () => {
                           onStartTyping={startTyping}
                           onStopTyping={stopTyping}
                           typingText={typingText}
-                          canManageChannel={user.role === 'admin'}
+                          canManageChannel={user?.role === 'admin'}
                           channelId={selectedChannelId ?? undefined}
                           channel={selectedChannel}
                           isUserMember={userChannels.some(uc => uc.channel?.$id === selectedChannelId)}
@@ -586,7 +573,7 @@ const GroupsPageContent: React.FC = () => {
                             onStartTyping={startTyping}
                             onStopTyping={stopTyping}
                             typingText={typingText}
-                            canManageChannel={user.role === 'admin'}
+                            canManageChannel={user?.role === 'admin'}
                             channelId={selectedChannelId ?? undefined}
                             channel={selectedChannel}
                             isUserMember={userChannels.some(uc => uc.channel?.$id === selectedChannelId)}
@@ -612,41 +599,28 @@ const GroupsPageContent: React.FC = () => {
                         initial="initial"
                         animate="animate"
                         exit="exit"
-                        className={`flex-1 flex items-center justify-center ${
-                          theme === 'dark' ? 'bg-gray-800' : 'bg-white'
-                        }`}
+                        className = "flex-1 flex items-center justify-center bg-white"
                       >
                         <div className="text-center">
-                          <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
-                            theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'
-                          }`}>
-                            <MessageSquare className={`w-8 h-8 ${
-                              theme === 'dark' ? 'text-gray-400' : 'text-gray-400'
-                            }`} />
+                          <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center bg-gray-100"
+                          >
+                            <MessageSquare className="w-8 h-8 text-gray-400"/>
                           </div>
-                          <h3 className={`text-lg font-medium mb-2 ${
-                            theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
-                          }`}>
+                          <h3 className="text-lg font-medium mb-2 text-gray-900">
                             Select a Channel
                           </h3>
-                          <p className={`text-sm mb-4 ${
-                            theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                          }`}>
+                          <p className="text-sm mb-4 text-gray-500">
                             Choose a channel to start chatting
                           </p>
                           
-                          <div className={`flex items-center justify-center space-x-2 text-xs ${
-                            theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-                          }`}>
+                          <div className="flex items-center justify-center space-x-2 text-xs text-gray-400">
                             <Command size={12} />
                             <span>Press Cmd+K to search</span>
                           </div>
                           
                           {publicChannels.length > 0 && !channelsLoading && (
                             <div className="mt-6 max-w-sm">
-                              <p className={`text-sm mb-3 ${
-                                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                              }`}>
+                              <p className="text-sm mb-3 text-gray-600">
                                 Available channels:
                               </p>
                               <div className="space-y-2">
@@ -655,19 +629,13 @@ const GroupsPageContent: React.FC = () => {
                                     key={ch.$id}
                                     onClick={() => handleJoinChannel(ch.$id)}
                                     disabled={isJoining === ch.$id}
-                                    className={`w-full p-3 text-left border rounded-lg transition-colors disabled:opacity-50 ${
-                                      theme === 'dark'
-                                        ? 'border-gray-600 hover:bg-gray-700 text-gray-200'
-                                        : 'border-gray-200 hover:bg-gray-50 text-gray-900'
-                                    }`}
+                                    className="w-full p-3 text-left border rounded-lg transition-colors disabled:opacity-50 border-gray-200 hover:bg-gray-50 text-gray-900"
                                     aria-label={`Join ${ch.name} channel`}
                                   >
                                     <div className="flex items-center justify-between">
                                       <div>
                                         <div className="font-medium">#{ch.name}</div>
-                                        <div className={`text-sm ${
-                                          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                                        }`}>
+                                        <div className="text-sm text-gray-500">
                                           {ch.description}
                                         </div>
                                       </div>
@@ -726,9 +694,7 @@ const GroupsPageContent: React.FC = () => {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className={`w-full max-w-md mx-4 p-4 rounded-lg shadow-xl ${
-                theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
-              }`}
+              className="w-full max-w-md mx-4 p-4 rounded-lg shadow-xl bg-white border border-gray-200"
             >
               <input
                 type="text"
@@ -736,16 +702,10 @@ const GroupsPageContent: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoFocus
-                className={`w-full p-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  theme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-gray-200'
-                    : 'bg-white border-gray-300 text-gray-900'
-                }`}
+                className="w-full p-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white border-gray-300 text-gray-900"
                 aria-label="Search messages"
               />
-              <div className={`mt-2 text-xs ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-              }`}>
+              <div className="mt-2 text-xs text-gray-500">
                 Press Escape to close
               </div>
             </motion.div>
@@ -762,12 +722,10 @@ const GroupsPageContent: React.FC = () => {
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 flex items-center justify-center"
           >
-            <div className={`p-6 rounded-lg shadow-xl ${
-              theme === 'dark' ? 'bg-gray-800' : 'bg-white'
-            }`}>
+            <div className="p-6 rounded-lg shadow-xl bg-white">
               <div className="flex items-center space-x-3">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
-                <span className={theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}>
+                <span className="text-gray-700">
                   {isCreating ? 'Creating channel...' : 'Joining channel...'}
                 </span>
               </div>
@@ -805,11 +763,9 @@ const GroupsPageContent: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             className={`fixed bottom-20 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-full shadow-lg border text-sm z-30 ${
-              theme === 'dark'
-                ? 'bg-gray-800 border-gray-600 text-gray-300'
-                : 'bg-white border-gray-200 text-gray-600'
+                'bg-white border-gray-200 text-gray-600'
             }`}
-            role="status"
+            role="status" 
             aria-live="polite"
           >
             <div className="flex items-center space-x-2">
