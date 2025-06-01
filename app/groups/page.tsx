@@ -245,7 +245,7 @@ const GroupsPageContent: React.FC = () => {
   const handleTabChange = (tab: string) => {
     if (tab === 'add') {
       saveFocus()
-      if (user?.role === 'admin') {
+      if (user.role === 'admin') {
         setIsCreateModalOpen(true)
         announce('Create channel modal opened', 'polite')
       } else {
@@ -491,7 +491,7 @@ const GroupsPageContent: React.FC = () => {
                           onStartTyping={startTyping}
                           onStopTyping={stopTyping}
                           typingText={typingText}
-                          canManageChannel={user?.role === 'admin'}
+                          canManageChannel={user.role === 'admin'}
                           channelId={selectedChannelId ?? undefined}
                           channel={selectedChannel}
                           isUserMember={userChannels.some(uc => uc.channel?.$id === selectedChannelId)}
@@ -573,7 +573,7 @@ const GroupsPageContent: React.FC = () => {
                             onStartTyping={startTyping}
                             onStopTyping={stopTyping}
                             typingText={typingText}
-                            canManageChannel={user?.role === 'admin'}
+                            canManageChannel={user.role === 'admin'}
                             channelId={selectedChannelId ?? undefined}
                             channel={selectedChannel}
                             isUserMember={userChannels.some(uc => uc.channel?.$id === selectedChannelId)}
