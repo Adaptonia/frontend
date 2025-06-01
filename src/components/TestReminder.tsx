@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { reminderService } from '../services/appwrite/reminderService';
-import { scheduleReminderNotification, requestNotificationPermission } from '@/app/sw-register';
+// import { scheduleReminderNotification, requestNotificationPermission } from '@/app/sw-register';
 
 export const TestReminder = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -13,11 +13,11 @@ export const TestReminder = () => {
       setIsLoading(true);
       
       // Request permission first
-      const hasPermission = await requestNotificationPermission();
-      if (!hasPermission) {
-        toast.error('Please allow notifications to test reminders');
-        return;
-      }
+      // const hasPermission = await requestNotificationPermission();
+      // if (!hasPermission) {
+      //   toast.error('Please allow notifications to test reminders');
+      //   return;
+      // }
 
       // Create a reminder that triggers in 10 seconds
       const reminderTime = new Date();
@@ -37,20 +37,20 @@ export const TestReminder = () => {
       console.log('✅ Reminder created in database:', reminder);
 
       // Schedule with service worker
-      const scheduled = await scheduleReminderNotification({
-        goalId: reminder.goalId,
-        title: reminder.title,
-        description: reminder.description,
-        sendDate: reminder.sendDate
-      });
+      // const scheduled = await scheduleReminderNotification({
+      //   goalId: reminder.goalId,
+      //   title: reminder.title,
+      //   description: reminder.description,
+      //   sendDate: reminder.sendDate
+      // });
 
-      if (scheduled) {
-        toast.success('Test reminder created!', {
-          description: 'You should get a notification in 10 seconds'
-        });
-      } else {
-        toast.error('Failed to schedule reminder with service worker');
-      }
+      // if (scheduled) {
+      //   toast.success('Test reminder created!', {
+      //     description: 'You should get a notification in 10 seconds'
+      //   });
+      // } else {
+      //   toast.error('Failed to schedule reminder with service worker');
+      // }
 
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create test reminder';
