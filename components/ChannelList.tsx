@@ -11,8 +11,7 @@ import {
   Folder, 
   Mic,
   Hash,
-  Users,
-  Loader2
+  Users
 } from 'lucide-react'
 import { useChannels } from '../hooks/useChannels'
 import { useAuth } from '../context/AuthContext'
@@ -152,9 +151,6 @@ const ChannelList: React.FC<ChannelListProps> = ({ onChannelSelect }) => {
             <Folder size={16} className="text-green-600" />
             <span className="text-sm font-medium text-gray-600">-- Public Groups --</span>
             <Folder size={16} className="text-green-600" />
-            {channelsLoading && (
-              <Loader2 size={14} className="text-gray-400 animate-spin" />
-            )}
           </button>
 
           {/* Public Channels List */}
@@ -168,18 +164,7 @@ const ChannelList: React.FC<ChannelListProps> = ({ onChannelSelect }) => {
                 className="overflow-hidden"
               >
                 <div className="pb-2">
-                  {channelsLoading ? (
-                    // Loading skeleton
-                    Array.from({ length: 3 }).map((_, i) => (
-                      <div key={i} className="px-6 py-3 flex items-center justify-between">
-                        <div className="flex items-center space-x-3 flex-1">
-                          <div className="w-4 h-4 bg-gray-200 rounded animate-pulse" />
-                          <div className="h-4 bg-gray-200 rounded animate-pulse flex-1 max-w-[120px]" />
-                          <div className="w-8 h-4 bg-gray-200 rounded animate-pulse" />
-                        </div>
-                      </div>
-                    ))
-                  ) : filteredPublicChannels.length > 0 ? (
+                  {filteredPublicChannels.length > 0 ? (
                     filteredPublicChannels.map((channel) => {
                       const isUserMember = userChannelIds.has(channel.$id)
                       
