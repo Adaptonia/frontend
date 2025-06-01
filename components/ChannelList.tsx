@@ -14,7 +14,6 @@ import {
   Users
 } from 'lucide-react'
 import { useChannels } from '../hooks/useChannels'
-import { useAuth } from '../context/AuthContext'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 
 
