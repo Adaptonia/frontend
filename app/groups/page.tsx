@@ -525,11 +525,13 @@ const GroupsPageContent: React.FC = () => {
                       className="flex-1"
                     >
                       <ErrorBoundary>
-                        {channelsLoading ? (
+                      <ChannelList onChannelSelect={handleChannelSelect} />
+
+                        {/* {channelsLoading ? (
                           <ChannelListSkeleton />
                         ) : (
                           <ChannelList onChannelSelect={handleChannelSelect} />
-                        )}
+                        )} */}
                       </ErrorBoundary>
                     </motion.div>
                   )}
