@@ -15,7 +15,7 @@ import { useChannels } from '../../hooks/useChannels'
 import { useChannelMessages } from '../../hooks/useChannelMessages'
 import { useTypingIndicator,} from '../../hooks/useTyping'
 import { 
-  useTheme, 
+   
   useKeyboardShortcuts, 
   useDebounce, 
   useScreenReader, 
@@ -52,7 +52,7 @@ const GroupsPageContent: React.FC = () => {
   const { user, loading: authLoading } = useRequireAuth()
 
   // Utility hooks
-  const { theme, toggleTheme } = useTheme()
+  // const { theme, toggleTheme } = useTheme()
   const { addToast } = useToast()
   const { announce } = useScreenReader()
   const { saveFocus, restoreFocus } = useFocusManagement()
@@ -134,10 +134,10 @@ const GroupsPageContent: React.FC = () => {
         announce('Create channel modal opened', 'polite')
       }
     },
-    'cmd+shift+t': () => {
-      toggleTheme()
-      announce(`Switched to ${theme === 'light' ? 'dark' : 'light'} theme`, 'polite')
-    }
+    // 'cmd+shift+t': () => {
+    //   toggleTheme()
+    //   announce(`Switched to ${theme === 'light' ? 'dark' : 'light'} theme`, 'polite')
+    // }
   })
 
   // Error handling
@@ -418,9 +418,9 @@ const GroupsPageContent: React.FC = () => {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={toggleTheme}
+            // onClick={toggleTheme}
             className="absolute bottom-4 left-2 p-2 rounded-lg transition-colors bg-white text-gray-600 hover:bg-gray-100 shadow-lg"
-            aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+            // aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
           >
              <Moon size={16} /> 
           </motion.button>

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { useChannels } from '../hooks/useChannels'
 import { useAuth } from '../context/AuthContext'
+import { useRequireAuth } from '@/hooks/useRequireAuth'
 
 
 
@@ -30,7 +31,7 @@ const ChannelList: React.FC<ChannelListProps> = ({ onChannelSelect }) => {
   const [searchQuery, setSearchQuery] = useState('')
   
   // Get current user ID from auth context
-  const { user } = useAuth()
+  const { user } = useRequireAuth()
   
   const {
     userChannels,
@@ -72,15 +73,15 @@ const ChannelList: React.FC<ChannelListProps> = ({ onChannelSelect }) => {
     )
   }, [publicChannels, searchQuery])
 
-  if (!user) {
-    return (
-      <div className="flex-1 bg-white flex flex-col h-full">
-        <div className="flex items-center justify-center h-full">
-          <p className="text-gray-500">Please log in to view channels</p>
-        </div>
-      </div>
-    )
-  }
+  // if (!user) {
+  //   return (
+  //     <div className="flex-1 bg-white flex flex-col h-full">
+  //       {/* <div className="flex items-center justify-center h-full">
+  //         <p className="text-gray-500">Please log in to view channels</p>
+  //       </div> */}
+  //     </div>
+  //   )
+  // }
 
   return (
     <div className="flex-1 bg-white flex flex-col h-full">
@@ -97,7 +98,7 @@ const ChannelList: React.FC<ChannelListProps> = ({ onChannelSelect }) => {
       {/* Channel Info - Fixed */}
       <div className="p-4 border-b flex-shrink-0">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-xl font-semibold flex items-center space-x-2">
+          <h1 className="text-xl font-semibold flex items-center space-x-2 text-gray-700">
             <span>Adaptonia Finance</span>
             <ChevronRight size={16} className="text-gray-400" />
           </h1>
@@ -244,11 +245,11 @@ const ChannelList: React.FC<ChannelListProps> = ({ onChannelSelect }) => {
       <div className="p-4 border-t bg-gray-50 flex-shrink-0">
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white text-sm font-semibold">
-            {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+            {user && user.name ? user.name.charAt(0).toUpperCase() : 'U'}
           </div>
           <div className="flex-1">
-            <span className="text-sm text-gray-700">{user.name || 'User'}</span>
-            {user.role === 'admin' && (
+            <span className="text-sm text-gray-700">{user && user.name || 'User'}</span>
+            {user && user.role === 'admin' && (
               <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Admin</span>
             )}
           </div>

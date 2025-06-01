@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Calendar, User, BookOpen, BarChart3 } from 'lucide-react'
 import Image from 'next/image'
-import { Toaster, toast } from 'sonner'
+import { Toaster } from 'sonner'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 
 // Custom components
@@ -45,16 +45,16 @@ const Dashboard = () => {
   }, [user, authLoading]);
 
   // Show loading state while authenticating
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  // if (authLoading) {
+  //   return (
+  //     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+  //       <div className="text-center">
+  //         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+  //         <p className="text-gray-600">Loading...</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   const loadGoals = async () => {
     if (!user?.id) return;
