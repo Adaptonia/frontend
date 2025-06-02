@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, BellOff } from 'lucide-react';
 import { toast } from 'sonner';
-// import { requestNotificationPermission } from '@/app/sw-register';
+import { requestNotificationPermission } from '@/app/sw-register';
 
 export const NotificationToggle: React.FC = () => {
   const [isEnabled, setIsEnabled] = useState(false);
@@ -32,29 +32,29 @@ export const NotificationToggle: React.FC = () => {
     try {
       if (!isEnabled) {
         // Request notification permission
-        // const permissionGranted = await requestNotificationPermission();
+        const permissionGranted = await requestNotificationPermission();
         
-        // if (permissionGranted) {
-        //   setIsEnabled(true);
-        //   toast.success('Notifications enabled');
+        if (permissionGranted) {
+          setIsEnabled(true);
+          toast.success('Notifications enabled');
           
-        //   // Send a test notification after a short delay
-        //   setTimeout(() => {
-        //     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        //       navigator.serviceWorker.ready.then(registration => {
-        //         registration.showNotification('Adaptonia Notifications', {
-        //           body: 'You will now receive reminders for your goals!',
-        //           icon: '/icons/icon-192x192.png',
-        //           badge: '/icons/icon-72x72.png',
-        //           // @ts-expect-error - vibrate is valid for mobile but not in TS types
-        //           vibrate: [100, 50, 100]
-        //         });
-        //       });
-        //     }
-        //   }, 1500);
-        // } else {
-        //   toast.error('Permission denied. Please enable notifications in your browser settings.');
-        // }
+          // Send a test notification after a short delay
+          setTimeout(() => {
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+              navigator.serviceWorker.ready.then(registration => {
+                registration.showNotification('Adaptonia Notifications', {
+                  body: 'You will now receive reminders for your goals!',
+                  icon: '/icons/icon-192x192.png',
+                  badge: '/icons/icon-72x72.png',
+                  // @ts-expect-error - vibrate is valid for mobile but not in TS types
+                  vibrate: [100, 50, 100]
+                });
+              });
+            }
+          }, 1500);
+        } else {
+          toast.error('Permission denied. Please enable notifications in your browser settings.');
+        }
       } else {
         // For now, we can't programmatically revoke permissions in most browsers
         // So we'll just show instructions to the user

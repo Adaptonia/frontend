@@ -5,7 +5,7 @@ import { ThemeProvider } from 'next-themes';
 import { AuthProvider } from '@/context/AuthContext';
 import { Toaster } from 'sonner';
 import { PWAProvider } from '@/src/context/PWAContext';
-// import ServiceWorkerRegistration from './sw-register';
+import ServiceWorkerRegistration from './sw-register';
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -14,7 +14,7 @@ export function Providers({ children }: { children: ReactNode }) {
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
           {children}
           <Toaster position="bottom-center" />
-          {/* <ServiceWorkerRegistration /> */}
+          <ServiceWorkerRegistration />
         </ThemeProvider>
       </PWAProvider>
     </AuthProvider>
