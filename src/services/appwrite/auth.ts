@@ -305,7 +305,7 @@ export const loginWithGoogle = async (): Promise<void> => {
   try {
     // Get the current URL for redirects
     const origin = window.location.origin;
-    const successUrl = `${origin}/dashboard`;
+    const successUrl = `${origin}/oauth-callback`;  // Changed to callback page
     const failureUrl = `${origin}/login`;
     
     console.log('Google OAuth login initiated');
