@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Users, 
@@ -10,7 +10,10 @@ import {
   UserPlus, 
   MessageSquare,
   Check,
-  AlertCircle
+  AlertCircle,
+  Download,
+  Share2,
+  Smartphone
 } from 'lucide-react'
 
 interface Contact {
@@ -47,10 +50,72 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
     "Hey! I'm using Adaptonia Finance for team collaboration. Join me: https://adaptonia.app/invite"
   )
   const [sendingInvites, setSendingInvites] = useState(false)
+  
+  // PWA-specific states
+  const [isInstallable, setIsInstallable] = useState(false)
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
+
+  // Manual contact entry
+  const [manualContact, setManualContact] = useState({ name: '', phone: '', email: '' })
+
+  // PWA: Check if app is installable and handle install prompt
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+      setIsInstallable(true)
+    }
+
+    const handleAppInstalled = () => {
+      setIsInstallable(false)
+      setDeferredPrompt(null)
+    }
+
+    // Listen for online/offline events
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.addEventListener('appinstalled', handleAppInstalled)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', handleAppInstalled)
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  // PWA: Trigger install prompt
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) return
+
+    deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
+    
+    if (outcome === 'accepted') {
+      setIsInstallable(false)
+    }
+    setDeferredPrompt(null)
+  }
 
   // Check if Contacts API is supported
   const isContactsAPISupported = () => {
     return 'contacts' in navigator && 'ContactsManager' in window
+  }
+
+  // PWA: Enhanced Web Share API usage
+  const canUseWebShare = () => {
+    return 'share' in navigator
+  }
+
+  // PWA: Check if running in standalone mode
+  const isStandaloneMode = () => {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+           (window.navigator as any).standalone === true
   }
 
   // Request contacts permission and import
@@ -108,7 +173,7 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
     setSelectedContacts(newSelected)
   }
 
-  // Send SMS invites
+  // PWA: Enhanced invite sending with Web Share API and offline support
   const sendInvites = async () => {
     if (selectedContacts.size === 0) return
 
@@ -117,31 +182,41 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
     try {
       const selectedContactsList = contacts.filter(c => selectedContacts.has(c.id))
       
-      // Check if Web Share API is available for SMS
-      if (navigator.share) {
+      // PWA: Enhanced Web Share API usage
+      if (canUseWebShare()) {
         for (const contact of selectedContactsList) {
           if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
             try {
+              // Try sharing with more specific data
               await navigator.share({
                 title: 'Join Adaptonia Finance',
-                text: inviteMessage,
+                text: `Hi ${contact.name}! ${inviteMessage}`,
                 url: 'https://adaptonia.app/invite'
               })
-            } catch {
+              
+              // PWA: Store successful share for analytics/tracking
+              if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                  type: 'INVITE_SENT',
+                  data: { contactId: contact.id, method: 'webshare' }
+                })
+              }
+            } catch (shareError) {
               console.log('Share cancelled or failed for:', contact.name)
+              // Fallback to SMS if share fails
+              await fallbackToSMS(contact)
             }
           }
         }
       } else {
-        // Fallback: Open SMS app with pre-filled message
+        // Fallback: Enhanced SMS handling for PWA
         for (const contact of selectedContactsList) {
-          if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
-            const phoneNumber = contact.phoneNumbers[0]
-            const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(inviteMessage)}`
-            window.open(smsUrl, '_blank')
-          }
+          await fallbackToSMS(contact)
         }
       }
+
+      // PWA: Store invites in IndexedDB for offline sync
+      await storeInvitesOffline(selectedContactsList)
 
       // Mark as sent and close
       onContactsImported?.(selectedContactsList)
@@ -152,6 +227,65 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
       setError('Failed to send invites. Please try again.')
     } finally {
       setSendingInvites(false)
+    }
+  }
+
+  // PWA: Fallback SMS function
+  const fallbackToSMS = async (contact: Contact) => {
+    if (!contact.phoneNumbers || contact.phoneNumbers.length === 0) return
+
+    const phoneNumber = contact.phoneNumbers[0]
+    const personalizedMessage = `Hi ${contact.name}! ${inviteMessage}`
+    
+    // Try different SMS URL schemes for better PWA compatibility
+    const smsUrls = [
+      `sms:${phoneNumber}?body=${encodeURIComponent(personalizedMessage)}`,
+      `sms:${phoneNumber}&body=${encodeURIComponent(personalizedMessage)}`,
+      `sms://${phoneNumber}?body=${encodeURIComponent(personalizedMessage)}`
+    ]
+
+    // Try each URL scheme
+    for (const smsUrl of smsUrls) {
+      try {
+        window.open(smsUrl, '_blank')
+        break
+      } catch {
+        continue
+      }
+    }
+  }
+
+  // PWA: Store invites offline for background sync
+  const storeInvitesOffline = async (invitedContacts: Contact[]) => {
+    if (!('indexedDB' in window)) return
+
+    try {
+      const dbRequest = indexedDB.open('AdaptoniaContacts', 1)
+      
+      dbRequest.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result
+        if (!db.objectStoreNames.contains('invites')) {
+          db.createObjectStore('invites', { keyPath: 'id', autoIncrement: true })
+        }
+      }
+
+      dbRequest.onsuccess = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result
+        const transaction = db.transaction(['invites'], 'readwrite')
+        const store = transaction.objectStore('invites')
+        
+        invitedContacts.forEach(contact => {
+          store.add({
+            contactId: contact.id,
+            contactName: contact.name,
+            invitedAt: new Date().toISOString(),
+            status: 'sent',
+            synced: isOnline
+          })
+        })
+      }
+    } catch (error) {
+      console.error('Failed to store invites offline:', error)
     }
   }
 
@@ -168,6 +302,101 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
   const handleClose = () => {
     resetModal()
     onClose()
+  }
+
+  const addManualContact = () => {
+    if (!manualContact.name.trim()) return
+
+    const newContact: Contact = {
+      id: `manual_${Date.now()}`,
+      name: manualContact.name.trim(),
+      phoneNumbers: manualContact.phone.trim() ? [manualContact.phone.trim()] : [],
+      emailAddresses: manualContact.email.trim() ? [manualContact.email.trim()] : []
+    }
+
+    setContacts(prev => [...prev, newContact])
+    setManualContact({ name: '', phone: '', email: '' })
+    
+    if (contacts.length === 0) {
+      setStep('select')
+    }
+  }
+
+  // File upload for vCard files
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const content = e.target?.result as string
+      if (file.name.endsWith('.vcf') || file.type === 'text/vcard') {
+        parseVCardContent(content)
+      } else if (file.name.endsWith('.csv')) {
+        parseCSVContent(content)
+      }
+    }
+    reader.readAsText(file)
+  }
+
+  // Simple vCard parser
+  const parseVCardContent = (content: string) => {
+    const vcards = content.split('BEGIN:VCARD')
+    const newContacts: Contact[] = []
+
+    vcards.forEach((vcard, index) => {
+      if (!vcard.trim()) return
+
+      const lines = vcard.split('\n')
+      let name = ''
+      const phones: string[] = []
+      const emails: string[] = []
+
+      lines.forEach(line => {
+        if (line.startsWith('FN:')) name = line.substring(3).trim()
+        if (line.startsWith('TEL:')) phones.push(line.substring(4).trim())
+        if (line.startsWith('EMAIL:')) emails.push(line.substring(6).trim())
+      })
+
+      if (name) {
+        newContacts.push({
+          id: `imported_${Date.now()}_${index}`,
+          name,
+          phoneNumbers: phones,
+          emailAddresses: emails
+        })
+      }
+    })
+
+    setContacts(prev => [...prev, ...newContacts])
+    if (newContacts.length > 0) {
+      setStep('select')
+    }
+  }
+
+  // Simple CSV parser (Name, Phone, Email format)
+  const parseCSVContent = (content: string) => {
+    const lines = content.split('\n')
+    const newContacts: Contact[] = []
+
+    lines.forEach((line, index) => {
+      if (index === 0) return // Skip header
+      const [name, phone, email] = line.split(',').map(s => s.trim().replace(/"/g, ''))
+      
+      if (name) {
+        newContacts.push({
+          id: `csv_${Date.now()}_${index}`,
+          name,
+          phoneNumbers: phone ? [phone] : [],
+          emailAddresses: email ? [email] : []
+        })
+      }
+    })
+
+    setContacts(prev => [...prev, ...newContacts])
+    if (newContacts.length > 0) {
+      setStep('select')
+    }
   }
 
   if (!isOpen) return null
@@ -215,25 +444,170 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
           <div className="p-6">
             {/* Permission Step */}
             {step === 'permission' && (
-              <div className="text-center space-y-6">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-                  <Phone className="w-8 h-8 text-blue-600" />
-                </div>
-                
-                <div>
-                  <h3 className="text-lg font-medium mb-2">Access Your Contacts</h3>
+              <div className="space-y-6">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Phone className="w-8 h-8 text-blue-600" />
+                  </div>
+                  
+                  <h3 className="text-lg font-medium mb-2">Add Contacts to Invite</h3>
                   <p className="text-gray-600 text-sm leading-relaxed">
-                    We&lsquo;ll help you invite friends and colleagues to join Adaptonia Finance. 
-                    Your contact information stays private and secure.
+                    Invite friends and colleagues to join Adaptonia Finance. 
+                    Choose your preferred method below.
                   </p>
                 </div>
 
-                {!isContactsAPISupported() && (
-                  <div className="flex items-center space-x-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0" />
-                    <p className="text-sm text-yellow-800">
-                      Contacts API is not supported in this browser. Please use a compatible mobile browser.
+                {/* PWA: Offline indicator */}
+                {!isOnline && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                    <div className="flex items-center space-x-2">
+                      <AlertCircle className="w-5 h-5 text-orange-600" />
+                      <span className="text-orange-800 text-sm font-medium">
+                        You're offline - contacts will be saved locally and synced when online
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* PWA: Install prompt for better contact access */}
+                {isInstallable && !isStandaloneMode() && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start space-x-3">
+                      <Smartphone className="w-5 h-5 text-blue-600 mt-0.5" />
+                      <div className="flex-1">
+                        <h4 className="font-medium text-blue-900 mb-1">Install App for Better Experience</h4>
+                        <p className="text-sm text-blue-700 mb-3">
+                          Install Adaptonia as an app for easier contact sharing and offline access.
+                        </p>
+                        <button
+                          onClick={handleInstallApp}
+                          className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                        >
+                          <Download size={14} className="inline mr-1" />
+                          Install App
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Method 1: Native Contacts API */}
+                {isContactsAPISupported() ? (
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <h4 className="font-medium">📱 Import from Device</h4>
+                      {isStandaloneMode() && (
+                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                          PWA Enhanced
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">
+                      Access your device contacts directly
+                      {isStandaloneMode() && " with enhanced PWA integration"}
                     </p>
+                    <button
+                      onClick={importContacts}
+                      disabled={loading}
+                      className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center space-x-2"
+                    >
+                      {loading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span>Importing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus size={16} />
+                          <span>Import Contacts</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="border border-yellow-200 bg-yellow-50 rounded-lg p-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <AlertCircle className="w-5 h-5 text-yellow-600" />
+                      <h4 className="font-medium text-yellow-800">Device Import Unavailable</h4>
+                    </div>
+                    <p className="text-sm text-yellow-700">
+                      Contact import is only supported on mobile browsers. Use the methods below instead.
+                    </p>
+                  </div>
+                )}
+
+                {/* Method 2: Manual Entry */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-medium mb-2">✍️ Add Manually</h4>
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      placeholder="Full Name *"
+                      value={manualContact.name}
+                      onChange={(e) => setManualContact(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="tel"
+                      placeholder="Phone Number"
+                      value={manualContact.phone}
+                      onChange={(e) => setManualContact(prev => ({ ...prev, phone: e.target.value }))}
+                      className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email Address"
+                      value={manualContact.email}
+                      onChange={(e) => setManualContact(prev => ({ ...prev, email: e.target.value }))}
+                      className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button
+                      onClick={addManualContact}
+                      disabled={!manualContact.name.trim()}
+                      className="w-full py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Add Contact
+                    </button>
+                  </div>
+                </div>
+
+                {/* Method 3: File Upload */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <h4 className="font-medium">📁 Upload File</h4>
+                    {canUseWebShare() && (
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                        Share Enabled
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Support for .vcf (vCard) and .csv files
+                    {canUseWebShare() && ". Files can be shared from other apps."}
+                  </p>
+                  <input
+                    type="file"
+                    accept=".vcf,.csv,text/vcard,text/csv"
+                    onChange={handleFileUpload}
+                    className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Show added contacts count */}
+                {contacts.length > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-blue-800 font-medium">
+                        {contacts.length} contact(s) added
+                        {!isOnline && " (saved offline)"}
+                      </span>
+                      <button
+                        onClick={() => setStep('select')}
+                        className="text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        Continue →
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -243,23 +617,6 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
                     className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
                   >
                     Cancel
-                  </button>
-                  <button
-                    onClick={importContacts}
-                    disabled={loading || !isContactsAPISupported()}
-                    className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                  >
-                    {loading ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span>Importing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus size={16} />
-                        <span>Import Contacts</span>
-                      </>
-                    )}
                   </button>
                 </div>
               </div>

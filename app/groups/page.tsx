@@ -379,7 +379,7 @@ const GroupsPageContent: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 ">
       {/* User Initialization Loading */}
       {/* {!userInitialized && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -400,26 +400,18 @@ const GroupsPageContent: React.FC = () => {
       {/* Sidebar with notification badge - Hide on mobile when channel is selected */}
       {!(isMobile && selectedChannel) && (
         <div className="relative">
-          <Sidebar activeTab={activeTab} onTabChange={handleTabChange} />
-          
-          {/* Notification Badge */}
-          {totalUnreadCount > 0 && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center"
-              aria-label={`${totalUnreadCount} unread messages`}
-            >
-              {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-            </motion.div>
-          )}
+          <Sidebar 
+            activeTab={activeTab} 
+            onTabChange={handleTabChange}
+            notificationCount={totalUnreadCount}
+          />
 
           {/* Theme Toggle */}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             // onClick={toggleTheme}
-            className="absolute bottom-4 left-2 p-2 rounded-lg transition-colors bg-white text-gray-600 hover:bg-gray-100 shadow-lg"
+            className="absolute bottom-4 left-4 p-2 rounded-lg transition-colors bg-white text-gray-600 hover:bg-gray-100 shadow-lg"
             // aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
           >
              <Moon size={16} /> 

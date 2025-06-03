@@ -82,14 +82,14 @@ const ChannelList: React.FC<ChannelListProps> = ({ onChannelSelect }) => {
   // }
 
   return (
-    <div className="flex-1 bg-white flex flex-col h-full">
+    <div className="flex-1 bg-white flex flex-col h-full rounded-tl-3xl mt-16">
       {/* Header Section - Fixed */}
-      <div className="bg-black text-white p-4 flex-shrink-0">
+      <div className="bg-black text-white p-8 flex-shrink-0 rounded-tl-3xl">
         <div className="flex items-center space-x-2 mb-1">
           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
             <MessageSquare className="w-4 h-4 text-white" />
           </div>
-          <span className="text-white font-medium">Finance</span>
+          <span className="text-white font-medium text-2xl flex justify-center text-center">Finance</span>
         </div>
       </div>
 

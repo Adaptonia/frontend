@@ -21,8 +21,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("✅ Found authenticated user:", data?.email);
       setUser(data);
     } catch (error) {
-      console.log("❌ No authenticated user found");
-      console.error('Error details:', error);
+      // This is expected when no user is logged in - don't log as error
+      console.log("ℹ️ No authenticated user found (guest session)");
+      // Only log detailed error in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Auth check details:', error);
+      }
       setUser(null);
     } finally {
       setLoading(false);

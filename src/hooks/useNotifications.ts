@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { 
-  requestNotificationPermission, 
-  scheduleReminderNotification,
-  cancelReminderNotification,
-  playNotificationSound
-} from '@/app/sw-register';
+// import { 
+//   requestNotificationPermission, 
+//   scheduleReminderNotification,
+//   cancelReminderNotification,
+//   playNotificationSound
+// } from '@/app/sw-register';
 import { CreateReminderRequest, reminderService } from '../services/appwrite/reminderService';
 
 export interface NotificationState {
@@ -92,166 +92,190 @@ export const useNotifications = (): UseNotificationsReturn => {
   }, []);
 
   // Request notification permission
-  const requestPermission = useCallback(async (): Promise<boolean> => {
-    try {
-      const granted = await requestNotificationPermission();
+  // const requestPermission = useCallback(async (): Promise<boolean> => {
+  //   try {
+  //     const granted = await requestNotificationPermission();
       
-      setState(prevState => ({
-        ...prevState,
-        permission: Notification.permission
-      }));
+  //     setState(prevState => ({
+  //       ...prevState,
+  //       permission: Notification.permission
+  //     }));
 
-      if (granted) {
-        toast.success('Notifications enabled', {
-          description: 'You\'ll receive reminders for your goals'
-        });
-      } else {
-        toast.error('Notifications disabled', {
-          description: 'Please enable notifications in your browser settings'
-        });
-      }
+  //     if (granted) {
+  //       toast.success('Notifications enabled', {
+  //         description: 'You\'ll receive reminders for your goals'
+  //       });
+  //     } else {
+  //       toast.error('Notifications disabled', {
+  //         description: 'Please enable notifications in your browser settings'
+  //       });
+  //     }
 
-      return granted;
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to request notification permission';
-      console.error('Permission request error:', errorMessage);
+  //     return granted;
+  //   } catch (error: unknown) {
+  //     const errorMessage = error instanceof Error ? error.message : 'Failed to request notification permission';
+  //     console.error('Permission request error:', errorMessage);
       
-      toast.error('Permission request failed', {
-        description: 'Unable to request notification permission'
-      });
+  //     toast.error('Permission request failed', {
+  //       description: 'Unable to request notification permission'
+  //     });
       
-      return false;
-    }
-  }, []);
+  //     return false;
+  //   }
+  // }, []);
 
   // Create a new reminder
-  const createReminder = useCallback(async (reminderData: CreateReminderRequest): Promise<boolean> => {
-    try {
-      // First ensure we have notification permission
-      if (state.permission !== 'granted') {
-        const granted = await requestPermission();
-        if (!granted) {
-          toast.warning('Reminder created without notifications', {
-            description: 'Enable notifications to receive alerts'
-          });
-          // Still create the reminder in database even without permission
-        }
-      }
+  // const createReminder = useCallback(async (reminderData: CreateReminderRequest): Promise<boolean> => {
+  //   try {
+  //     // First ensure we have notification permission
+  //     if (state.permission !== 'granted') {
+  //       const granted = await requestPermission();
+  //       if (!granted) {
+  //         toast.warning('Reminder created without notifications', {
+  //           description: 'Enable notifications to receive alerts'
+  //         });
+  //         // Still create the reminder in database even without permission
+  //       }
+  //     }
 
-      // Create reminder in database
-      const reminder = await reminderService.createReminder(reminderData);
+  //     // Create reminder in database
+  //     const reminder = await reminderService.createReminder(reminderData);
       
-      // Schedule notification if service worker is ready
-      if (state.isServiceWorkerReady) {
-        await scheduleReminderNotification({
-          goalId: reminder.goalId,
-          title: reminder.title,
-          description: reminder.description,
-          sendDate: reminder.sendDate
-        });
-      }
+  //     // Schedule notification if service worker is ready
+  //     if (state.isServiceWorkerReady) {
+  //       await scheduleReminderNotification({
+  //         goalId: reminder.goalId,
+  //         title: reminder.title,
+  //         description: reminder.description,
+  //         sendDate: reminder.sendDate
+  //       });
+  //     }
 
-      toast.success('Reminder created', {
-        description: `Reminder set for ${reminder.title}`
-      });
+  //     toast.success('Reminder created', {
+  //       description: `Reminder set for ${reminder.title}`
+  //     });
 
-      return true;
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create reminder';
-      console.error('Create reminder error:', errorMessage);
+  //     return true;
+  //   } catch (error: unknown) {
+  //     const errorMessage = error instanceof Error ? error.message : 'Failed to create reminder';
+  //     console.error('Create reminder error:', errorMessage);
       
-      toast.error('Failed to create reminder', {
-        description: errorMessage
-      });
+  //     toast.error('Failed to create reminder', {
+  //       description: errorMessage
+  //     });
       
-      return false;
-    }
-  }, [state.permission, state.isServiceWorkerReady, requestPermission]);
+  //     return false;
+  //   }
+  // }, [state.permission, state.isServiceWorkerReady, requestPermission]);
 
   // Cancel a reminder
-  const cancelReminder = useCallback(async (goalId: string): Promise<boolean> => {
-    try {
-      // Cancel in service worker
-      if (state.isServiceWorkerReady) {
-        await cancelReminderNotification(goalId);
-      }
+  // const cancelReminder = useCallback(async (goalId: string): Promise<boolean> => {
+  //   try {
+  //     // Cancel in service worker
+  //     if (state.isServiceWorkerReady) {
+  //       await cancelReminderNotification(goalId);
+  //     }
 
-      // Delete from database
-      await reminderService.deleteRemindersByGoalId(goalId);
+  //     // Delete from database
+  //     await reminderService.deleteRemindersByGoalId(goalId);
 
-      toast.success('Reminder cancelled', {
-        description: 'The reminder has been removed'
-      });
+  //     toast.success('Reminder cancelled', {
+  //       description: 'The reminder has been removed'
+  //     });
 
-      return true;
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to cancel reminder';
-      console.error('Cancel reminder error:', errorMessage);
+  //     return true;
+  //   } catch (error: unknown) {
+  //     const errorMessage = error instanceof Error ? error.message : 'Failed to cancel reminder';
+  //     console.error('Cancel reminder error:', errorMessage);
       
-      toast.error('Failed to cancel reminder', {
-        description: errorMessage
-      });
+  //     toast.error('Failed to cancel reminder', {
+  //       description: errorMessage
+  //     });
       
-      return false;
-    }
-  }, [state.isServiceWorkerReady]);
+  //     return false;
+  //   }
+  // }, [state.isServiceWorkerReady]);
 
   // Test notification functionality
-  const testNotification = useCallback(async (): Promise<boolean> => {
-    try {
-      // Request permission if needed
-      if (state.permission !== 'granted') {
-        const granted = await requestPermission();
-        if (!granted) {
-          return false;
-        }
-      }
+  // const testNotification = useCallback(async (): Promise<boolean> => {
+  //   try {
+  //     // Request permission if needed
+  //     if (state.permission !== 'granted') {
+  //       const granted = await requestPermission();
+  //       if (!granted) {
+  //         return false;
+  //       }
+  //     }
 
-      // Create test notification
-      const testReminder = {
-        goalId: 'test',
-        title: 'Test Notification',
-        description: 'This is a test notification from Adaptonia',
-        sendDate: new Date().toISOString()
-      };
+  //     // Create test notification
+  //     const testReminder = {
+  //       goalId: 'test',
+  //       title: 'Test Notification',
+  //       description: 'This is a test notification from Adaptonia',
+  //       sendDate: new Date().toISOString()
+  //     };
 
-      const success = await scheduleReminderNotification(testReminder);
+  //     const success = await scheduleReminderNotification(testReminder);
       
-      if (success) {
-        toast.success('Test notification scheduled', {
-          description: 'You should receive a notification shortly'
-        });
+  //     if (success) {
+  //       toast.success('Test notification scheduled', {
+  //         description: 'You should receive a notification shortly'
+  //       });
         
-        // Also play sound for immediate feedback
-        await playSound();
-      } else {
-        toast.error('Test notification failed', {
-          description: 'Unable to schedule test notification'
-        });
-      }
+  //       // Also play sound for immediate feedback
+  //       await playSound();
+  //     } else {
+  //       toast.error('Test notification failed', {
+  //         description: 'Unable to schedule test notification'
+  //       });
+  //     }
 
-      return success;
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Test notification failed';
-      console.error('Test notification error:', errorMessage);
+  //     return success;
+  //   } catch (error: unknown) {
+  //     const errorMessage = error instanceof Error ? error.message : 'Test notification failed';
+  //     console.error('Test notification error:', errorMessage);
       
-      toast.error('Test notification failed', {
-        description: errorMessage
-      });
+  //     toast.error('Test notification failed', {
+  //       description: errorMessage
+  //     });
       
-      return false;
-    }
-  }, [state.permission, requestPermission]);
+  //     return false;
+  //   }
+  // }, [state.permission, requestPermission]);
 
   // Play notification sound
-  const playSound = useCallback(async (): Promise<void> => {
-    try {
-      await playNotificationSound();
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to play notification sound';
-      console.error('Play sound error:', errorMessage);
-    }
-  }, []);
+  // const playSound = useCallback(async (): Promise<void> => {
+  //   try {
+  //     await playNotificationSound();
+  //   } catch (error: unknown) {
+  //     const errorMessage = error instanceof Error ? error.message : 'Failed to play notification sound';
+  //     console.error('Play sound error:', errorMessage);
+  //   }
+  // }, []);
+  
+  const createReminder = async (reminderData: CreateReminderRequest): Promise<boolean> => {
+    console.log('createReminder');
+    return true;
+  }
+
+   const testNotification = async (): Promise<boolean> => {
+    console.log('testNotification');
+    return true;
+  }
+
+  const requestPermission = async (): Promise<boolean> => {
+    console.log('requestPermission');
+    return true;
+  }
+
+  const playSound = async (): Promise<void>  => {
+    console.log('playSound');
+  }
+
+  const cancelReminder = async (goalId: string): Promise<boolean> => {
+    console.log('cancelReminder');
+    return true;
+  }
 
   return {
     state,

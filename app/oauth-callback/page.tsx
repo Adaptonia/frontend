@@ -1,17 +1,34 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { getCurrentUser } from '@/src/services/appwrite/auth'
 import { toast } from 'sonner'
 
 export default function OAuthCallback() {
   const { setUser } = useAuth()
+  const [attempts, setAttempts] = useState(0)
+  const maxAttempts = 3
 
   useEffect(() => {
     const handleOAuthCallback = async () => {
       try {
         console.log('🔄 OAuth callback: Processing authentication...')
+        
+        // Check for OAuth error in URL parameters
+        const urlParams = new URLSearchParams(window.location.search)
+        const error = urlParams.get('error')
+        const errorDescription = urlParams.get('error_description')
+        
+        if (error) {
+          console.error('❌ OAuth error:', error, errorDescription)
+          toast.error('Authentication failed: ' + (errorDescription || error))
+          window.location.replace('/login')
+          return
+        }
+        
+        // Small delay to ensure OAuth session is fully established
+        await new Promise(resolve => setTimeout(resolve, 1000))
         
         // Get the authenticated user from Appwrite
         const user = await getCurrentUser()
@@ -34,20 +51,36 @@ export default function OAuthCallback() {
           window.location.replace('/dashboard')
           
         } else {
-          console.error('❌ OAuth callback: No user found after OAuth')
-          toast.error('Authentication failed')
-          window.location.replace('/login')
+          console.log('❌ OAuth callback: No user found, retrying...', attempts + 1, '/', maxAttempts)
+          
+          // Retry logic for cases where OAuth session might need more time
+          if (attempts < maxAttempts) {
+            setAttempts(prev => prev + 1)
+            setTimeout(() => handleOAuthCallback(), 2000) // Retry after 2 seconds
+          } else {
+            console.error('❌ OAuth callback: Max attempts reached, no user found')
+            toast.error('Authentication failed')
+            window.location.replace('/login')
+          }
         }
         
       } catch (error) {
         console.error('❌ OAuth callback error:', error)
-        toast.error('Authentication failed')
-        window.location.replace('/login')
+        
+        // Retry logic for network or temporary errors
+        if (attempts < maxAttempts) {
+          console.log('🔄 Retrying OAuth callback...', attempts + 1, '/', maxAttempts)
+          setAttempts(prev => prev + 1)
+          setTimeout(() => handleOAuthCallback(), 2000)
+        } else {
+          toast.error('Authentication failed')
+          window.location.replace('/login')
+        }
       }
     }
 
     handleOAuthCallback()
-  }, [setUser])
+  }, [setUser, attempts])
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -59,6 +92,11 @@ export default function OAuthCallback() {
         <p className="text-gray-600">
           Please wait while we finish setting up your account
         </p>
+        {/* {attempts > 0 && (
+          <p className="text-sm text-gray-500 mt-2">
+            Attempt {attempts + 1} of {maxAttempts + 1}
+          </p>
+        )} */}
       </div>
     </div>
   )

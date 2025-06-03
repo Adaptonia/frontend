@@ -12,7 +12,7 @@ import { updateGoal } from '@/src/services/appwrite';
 import { useAuth } from '@/context/AuthContext';
 import { reminderService } from '@/src/services/appwrite/reminderService';
 import { format } from 'date-fns';
-import { requestNotificationPermission, scheduleReminderNotificationWithAlarm } from '@/app/sw-register';
+// import { requestNotificationPermission, scheduleReminderNotificationWithAlarm } from '@/app/sw-register';
 
 // Helper function to format dates nicely
 const formatDisplayDate = (dateString: string): string => {
@@ -300,20 +300,20 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
     
     try {
       // First, request notification permission if not already granted
-      const permissionGranted = await requestNotificationPermission();
+      // const permissionGranted = await requestNotificationPermission();
       
-      if (!permissionGranted) {
-        // If permission was denied, still create the reminder in the database
-        // but inform the user they won't receive notifications
-        toast.warning(
-          <div className="flex flex-col gap-1">
-            <span className="font-medium">Notification permission denied</span>
-            <span className="text-sm text-gray-600">
-              You won&apos;t receive notification alerts for this reminder
-            </span>
-          </div>
-        );
-      }
+      // if (!permissionGranted) {
+      //   // If permission was denied, still create the reminder in the database
+      //   // but inform the user they won't receive notifications
+      //   toast.warning(
+      //     <div className="flex flex-col gap-1">
+      //       <span className="font-medium">Notification permission denied</span>
+      //       <span className="text-sm text-gray-600">
+      //         You won&apos;t receive notification alerts for this reminder
+      //       </span>
+      //     </div>
+      //   );
+      // }
       
       const [hours, minutes] = reminderSettings.time.split(':').map(Number);
       const reminderDate = new Date(reminderSettings.date);
@@ -368,20 +368,20 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       await Promise.all(reminderPromises);
       
       // If notification permission is granted, also schedule in service worker for alarm
-      if (permissionGranted) {
-        // Schedule the notifications in the service worker for alarm functionality
-        const serviceWorkerPromises = reminderDates.map(sendDate => 
-          scheduleReminderNotificationWithAlarm({
-            goalId,
-            title: `Reminder: ${title}`,
-            description: description || 'Time to work on your goal!',
-            sendDate,
-            alarm: true
-          })
-        );
+      // if (permissionGranted) {
+      //   // Schedule the notifications in the service worker for alarm functionality
+      //   const serviceWorkerPromises = reminderDates.map(sendDate => 
+      //     scheduleReminderNotificationWithAlarm({
+      //       goalId,
+      //       title: `Reminder: ${title}`,
+      //       description: description || 'Time to work on your goal!',
+      //       sendDate,
+      //       alarm: true
+      //     })
+      //   );
         
-        await Promise.all(serviceWorkerPromises);
-      }
+      //   await Promise.all(serviceWorkerPromises);
+      // }
       
       const formattedTime = new Date(`2000-01-01T${reminderSettings.time}`).toLocaleTimeString([], {
         hour: 'numeric',
@@ -394,7 +394,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           <span className="font-medium">Reminder Set! ⏰</span>
           <span className="text-sm text-gray-600">
             {reminderSettings.count} {reminderSettings.count === 1 ? 'reminder' : 'reminders'} scheduled at {formattedTime}
-            {permissionGranted ? '' : ' (notifications blocked by browser)'}
+            {/* {permissionGranted ? '' : ' (notifications blocked by browser)'} */}
           </span>
         </div>
       );

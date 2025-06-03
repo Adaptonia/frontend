@@ -216,7 +216,10 @@ export const getCurrentUser = async (): Promise<User | null> => {
       return null;
     }
   } catch (error: unknown) {
-    console.error('No active session found:', error);
+    // This is expected when no user is logged in - don't log as error in production
+    if (process.env.NODE_ENV === 'development') {
+      console.log('No active session found:', error);
+    }
     return null;
   }
 };

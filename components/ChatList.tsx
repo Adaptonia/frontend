@@ -28,9 +28,9 @@ const ChatList: React.FC<ChatListProps> = ({ contacts, onContactSelect, onAddCon
   )
 
   return (
-    <div className="flex-1 bg-white flex flex-col h-full">
+    <div className="flex-1 bg-white flex flex-col h-full rounded-tl-3xl mt-16">
       {/* Header */}
-      <div className="p-4 border-b">
+      <div className="p-8 border-b">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-semibold">Direct Messages</h1>
           <button
