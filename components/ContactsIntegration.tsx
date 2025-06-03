@@ -414,11 +414,11 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-hidden"
+          className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b">
+          <div className="flex items-center justify-between p-6 border-b flex-shrink-0">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                 <Users className="w-5 h-5 text-blue-600" />
@@ -441,8 +441,9 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
             </button>
           </div>
 
-          <div className="p-6">
-            {/* Permission Step */}
+          {/* Scrollable Content Area */}
+          <div className="flex-1 overflow-y-auto overscroll-contain">
+            <div className="p-6">{/* Permission Step */}
             {step === 'permission' && (
               <div className="space-y-6">
                 <div className="text-center">
@@ -633,7 +634,7 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
                   <textarea
                     value={inviteMessage}
                     onChange={(e) => setInviteMessage(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     rows={3}
                     placeholder="Customize your invite message..."
                   />
@@ -644,12 +645,14 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Select Contacts ({selectedContacts.size} selected)
                   </label>
-                  <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-lg">
-                    {contacts.map((contact) => (
+                  <div className="max-h-72 min-h-[200px] overflow-y-auto overscroll-contain border border-gray-200 rounded-lg bg-gray-50 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                    {contacts.map((contact, index) => (
                       <div
                         key={contact.id}
-                        className={`flex items-center space-x-3 p-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 ${
-                          selectedContacts.has(contact.id) ? 'bg-blue-50' : ''
+                        className={`flex items-center space-x-3 p-3 cursor-pointer hover:bg-gray-100 transition-colors ${
+                          index !== contacts.length - 1 ? 'border-b border-gray-200' : ''
+                        } ${
+                          selectedContacts.has(contact.id) ? 'bg-blue-50 hover:bg-blue-100' : 'bg-white'
                         }`}
                         onClick={() => toggleContact(contact.id)}
                       >
@@ -657,36 +660,56 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
                           selectedContacts.has(contact.id)
                             ? 'bg-blue-600 border-blue-600'
                             : 'border-gray-300'
-                        } flex items-center justify-center`}>
+                        } flex items-center justify-center flex-shrink-0`}>
                           {selectedContacts.has(contact.id) && (
                             <Check size={12} className="text-white" />
                           )}
                         </div>
                         
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-900">{contact.name}</div>
-                          <div className="text-sm text-gray-500">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-gray-900 truncate">{contact.name}</div>
+                          <div className="text-sm text-gray-500 space-y-1">
                             {contact.phoneNumbers?.[0] && (
-                              <span className="flex items-center space-x-1">
-                                <Phone size={12} />
-                                <span>{contact.phoneNumbers[0]}</span>
-                              </span>
+                              <div className="flex items-center space-x-1">
+                                <Phone size={12} className="flex-shrink-0" />
+                                <span className="truncate">{contact.phoneNumbers[0]}</span>
+                              </div>
                             )}
                             {contact.emailAddresses?.[0] && (
-                              <span className="flex items-center space-x-1">
-                                <Mail size={12} />
-                                <span>{contact.emailAddresses[0]}</span>
-                              </span>
+                              <div className="flex items-center space-x-1">
+                                <Mail size={12} className="flex-shrink-0" />
+                                <span className="truncate">{contact.emailAddresses[0]}</span>
+                              </div>
                             )}
                           </div>
                         </div>
                       </div>
                     ))}
+                    
+                    {contacts.length === 0 && (
+                      <div className="p-8 text-center text-gray-500">
+                        <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                        <p>No contacts added yet</p>
+                        <button
+                          onClick={() => setStep('permission')}
+                          className="mt-2 text-blue-600 hover:text-blue-700 text-sm"
+                        >
+                          ← Go back to add contacts
+                        </button>
+                      </div>
+                    )}
                   </div>
+                  
+                  {/* Scroll indicator for long lists */}
+                  {contacts.length > 5 && (
+                    <p className="text-xs text-gray-500 mt-2 text-center">
+                      Scroll to see all {contacts.length} contacts
+                    </p>
+                  )}
                 </div>
 
                 {/* Actions */}
-                <div className="flex space-x-3">
+                <div className="flex space-x-3 pt-4 border-t">
                   <button
                     onClick={handleClose}
                     className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
@@ -745,6 +768,7 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
                 <p className="text-sm text-red-800">{error}</p>
               </div>
             )}
+            </div>
           </div>
         </motion.div>
       </motion.div>
