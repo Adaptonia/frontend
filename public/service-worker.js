@@ -1,20 +1,23 @@
 // Enhanced Service Worker for Adaptonia PWA
-// Handles caching, notification events, and reminder scheduling
+// Handles caching, notification events, badge counting, and reminder scheduling
 
-const CACHE_NAME = 'adaptonia-cache-v2';
+const CACHE_NAME = 'adaptonia-cache-v3';
 const urlsToCache = [
   '/',
   '/index.html',
   '/dashboard',
-  '/icons/logo-192x192.png',
-  '/icons/badge-72x72.png',
+  '/icons/icon-192x192.png',
+  '/icons/icon-72x72.png',
   '/sounds/notification.mp3',
   // Add other static assets here
 ];
 
+// Badge counter for notifications
+let notificationBadgeCount = 0;
+
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing v2');
+  console.log('Service Worker: Installing v3 with enhanced mobile support');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('Service Worker: Caching Files');
@@ -29,7 +32,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activated v2');
+  console.log('Service Worker: Activated v3 with badge support');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -43,6 +46,9 @@ self.addEventListener('activate', (event) => {
     }).then(() => {
       // Take control of all clients immediately
       return self.clients.claim();
+    }).then(() => {
+      // Initialize badge count
+      updateBadgeCount(0);
     })
   );
 });
@@ -109,39 +115,77 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// Enhanced badge management
+function updateBadgeCount(count) {
+  notificationBadgeCount = Math.max(0, count);
+  
+  if ('setAppBadge' in navigator) {
+    // Use the new Badge API if available (Chrome 81+, Edge 84+)
+    if (notificationBadgeCount > 0) {
+      navigator.setAppBadge(notificationBadgeCount).catch((error) => {
+        console.error('Service Worker: Failed to set app badge:', error);
+      });
+    } else {
+      navigator.clearAppBadge().catch((error) => {
+        console.error('Service Worker: Failed to clear app badge:', error);
+      });
+    }
+  }
+  
+  // Send badge count to all clients
+  self.clients.matchAll().then(clients => {
+    clients.forEach(client => {
+      try {
+        client.postMessage({
+          type: 'BADGE_COUNT_UPDATED',
+          count: notificationBadgeCount
+        });
+      } catch (error) {
+        console.error('Service Worker: Failed to send badge update:', error);
+      }
+    });
+  });
+  
+  console.log('Service Worker: Badge count updated to:', notificationBadgeCount);
+}
+
 // Handle push notifications from server
 self.addEventListener('push', (event) => {
   console.log('Service Worker: Push Received', event);
   
   try {
     const data = event.data ? event.data.json() : {};
+    
+    // Increment badge count
+    updateBadgeCount(notificationBadgeCount + 1);
   
-  const options = {
-    body: data.description || 'Reminder for your goal',
-    icon: '/icons/logo-192x192.png',
-    badge: '/icons/badge-72x72.png',
-    vibrate: [100, 50, 100],
-    data: {
-      url: data.url || '/dashboard',
+    const options = {
+      body: data.description || 'Reminder for your goal',
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-72x72.png',
+      vibrate: [100, 50, 100],
+      data: {
+        url: data.url || '/dashboard',
         goalId: data.goalId,
         timestamp: Date.now()
-    },
-    actions: [
-      {
-        action: 'view',
-        title: 'View Goal'
       },
-      {
-        action: 'complete',
-        title: 'Mark Complete'
-      }
+      actions: [
+        {
+          action: 'view',
+          title: 'View Goal'
+        },
+        {
+          action: 'complete',
+          title: 'Mark Complete'
+        }
       ],
       silent: false,
-      requireInteraction: true
-  };
+      requireInteraction: true,
+      tag: `goal-${data.goalId || Date.now()}` // Prevents duplicate notifications
+    };
   
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'Adaptonia Reminder', options)
+    event.waitUntil(
+      self.registration.showNotification(data.title || 'Adaptonia Reminder', options)
         .catch((error) => {
           console.error('Service Worker: Failed to show push notification:', error);
         })
@@ -206,34 +250,38 @@ class ReminderManager {
 
   showNotification(reminder) {
     try {
+      // Increment badge count for new notification
+      updateBadgeCount(notificationBadgeCount + 1);
+      
       const options = {
-    body: reminder.description || 'Time for your goal!',
-    icon: '/icons/logo-192x192.png',
-    badge: '/icons/badge-72x72.png',
+        body: reminder.description || 'Time for your goal!',
+        icon: '/icons/icon-192x192.png',
+        badge: '/icons/icon-72x72.png',
         vibrate: [200, 100, 200],
-    data: {
-      url: '/dashboard',
-      goalId: reminder.goalId,
+        data: {
+          url: '/dashboard',
+          goalId: reminder.goalId,
           alarm: reminder.alarm,
           timestamp: Date.now()
-    },
-    actions: [
-      {
-        action: 'view',
-        title: 'View Goal'
-      },
-      {
-        action: 'complete',
-        title: 'Mark Complete'
-      },
-      {
-        action: 'snooze',
-        title: 'Snooze 5 min'
-      }
+        },
+        actions: [
+          {
+            action: 'view',
+            title: 'View Goal'
+          },
+          {
+            action: 'complete',
+            title: 'Mark Complete'
+          },
+          {
+            action: 'snooze',
+            title: 'Snooze 5 min'
+          }
         ],
         silent: false,
         requireInteraction: true,
-        tag: `goal-${reminder.goalId}` // Prevents duplicate notifications
+        tag: `goal-${reminder.goalId}`, // Prevents duplicate notifications
+        renotify: true // Allow renotification for the same tag
       };
       
       self.registration.showNotification(reminder.title || 'Adaptonia Reminder', options)
@@ -244,11 +292,11 @@ class ReminderManager {
           return self.clients.matchAll();
         })
         .then((clients) => {
-    clients.forEach(client => {
+          clients.forEach(client => {
             try {
-      client.postMessage({
-        type: 'PLAY_NOTIFICATION_SOUND',
-        data: {
+              client.postMessage({
+                type: 'PLAY_NOTIFICATION_SOUND',
+                data: {
                   goalId: reminder.goalId,
                   alarm: reminder.alarm
                 }
@@ -284,13 +332,13 @@ class ReminderManager {
       self.clients.matchAll().then(clients => {
         clients.forEach(client => {
           try {
-          client.postMessage({
-            type: 'REMINDER_SNOOZED',
-            data: {
-              goalId,
-              snoozeTime: snoozeTime.toISOString()
-            }
-          });
+            client.postMessage({
+              type: 'REMINDER_SNOOZED',
+              data: {
+                goalId,
+                snoozeTime: snoozeTime.toISOString()
+              }
+            });
           } catch (error) {
             console.error('Service Worker: Failed to send snooze message:', error);
           }
@@ -311,7 +359,7 @@ self.addEventListener('message', (event) => {
   console.log('Service Worker: Message received', event.data);
   
   try {
-    const { type, reminder, goalId } = event.data;
+    const { type, reminder, goalId, count } = event.data;
     
     switch (type) {
       case 'SCHEDULE_REMINDER':
@@ -324,6 +372,24 @@ self.addEventListener('message', (event) => {
         if (goalId) {
           reminderManager.cancelReminder(goalId);
         }
+        break;
+        
+      case 'UPDATE_BADGE_COUNT':
+        if (typeof count === 'number') {
+          updateBadgeCount(count);
+        }
+        break;
+        
+      case 'CLEAR_BADGE':
+        updateBadgeCount(0);
+        break;
+        
+      case 'REQUEST_BADGE_COUNT':
+        // Send current badge count to requesting client
+        event.ports[0]?.postMessage({
+          type: 'BADGE_COUNT_RESPONSE',
+          count: notificationBadgeCount
+        });
         break;
         
       default:
@@ -340,6 +406,9 @@ self.addEventListener('notificationclick', (event) => {
   
   try {
     event.notification.close();
+    
+    // Decrement badge count when notification is clicked
+    updateBadgeCount(notificationBadgeCount - 1);
     
     const { action } = event;
     const { goalId, url } = event.notification.data || {};
@@ -359,18 +428,18 @@ self.addEventListener('notificationclick', (event) => {
         
       case 'view':
         const viewUrl = goalId ? `/dashboard?goal=${goalId}` : url || '/dashboard';
-    event.waitUntil(
+        event.waitUntil(
           self.clients.matchAll({ type: 'window' }).then((clientList) => {
             // Try to focus existing window
-        for (const client of clientList) {
-          if (client.url.includes('/dashboard') && 'focus' in client) {
-            client.postMessage({
-              type: 'VIEW_GOAL',
-              goalId: goalId
-            });
-            return client.focus();
-          }
-        }
+            for (const client of clientList) {
+              if (client.url.includes('/dashboard') && 'focus' in client) {
+                client.postMessage({
+                  type: 'VIEW_GOAL',
+                  goalId: goalId
+                });
+                return client.focus();
+              }
+            }
             // Open new window if none exists
             if (self.clients.openWindow) {
               return self.clients.openWindow(viewUrl);
@@ -382,9 +451,9 @@ self.addEventListener('notificationclick', (event) => {
         break;
         
       case 'complete':
-    if (goalId) {
-      event.waitUntil(
-        self.registration.sync.register(`complete-goal-${goalId}`)
+        if (goalId) {
+          event.waitUntil(
+            self.registration.sync.register(`complete-goal-${goalId}`)
               .catch((error) => {
                 console.error('Service Worker: Failed to register sync:', error);
               })
@@ -394,68 +463,60 @@ self.addEventListener('notificationclick', (event) => {
         
       default:
         // Default action - open app
-    event.waitUntil(
+        event.waitUntil(
           self.clients.matchAll({ type: 'window' }).then((clientList) => {
-        if (clientList.length > 0) {
-          return clientList[0].focus();
-        }
-            return self.clients.openWindow('/dashboard');
+            if (clientList.length > 0) {
+              // Focus existing window
+              return clientList[0].focus();
+            }
+            // Open new window
+            if (self.clients.openWindow) {
+              return self.clients.openWindow('/dashboard');
+            }
           }).catch((error) => {
             console.error('Service Worker: Failed to handle default action:', error);
-      })
-    );
+          })
+        );
     }
   } catch (error) {
     console.error('Service Worker: Notification click handling failed:', error);
   }
 });
 
-// Enhanced background sync handler
+// Handle notification close event
+self.addEventListener('notificationclose', (event) => {
+  console.log('Service Worker: Notification closed');
+  // Decrement badge count when notification is dismissed
+  updateBadgeCount(notificationBadgeCount - 1);
+});
+
+// Background sync for completed goals
 self.addEventListener('sync', (event) => {
-  console.log('Service Worker: Sync event', event.tag);
-  
-  try {
   if (event.tag.startsWith('complete-goal-')) {
     const goalId = event.tag.replace('complete-goal-', '');
-    
-    event.waitUntil(
-      fetch(`/api/goals/${goalId}/complete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            completed: true,
-            completedAt: new Date().toISOString()
-        })
-      }).then((response) => {
-        if (!response.ok) {
-            throw new Error(`Failed to complete goal: ${response.status}`);
-          }
-          return response.json();
-        }).then(() => {
-          console.log('Service Worker: Goal completed successfully via sync');
-          
-          // Notify clients about successful completion
-          return self.clients.matchAll();
-        }).then((clients) => {
-          clients.forEach(client => {
-            try {
-              client.postMessage({
-                type: 'GOAL_COMPLETED',
-                goalId: goalId
-              });
-            } catch (error) {
-              console.error('Service Worker: Failed to notify client of completion:', error);
-            }
-          });
-        }).catch((error) => {
-          console.error('Service Worker: Background sync failed:', error);
-          throw error; // Re-throw to retry sync later
-        })
-      );
-    }
-  } catch (error) {
-    console.error('Service Worker: Sync event handling failed:', error);
+    event.waitUntil(completeGoalSync(goalId));
   }
-}); 
+});
+
+async function completeGoalSync(goalId) {
+  try {
+    console.log('Service Worker: Syncing goal completion for:', goalId);
+    
+    // Send message to clients to handle goal completion
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => {
+      try {
+        client.postMessage({
+          type: 'GOAL_COMPLETED',
+          goalId: goalId
+        });
+      } catch (error) {
+        console.error('Service Worker: Failed to send goal completion message:', error);
+      }
+    });
+    
+  } catch (error) {
+    console.error('Service Worker: Goal completion sync failed:', error);
+    throw error;
+  }
+} 

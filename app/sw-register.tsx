@@ -1,10 +1,15 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+
+// Badge count state for external access
+let currentBadgeCount = 0;
 
 // Component to register service worker
 const ServiceWorkerRegistration = () => {
+  const [badgeCount, setBadgeCount] = useState(0);
+  
   useEffect(() => {
     // TEMPORARY: Disable service worker to test signup issues
     const DISABLE_SW_FOR_TESTING = false;
@@ -50,6 +55,9 @@ const ServiceWorkerRegistration = () => {
         }
       });
       
+      // Request notification permission on mobile devices
+      await requestNotificationPermissionForMobile();
+      
       // Show confirmation that service worker is working
       setTimeout(() => {
         console.log('🔔 Reminder system is now active');
@@ -66,10 +74,18 @@ const ServiceWorkerRegistration = () => {
 
   const handleServiceWorkerMessage = (event: MessageEvent) => {
     try {
-      const { type, data } = event.data;
+      const { type, data, count } = event.data;
       console.log('📨 Service Worker message received:', type, data);
       
       switch (type) {
+        case 'BADGE_COUNT_UPDATED':
+          if (typeof count === 'number') {
+            currentBadgeCount = count;
+            setBadgeCount(count);
+            console.log('🔢 Badge count updated to:', count);
+          }
+          break;
+          
         case 'GOAL_COMPLETED':
           toast.success('Goal marked as complete!', {
             description: 'Great job on achieving your goal!'
@@ -104,6 +120,86 @@ const ServiceWorkerRegistration = () => {
   return null; // This component doesn't render anything
 };
 
+// Enhanced mobile notification permission request
+const requestNotificationPermissionForMobile = async (): Promise<boolean> => {
+  if (!('Notification' in window)) {
+    console.warn('❌ This browser does not support notifications');
+    return false;
+  }
+  
+  // Check if already granted
+  if (Notification.permission === 'granted') {
+    console.log('✅ Notification permission already granted');
+    return true;
+  }
+  
+  // Don't request if denied
+  if (Notification.permission === 'denied') {
+    console.warn('❌ Notification permission was denied');
+    toast.error('Notifications blocked', {
+      description: 'Please enable notifications in your browser settings to receive reminders.'
+    });
+    return false;
+  }
+  
+  try {
+    // For mobile devices, we need to be more explicit about the permission request
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // Show a user-friendly message before requesting permission
+      toast.info('Enable Notifications', {
+        description: 'Allow notifications to receive reminders for your goals, even when the app is closed.',
+        duration: 5000
+      });
+      
+      // Wait a moment for user to read the message
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    const permission = await Notification.requestPermission();
+    const granted = permission === 'granted';
+    
+    if (granted) {
+      console.log('✅ Notification permission granted');
+      toast.success('Notifications enabled!', {
+        description: 'You\'ll now receive reminders for your goals.'
+      });
+      
+      // Test notification for mobile users
+      if (isMobile) {
+        setTimeout(() => {
+          showTestNotification();
+        }, 2000);
+      }
+    } else {
+      console.warn('❌ Notification permission denied');
+      toast.error('Notifications disabled', {
+        description: 'You won\'t receive reminder notifications. You can enable them later in settings.'
+      });
+    }
+    
+    return granted;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to request notification permission';
+    console.error('❌ Notification permission request failed:', errorMessage);
+    return false;
+  }
+};
+
+// Test notification for mobile devices
+const showTestNotification = () => {
+  if (Notification.permission === 'granted') {
+    new Notification('Adaptonia Notifications Ready! 🎉', {
+      body: 'You\'ll now receive reminders for your goals.',
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-72x72.png',
+      tag: 'test-notification',
+      requireInteraction: false
+    });
+  }
+};
+
 // Helper function to schedule reminders through the service worker
 export const scheduleReminderNotification = async (reminder: {
   goalId: string;
@@ -124,6 +220,15 @@ export const scheduleReminderNotification = async (reminder: {
     if (!registration.active) {
       console.warn('❌ No active service worker found');
       return false;
+    }
+    
+    // Request notification permission first if not granted
+    if (Notification.permission !== 'granted') {
+      const permissionGranted = await requestNotificationPermissionForMobile();
+      if (!permissionGranted) {
+        console.warn('❌ Cannot schedule reminder without notification permission');
+        return false;
+      }
     }
     
     // Send the reminder to the service worker
@@ -176,39 +281,69 @@ export const cancelReminderNotification = async (goalId: string): Promise<boolea
 
 // Helper to request notification permission
 export const requestNotificationPermission = async (): Promise<boolean> => {
-  console.log('🔔 Requesting notification permission...');
+  return await requestNotificationPermissionForMobile();
+};
+
+// Helper to update badge count
+export const updateBadgeCount = async (count: number): Promise<void> => {
+  console.log('🔢 Updating badge count to:', count);
   
-  if (!('Notification' in window)) {
-    console.warn('❌ This browser does not support notifications');
-    return false;
+  if (!('serviceWorker' in navigator)) {
+    console.warn('❌ Service Workers not supported');
+    return;
   }
-  
-  if (Notification.permission === 'granted') {
-    console.log('✅ Notification permission already granted');
-    return true;
-  }
-  
-  if (Notification.permission === 'denied') {
-    console.warn('❌ Notification permission was denied');
-    return false;
-  }
-  
+
   try {
-    const permission = await Notification.requestPermission();
-    const granted = permission === 'granted';
+    const registration = await navigator.serviceWorker.ready;
     
-    if (granted) {
-      console.log('✅ Notification permission granted');
-    } else {
-      console.warn('❌ Notification permission not granted:', permission);
+    if (!registration.active) {
+      console.warn('❌ No active service worker found');
+      return;
     }
     
-    return granted;
+    registration.active.postMessage({
+      type: 'UPDATE_BADGE_COUNT',
+      count
+    });
+    
+    currentBadgeCount = count;
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Error requesting notification permission';
-    console.error('❌ Error requesting notification permission:', errorMessage);
-    return false;
+    const errorMessage = error instanceof Error ? error.message : 'Failed to update badge count';
+    console.error('❌ Failed to update badge count:', errorMessage);
   }
+};
+
+// Helper to clear badge count
+export const clearBadgeCount = async (): Promise<void> => {
+  console.log('🔢 Clearing badge count');
+  
+  if (!('serviceWorker' in navigator)) {
+    console.warn('❌ Service Workers not supported');
+    return;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    
+    if (!registration.active) {
+      console.warn('❌ No active service worker found');
+      return;
+    }
+    
+    registration.active.postMessage({
+      type: 'CLEAR_BADGE'
+    });
+    
+    currentBadgeCount = 0;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to clear badge count';
+    console.error('❌ Failed to clear badge count:', errorMessage);
+  }
+};
+
+// Helper to get current badge count
+export const getBadgeCount = (): number => {
+  return currentBadgeCount;
 };
 
 // Subscribe to push notifications (for server-sent notifications)

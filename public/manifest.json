@@ -1,14 +1,16 @@
 {
     "name": "Adaptonia",
     "short_name": "Adaptonia",
-    "description": "Task management and reminders app",
+    "description": "Chat, collaborate, and manage tasks with Adaptonia",
     "display": "standalone",
     "orientation": "portrait",
     "theme_color": "#4F46E5",
-    "background_color": "#4F46E5",
-    "start_url": "/dashboard",
+    "background_color": "#ffffff",
+    "start_url": "/",
     "id": "/dashboard",
     "scope": "/",
+    "lang": "en",
+    "categories": ["productivity", "social", "communication"],
     "icons": [
       {
         "src": "/icons/icon-72x72.png",
@@ -87,6 +89,18 @@
         "description": "Chat and collaborate",
         "url": "/groups",
         "icons": [{ "src": "/icons/shortcut-groups.png", "sizes": "96x96" }]
+      },
+      {
+        "name": "New Chat",
+        "short_name": "Chat",
+        "description": "Start a new chat conversation",
+        "url": "/chat",
+        "icons": [
+          {
+            "src": "/icons/icon-96x96.png",
+            "sizes": "96x96"
+          }
+        ]
       }
     ],
     "file_handlers": [
@@ -139,5 +153,18 @@
     "permissions": [
       "notifications",
       "contacts"
+    ],
+    "edge_side_panel": {
+      "preferred_width": 400
+    },
+    "launch_handler": {
+      "client_mode": ["navigate-existing", "auto"]
+    },
+    "display_override": ["window-controls-overlay", "standalone"],
+    "protocol_handlers": [
+      {
+        "protocol": "adaptonia",
+        "url": "/?action=%s"
+      }
     ]
   } 
