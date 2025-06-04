@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 // import { reminderService } from '@/services/appwrite/reminderService';
-// import { scheduleReminderNotification, requestNotificationPermission } from '@/app/sw-register';
+import { scheduleReminderNotification, requestNotificationPermission } from '@/app/sw-register';
 import { Reminder, reminderService } from '../services/appwrite/reminderService';
 
 export function ReminderChecker() {
@@ -13,20 +13,20 @@ export function ReminderChecker() {
   const processReminder = async (reminder: Reminder) => {
     try {
       // Try to schedule/trigger the notification
-      // if (typeof window !== 'undefined') {
-      //   // Request notification permission if not already granted
-      //   const hasPermission = await requestNotificationPermission();
+      if (typeof window !== 'undefined') {
+        // Request notification permission if not already granted
+        const hasPermission = await requestNotificationPermission();
         
-      //   if (hasPermission) {
-      //     // Schedule immediate notification (current time)
-      //     await scheduleReminderNotification({
-      //       goalId: reminder.goalId,
-      //       title: reminder.title,
-      //       description: reminder.description || 'Time for your goal!',
-      //       sendDate: new Date().toISOString() // Send immediately
-      //     });
-      //   }
-      // }
+        if (hasPermission) {
+          // Schedule immediate notification (current time)
+          await scheduleReminderNotification({
+            goalId: reminder.goalId,
+            title: reminder.title,
+            description: reminder.description || 'Time for your goal!',
+            sendDate: new Date().toISOString() // Send immediately
+          });
+        }
+      }
 
       // Mark as sent in database
       await reminderService.markReminderAsSent(reminder.id);

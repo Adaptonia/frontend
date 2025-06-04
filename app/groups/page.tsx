@@ -226,12 +226,12 @@ const GroupsPageContent: React.FC = () => {
   if (authLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
-        <div className="p-6 rounded-lg shadow-xl bg-white">
+        {/* <div className="p-6 rounded-lg shadow-xl bg-white">
           <div className="flex items-center space-x-3">
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
             <span className="text-gray-700">Loading...</span>
           </div>
-        </div>
+        </div> */}
       </div>
     )
   }

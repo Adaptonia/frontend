@@ -2,7 +2,7 @@
 
 import { ID, Query } from 'appwrite';
 import { databases, DATABASE_ID, REMINDERS_COLLECTION_ID } from './client';
-// import { scheduleReminderNotification } from '@/app/sw-register';
+import { scheduleReminderNotification } from '@/app/sw-register';
 
 // Interface for creating a reminder
 export interface CreateReminderRequest {
@@ -90,12 +90,12 @@ class ReminderService {
       // Then schedule the notification using service worker
       if (typeof window !== 'undefined') {
         try {
-          // await scheduleReminderNotification({
-          //   goalId: reminder.goalId,
-          //   title: reminder.title,
-          //   description: reminder.description,
-          //   sendDate: reminder.sendDate
-          // });
+          await scheduleReminderNotification({
+            goalId: reminder.goalId,
+            title: reminder.title,
+            description: reminder.description,
+            sendDate: reminder.sendDate
+          });
         } catch (error: unknown) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to schedule notification';
           console.error('Failed to schedule notification:', errorMessage);
