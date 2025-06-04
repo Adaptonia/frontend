@@ -3,9 +3,9 @@ import { Poppins } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { ThemeProvider } from "@/src/context/ThemeContext";
-// import ServiceWorkerRegistration from "./sw-register";
+import ServiceWorkerRegistration from "./sw-register";
 import { ReminderChecker } from "@/src/components/ReminderChecker";
-import { TestReminder } from "@/src/components/TestReminder";
+// import { TestReminder } from "@/src/components/TestReminder";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -61,7 +61,7 @@ export default function RootLayout({
           <ThemeProvider>
             {children}
             {/* Service Worker Registration for PWA and notifications */}
-            {/* <ServiceWorkerRegistration /> */}
+            <ServiceWorkerRegistration />
             {/* Background Reminder Checker - runs globally */}
             <ReminderChecker />
             {/* Test Reminder Component - for debugging (remove in production) */}
