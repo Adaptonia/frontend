@@ -5,6 +5,7 @@ import { Providers } from "./providers";
 import { ThemeProvider } from "@/src/context/ThemeContext";
 import ServiceWorkerRegistration from "./sw-register";
 import { ReminderChecker } from "@/src/components/ReminderChecker";
+import BackgroundReminderChecker from "@/components/BackgroundReminderChecker";
 // import { TestReminder } from "@/src/components/TestReminder";
 
 const poppins = Poppins({
@@ -62,7 +63,9 @@ export default function RootLayout({
             {children}
             {/* Service Worker Registration for PWA and notifications */}
             <ServiceWorkerRegistration />
-            {/* Background Reminder Checker - runs globally */}
+            {/* Background Reminder Checker - checks when app opens after being closed */}
+            <BackgroundReminderChecker />
+            {/* Database Reminder Checker - runs periodically while app is open */}
             <ReminderChecker />
             {/* Test Reminder Component - for debugging (remove in production) */}
             {/* <div className="fixed bottom-4 right-4 z-50">

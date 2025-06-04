@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { reminderService } from '@/src/services/appwrite/reminderService';
 import { format } from 'date-fns';
 import { requestNotificationPermission, scheduleReminderNotificationWithAlarm } from '@/app/sw-register';
+import { scheduleServerPushNotification } from '@/lib/push-notifications';
 
 // Helper function to format dates nicely
 const formatDisplayDate = (dateString: string): string => {
@@ -367,37 +368,79 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       
       await Promise.all(reminderPromises);
       
-      // If notification permission is granted, also schedule in service worker for alarm
+      // If notification permission is granted, schedule TRUE background notifications
       if (permissionGranted) {
-        // Schedule the notifications in the service worker for alarm functionality
-        const serviceWorkerPromises = reminderDates.map(sendDate => 
-          scheduleReminderNotificationWithAlarm({
+        console.log('🚀 Scheduling TRUE background push notifications...');
+        
+        // Schedule server-side push notifications (works when app is closed!)
+        const pushNotificationPromises = reminderDates.map(sendDate => 
+          scheduleServerPushNotification({
             goalId,
             title: `Reminder: ${title}`,
-            description: description || 'Time to work on your goal!',
-            sendDate,
-            alarm: true
+            message: description || 'Time to work on your goal!',
+            scheduledTime: sendDate,
+            userId: user?.id
           })
         );
         
-        await Promise.all(serviceWorkerPromises);
+        const pushResults = await Promise.allSettled(pushNotificationPromises);
+        
+        // Check if any push notifications failed
+        const failedPushes = pushResults.filter(result => result.status === 'rejected');
+        
+        if (failedPushes.length > 0) {
+          console.warn('Some push notifications failed to schedule:', failedPushes);
+          
+          // Fallback to local notifications for failed pushes
+          console.log('📱 Falling back to local notifications for failed pushes...');
+          const fallbackPromises = reminderDates.map(sendDate => 
+            scheduleReminderNotificationWithAlarm({
+              goalId,
+              title: `Reminder: ${title}`,
+              description: description || 'Time to work on your goal!',
+              sendDate,
+              alarm: true
+            })
+          );
+          
+          await Promise.all(fallbackPromises);
+          
+          toast.warning(
+            <div className="flex flex-col gap-1">
+              <span className="font-medium">Reminders Set with Fallback ⏰</span>
+              <span className="text-sm text-gray-600">
+                Using local notifications (may require app to be open)
+              </span>
+            </div>
+          );
+        } else {
+          // All push notifications scheduled successfully
+          toast.success(
+            <div className="flex flex-col gap-1">
+              <span className="font-medium">TRUE Background Reminders Set! 🚀</span>
+              <span className="text-sm text-gray-600">
+                {reminderSettings.count} {reminderSettings.count === 1 ? 'reminder' : 'reminders'} will fire even when app is closed
+              </span>
+            </div>
+          );
+        }
+      } else {
+        // No permission - only database reminders
+        const formattedTime = new Date(`2000-01-01T${reminderSettings.time}`).toLocaleTimeString([], {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+        
+        toast.warning(
+          <div className="flex flex-col gap-1">
+            <span className="font-medium">Reminders Created (No Notifications) ⏰</span>
+            <span className="text-sm text-gray-600">
+              {reminderSettings.count} {reminderSettings.count === 1 ? 'reminder' : 'reminders'} at {formattedTime} - enable notifications for alerts
+            </span>
+          </div>
+        );
       }
-      
-      const formattedTime = new Date(`2000-01-01T${reminderSettings.time}`).toLocaleTimeString([], {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      });
-      
-      toast.success(
-        <div className="flex flex-col gap-1">
-          <span className="font-medium">Reminder Set! ⏰</span>
-          <span className="text-sm text-gray-600">
-            {reminderSettings.count} {reminderSettings.count === 1 ? 'reminder' : 'reminders'} scheduled at {formattedTime}
-            {permissionGranted ? '' : ' (notifications blocked by browser)'}
-          </span>
-        </div>
-      );
       
     } catch (error) {
       console.error('Error scheduling reminders:', error);
