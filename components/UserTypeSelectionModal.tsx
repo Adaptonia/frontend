@@ -189,10 +189,10 @@ const UserTypeSelectionModal: React.FC<UserTypeSelectionModalProps> = ({
       initial="hidden"
       animate="visible"
       exit="exit"
-      className="flex flex-col h-full"
+      className="flex flex-col h-[80vh]"
     >
       {/* Header */}
-      <div className="p-6 border-b">
+      <div className="flex-shrink-0 p-6 border-b">
         <div className="flex items-center mb-4">
           <button
             onClick={() => setCurrentStep('user-type')}
@@ -242,8 +242,8 @@ const UserTypeSelectionModal: React.FC<UserTypeSelectionModalProps> = ({
         </div>
       </div>
 
-      {/* Schools List */}
-      <div className="flex-1 overflow-y-auto p-6">
+      {/* Schools List - This is the scrollable area */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-6">
         {!showCustomSchool ? (
           <div className="space-y-2">
             {filteredInstitutions.map((institution, index) => (
@@ -351,7 +351,7 @@ const UserTypeSelectionModal: React.FC<UserTypeSelectionModalProps> = ({
 
       {/* Continue Button */}
       {selectedSchool && !showCustomSchool && (
-        <div className="p-6 border-t">
+        <div className="flex-shrink-0 p-6 border-t">
           <motion.button
             onClick={handleSchoolConfirmation}
             className="w-full py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
@@ -377,7 +377,7 @@ const UserTypeSelectionModal: React.FC<UserTypeSelectionModalProps> = ({
         exit="hidden"
       >
         <motion.div
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden"
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-md h-[85vh] overflow-hidden"
           variants={modalVariants}
           initial="hidden"
           animate="visible"
@@ -397,7 +397,7 @@ const UserTypeSelectionModal: React.FC<UserTypeSelectionModalProps> = ({
           {/* Modal Content */}
           <AnimatePresence mode="wait">
             {currentStep === 'user-type' ? (
-              <motion.div key="user-type">
+              <motion.div key="user-type" className="h-full">
                 {renderUserTypeStep()}
               </motion.div>
             ) : (
