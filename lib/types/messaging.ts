@@ -6,30 +6,33 @@ export interface User {
   name?: string;
   profilePicture?: string;
   role: 'user' | 'admin';
+  // New fields for student classification
+  userType?: 'student' | 'non-student' | null;
+  schoolName?: string;
+  hasCompletedUserTypeSelection?: boolean;
 }
 
 // Channel types
 export interface Channel {
   $id: string;
   name: string;
-  description?: string;
-  type: 'PUBLIC' | 'PRIVATE';
+  description: string;
+  type: 'public' | 'private';
   creatorId: string;
-  createdAt: string;
-  updatedAt: string;
-  isActive: boolean;
   memberCount: number;
+  isActive: boolean;
+  $createdAt: string;
+  $updatedAt: string;
 }
 
 export interface ChannelMember {
   $id: string;
   channelId: string;
   userId: string;
-  role: 'admin' | 'member';
+  role: 'admin' | 'moderator' | 'member';
   joinedAt: string;
-  isActive: boolean;
-  lastReadMessageId?: string;
-  lastActiveAt?: string;
+  $createdAt: string;
+  $updatedAt: string;
 }
 
 export interface ChannelMessage {
@@ -37,25 +40,25 @@ export interface ChannelMessage {
   channelId: string;
   senderId: string;
   content: string;
-  replyToId?: string;
-  createdAt: string;
-  updateAt: string;
-  isDeleted: boolean;
-  readby: string[];
-  messageType: 'TEXT' | 'IMAGE' | 'FILE' | 'VOICE';
-  attachments?: string;
-  // Extended properties for UI
-  sender?: User;
-  replyToMessage?: ChannelMessage;
-  reactions?: MessageReaction[];
+  type: 'text' | 'image' | 'file';
+  $createdAt: string;
+  $updatedAt: string;
 }
 
-export interface MessageReaction {
-  id: string;
-  messageId: string;
-  userId: string;
-  emoji: string;
-  createdAt: string;
+export interface MessageWithSender extends ChannelMessage {
+  sender: User;
+}
+
+// API Response types
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+export interface PaginatedResponse<T> extends ApiResponse<T[]> {
+  totalCount?: number;
+  hasMore?: boolean;
 }
 
 // Contact types

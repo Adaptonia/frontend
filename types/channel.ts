@@ -5,6 +5,9 @@ export interface User {
   email: string
   profilePicture?: string
   role: 'admin' | 'user'
+  userType?: 'student' | 'non-student' | null
+  schoolName?: string
+  hasCompletedUserTypeSelection?: boolean
   $createdAt: string
   $updatedAt: string
 }
@@ -25,10 +28,8 @@ export interface ChannelMember {
   $id: string
   channelId: string
   userId: string
-  role: 'admin' | 'member'
-  isActive: boolean
-  lastReadMessageId?: string
-  lastActiveAt: string
+  role: 'admin' | 'moderator' | 'member'
+  joinedAt: string
   $createdAt: string
   $updatedAt: string
 }
@@ -38,86 +39,68 @@ export interface ChannelMessage {
   channelId: string
   senderId: string
   content: string
-  replyToId?: string
-  isDeleted: boolean
-  readby: string[]
-  messageType: 'text' | 'image' | 'file' | 'meet-card'
-  attachments?: string
+  type: 'text' | 'image' | 'file'
   $createdAt: string
   $updatedAt: string
+}
+
+export interface MessageWithSender extends ChannelMessage {
+  sender: User
 }
 
 export interface UserChannelInfo {
   channel: Channel
-  member: ChannelMember
-  unreadCount: number
-}
-
-export interface MessageWithSender {
-  $id: string
-  channelId: string
-  senderId: string
-  content: string
-  replyToId?: string
-  messageType: 'text' | 'image' | 'file' | 'meet-card'
-  $createdAt: string
-  $updatedAt: string
-  sender: User
+  role: 'admin' | 'moderator' | 'member'
+  joinedAt: string
 }
 
 export interface CreateChannelData {
   name: string
   description: string
   type: 'public' | 'private'
+  memberLimit?: number
 }
 
 export interface SendMessageData {
   content: string
-  messageType?: 'text' | 'image' | 'file' | 'meet-card'
-  replyToId?: string
-  attachments?: string
+  type?: 'text' | 'image' | 'file'
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T> {
   success: boolean
   data?: T
   error?: string
 }
 
-export interface PaginatedResponse<T = any> {
-  documents: T[]
-  total: number
+export interface PaginatedResponse<T> extends ApiResponse<T[]> {
+  totalCount?: number
   hasMore?: boolean
 }
 
 export class ChannelError extends Error {
-  constructor(
-    message: string,
-    public code?: string,
-    public statusCode?: number
-  ) {
+  constructor(message: string) {
     super(message)
     this.name = 'ChannelError'
   }
 }
 
-export class ValidationError extends ChannelError {
-  constructor(message: string, public field?: string) {
-    super(message, 'VALIDATION_ERROR', 400)
-    this.name = 'ValidationError'
+export class NotFoundError extends ChannelError {
+  constructor(resource: string) {
+    super(`${resource} not found`)
+    this.name = 'NotFoundError'
   }
 }
 
 export class PermissionError extends ChannelError {
-  constructor(message: string = 'Insufficient permissions') {
-    super(message, 'PERMISSION_ERROR', 403)
+  constructor(action: string) {
+    super(`Permission denied: ${action}`)
     this.name = 'PermissionError'
   }
 }
 
-export class NotFoundError extends ChannelError {
-  constructor(resource: string) {
-    super(`${resource} not found`, 'NOT_FOUND', 404)
-    this.name = 'NotFoundError'
+export class ValidationError extends ChannelError {
+  constructor(message: string) {
+    super(`Validation error: ${message}`)
+    this.name = 'ValidationError'
   }
 } 

@@ -1,12 +1,20 @@
 export type UserRole = 'user' | 'admin';
 
+// New user types for student classification
+export type UserType = 'student' | 'non-student' | null;
+
 export type User = {
   id?: string;
   name?: string;
   email?: string;
   profilePicture? : string;
   role?: UserRole;
+  // New fields for student classification
+  userType?: UserType;
+  schoolName?: string;
+  hasCompletedUserTypeSelection?: boolean;
 };
+
 export type AuthContextType = {
   user: User | null;
   loading: boolean;
@@ -20,7 +28,18 @@ export type EditProfileType = {
   onClose: () => void;
 };
 
+// New types for the user type selection modal
+export interface UserTypeSelectionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onComplete: (userType: UserType, schoolName?: string) => void;
+}
 
+export interface SchoolSelectionData {
+  name: string;
+  location: string;
+  type: 'university' | 'polytechnic' | 'college';
+}
 
 // Define types
 export type ModalTab = 'main' | 'tag' | 'date' | 'reminder' | 'more' | 'location' | 'target';
