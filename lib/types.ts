@@ -41,6 +41,20 @@ export interface SchoolSelectionData {
   type: 'university' | 'polytechnic' | 'college';
 }
 
+// Milestone types
+export interface Milestone {
+  id: string;
+  title: string;
+  description?: string;
+  date: string;
+  isCompleted?: boolean;
+}
+
+export interface MilestoneComponentProps {
+  milestones: Milestone[];
+  onMilestonesChange: (milestones: Milestone[]) => void;
+}
+
 // Define types
 export type ModalTab = 'main' | 'tag' | 'date' | 'reminder' | 'more' | 'location' | 'target';
 
@@ -92,6 +106,7 @@ export interface Goal {
   createdAt: string;
   updatedAt: string;
   reminderSettings?: string; // JSON stringified reminder settings
+  milestones?: string; // JSON stringified milestones array
 }
 
 export interface CreateGoalRequest {
@@ -104,6 +119,7 @@ export interface CreateGoalRequest {
   location?: string;
   reminderSettings?: string; // JSON stringified reminder settings
   isCompleted?: boolean;
+  milestones?: string; // JSON stringified milestones array
 }
 
 export interface UpdateGoalRequest {
@@ -115,4 +131,6 @@ export interface UpdateGoalRequest {
   tags?: string;
   reminderDate?: string;
   isCompleted?: boolean;
+  reminderSettings?: string;
+  milestones?: string;
 }

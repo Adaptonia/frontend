@@ -5,12 +5,13 @@ import { Calendar, Tag as TagIcon, Bell as BellIcon, Settings, Flag, Loader2, Ma
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { ActionButtonProps, CreateGoalRequest, GoalFormModalProps, ModalTab, PremiumFeatureModalProps } from '@/lib/types';
+import { ActionButtonProps, CreateGoalRequest, GoalFormModalProps, ModalTab, PremiumFeatureModalProps, Milestone } from '@/lib/types';
+import MilestoneComponent from './MilestoneComponent';
+import { reminderService } from '@/src/services/appwrite/reminderService';
 import { useRouter } from 'next/navigation';
 import { createGoal } from '@/src/services/appwrite/database';
 import { updateGoal } from '@/src/services/appwrite';
 import { useAuth } from '@/context/AuthContext';
-import { reminderService } from '@/src/services/appwrite/reminderService';
 import { format } from 'date-fns';
 import { requestNotificationPermission, scheduleReminderNotificationWithAlarm } from '@/app/sw-register';
 import { scheduleServerPushNotification } from '@/lib/push-notifications';
@@ -200,6 +201,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
   const [selectedTag, setSelectedTag] = useState('');
   const [reminder, setReminder] = useState('');
   const [location, setLocation] = useState('');
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState('');
   // Add dropdown state at the component level
@@ -235,6 +237,19 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       setReminder(initialData.reminderDate || '');
       setLocation(initialData.location || '');
       
+      // Set milestones if available
+      if (initialData.milestones) {
+        try {
+          const parsedMilestones = JSON.parse(initialData.milestones as string);
+          setMilestones(parsedMilestones);
+        } catch (e) {
+          console.error("Failed to parse milestones", e);
+          setMilestones([]);
+        }
+      } else {
+        setMilestones([]);
+      }
+      
       // Set reminder settings if available
       if (initialData.reminderSettings) {
         try {
@@ -252,6 +267,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       setSelectedTag('');
       setReminder('');
       setLocation('');
+      setMilestones([]);
       setReminderSettings({
         enabled: false,
         interval: "once",
@@ -296,6 +312,45 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
   }, []);
 
   // Schedule reminders based on the settings
+  // Schedule milestone notifications
+  const scheduleMilestoneNotifications = async (goalId: string, goalTitle: string) => {
+    if (milestones.length === 0) return;
+
+    try {
+      console.log('📍 Scheduling milestone notifications for goal:', goalId);
+      
+      for (const milestone of milestones) {
+        // Only schedule notifications for future milestones
+        const milestoneDate = new Date(milestone.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset time to start of day
+        
+        if (milestoneDate >= today) {
+          const reminderData = {
+            goalId: `${goalId}-milestone-${milestone.id}`,
+            userId: user?.id || 'system',
+            title: `Milestone Due: ${milestone.title}`,
+            description: `Time to work on "${milestone.title}" for your goal "${goalTitle}". ${milestone.description || ''}`,
+            sendDate: milestone.date + 'T09:00:00.000Z', // 9 AM on milestone date
+            dueDate: milestone.date
+          };
+
+          await reminderService.createReminder(reminderData);
+          console.log(`✅ Milestone notification scheduled: ${milestone.title}`);
+        }
+      }
+
+      if (milestones.filter(m => new Date(m.date) >= new Date()).length > 0) {
+        toast.success('Milestone notifications scheduled', {
+          description: `You'll be reminded about upcoming milestones`
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error scheduling milestone notifications:', error);
+      toast.error('Failed to schedule milestone notifications');
+    }
+  };
+
   const scheduleReminders = async (goalId: string) => {
     if (!reminderSettings.enabled) return;
     
@@ -470,7 +525,8 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
         tags: selectedTag || undefined,
         reminderDate: reminder || undefined,
         location: location || undefined,
-        reminderSettings: reminderSettings.enabled ? JSON.stringify(reminderSettings) : undefined
+        reminderSettings: reminderSettings.enabled ? JSON.stringify(reminderSettings) : undefined,
+        milestones: milestones.length > 0 ? JSON.stringify(milestones) : undefined
       };
       
       // Ensure the category is one of the allowed values
@@ -489,6 +545,9 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           await scheduleReminders(initialData.id);
         }
         
+        // Schedule milestone notifications
+        await scheduleMilestoneNotifications(initialData.id, title);
+        
         toast.success('Goal updated successfully');
       } else {
         // Create new goal
@@ -497,6 +556,11 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
         // Schedule reminders if enabled and we have a goal ID
         if (reminderSettings.enabled && result?.id) {
           await scheduleReminders(result.id);
+        }
+        
+        // Schedule milestone notifications
+        if (result?.id) {
+          await scheduleMilestoneNotifications(result.id, title);
         }
         
         toast.success('Goal created successfully');
@@ -632,6 +696,14 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           placeholder="Description"
           className="w-full min-h-[150px] mb-6 text-gray-500 border-none outline-none resize-none"
         />
+        
+        {/* Milestone Component - Show after description is written */}
+        {description.trim() && (
+          <MilestoneComponent
+            milestones={milestones}
+            onMilestonesChange={setMilestones}
+          />
+        )}
       </div>
       
       {/* Add Task button - fixed at bottom */}

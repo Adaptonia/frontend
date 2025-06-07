@@ -32,7 +32,9 @@ export const createGoal = async (goalData: CreateGoalRequest, userId: string): P
       isCompleted: response.isCompleted,
       userId: response.userId,
       createdAt: response.createdAt,
-      updatedAt: response.updatedAt
+      updatedAt: response.updatedAt,
+      reminderSettings: response.reminderSettings,
+      milestones: response.milestones
     };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to create goal';
@@ -64,7 +66,9 @@ export const getGoals = async (userId: string): Promise<Goal[]> => {
       isCompleted: doc.isCompleted,
       userId: doc.userId,
       createdAt: doc.createdAt,
-      updatedAt: doc.updatedAt
+      updatedAt: doc.updatedAt,
+      reminderSettings: doc.reminderSettings,
+      milestones: doc.milestones
     }));
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch goals';
@@ -101,7 +105,9 @@ export const getGoalById = async (goalId: string, userId: string): Promise<Goal>
       isCompleted: response.isCompleted,
       userId: response.userId,
       createdAt: response.createdAt,
-      updatedAt: response.updatedAt
+      updatedAt: response.updatedAt,
+      reminderSettings: response.reminderSettings,
+      milestones: response.milestones
     };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch goal';
@@ -144,7 +150,9 @@ export const updateGoal = async (
       isCompleted: response.isCompleted,
       userId: response.userId,
       createdAt: response.createdAt,
-      updatedAt: response.updatedAt
+      updatedAt: response.updatedAt,
+      reminderSettings: response.reminderSettings,
+      milestones: response.milestones
     };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to update goal';
@@ -204,7 +212,9 @@ export const toggleGoalCompletion = async (goalId: string, userId: string): Prom
       isCompleted: response.isCompleted,
       userId: response.userId,
       createdAt: response.createdAt,
-      updatedAt: response.updatedAt
+      updatedAt: response.updatedAt,
+      reminderSettings: response.reminderSettings,
+      milestones: response.milestones
     };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to toggle goal completion';

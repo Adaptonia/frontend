@@ -333,6 +333,25 @@ class ReminderService {
   }
 
   /**
+   * Delete a single reminder by ID
+   */
+  async deleteReminder(reminderId: string): Promise<void> {
+    try {
+      validateConfig();
+      
+      await databases.deleteDocument(
+        DATABASE_ID,
+        REMINDERS_COLLECTION_ID,
+        reminderId
+      );
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete reminder';
+      console.error('Reminder deletion error:', errorMessage);
+      throw error;
+    }
+  }
+
+  /**
    * Mark reminder as sent
    */
   async markReminderAsSent(reminderId: string): Promise<Reminder> {
