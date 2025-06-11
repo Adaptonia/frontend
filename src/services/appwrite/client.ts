@@ -22,8 +22,8 @@ export const REMINDERS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_REMINDER
 export const GOAL_PACKS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_GOAL_PACKS_COLLECTION_ID || 'goal_packs';
 
 // Debug logging for goal packs collection ID
-console.log('🔍 Goal Packs Collection ID Debug:', {
-  envVar: process.env.NEXT_PUBLIC_APPWRITE_GOAL_PACKS_COLLECTION_ID,
-  finalValue: GOAL_PACKS_COLLECTION_ID,
-  allEnvVars: Object.keys(process.env).filter(key => key.includes('GOAL_PACKS'))
-}); 
+// console.log('🔍 Goal Packs Collection ID Debug:', {
+//   envVar: process.env.NEXT_PUBLIC_APPWRITE_GOAL_PACKS_COLLECTION_ID,
+//   finalValue: GOAL_PACKS_COLLECTION_ID,
+//   allEnvVars: Object.keys(process.env).filter(key => key.includes('GOAL_PACKS'))
+// }); 
