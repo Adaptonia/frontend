@@ -97,7 +97,7 @@ export default function EditProfile({ isOpen, onClose }: EditProfileType) {
           transition={{ type: "tween", duration: 0.3 }}
           className="fixed inset-0 bg-gray-100 z-50"
         >
-          <div className="max-w-md mx-auto min-h-screen pb-16">
+          <div className="max-w-md mx-auto min-h-screen pb-16 overflow-y-auto">
             {/* Header */}
             <div className="bg-white p-4 flex items-center">
               <button onClick={onClose} className="mr-4" disabled={isLoading}>
