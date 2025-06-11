@@ -103,6 +103,11 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState('');
   
+  // Drag to close functionality
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startY, setStartY] = useState(0);
+  
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Initialize form with goal pack data when modal opens
@@ -147,6 +152,88 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
       document.body.style.overflow = 'auto';
     };
   }, [isOpen]);
+
+  // Drag to close handlers
+  const handleDragStart = (clientY: number) => {
+    setIsDragging(true);
+    setStartY(clientY);
+    setDragY(0);
+  };
+
+  const handleDragMove = (clientY: number) => {
+    if (!isDragging) return;
+    
+    const deltaY = clientY - startY;
+    // Only allow downward dragging
+    if (deltaY > 0) {
+      setDragY(deltaY);
+    }
+  };
+
+  const handleDragEnd = () => {
+    if (!isDragging) return;
+    
+    setIsDragging(false);
+    
+    // Close modal if dragged down more than 100px
+    if (dragY > 100) {
+      onClose();
+    } else {
+      // Snap back to original position
+      setDragY(0);
+    }
+  };
+
+  // Touch event handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    handleDragStart(e.touches[0].clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    handleDragMove(e.touches[0].clientY);
+  };
+
+  const handleTouchEnd = () => {
+    handleDragEnd();
+  };
+
+  // Mouse event handlers (for desktop)
+  const handleMouseDown = (e: React.MouseEvent) => {
+    handleDragStart(e.clientY);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    handleDragMove(e.clientY);
+  };
+
+  const handleMouseUp = () => {
+    handleDragEnd();
+  };
+
+  // Add global mouse move and up listeners when dragging
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (isDragging) {
+        handleDragMove(e.clientY);
+      }
+    };
+
+    const handleGlobalMouseUp = () => {
+      if (isDragging) {
+        handleDragEnd();
+      }
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [isDragging, startY, dragY]);
 
   const handleSave = async () => {
     setValidationError('');
@@ -207,7 +294,11 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
         {/* Drag handle */}
         <div className="flex items-center justify-center mb-5">
           <div 
-            className="w-16 h-1 bg-gray-200 rounded-full cursor-pointer hover:bg-gray-300 transition-colors" 
+            className={`w-16 h-1 rounded-full cursor-pointer transition-all duration-200 ${
+              isDragging 
+                ? 'bg-blue-400 w-20 h-1.5' 
+                : 'bg-gray-300 hover:bg-gray-400'
+            }`}
             onClick={onClose}
           ></div>
         </div>
@@ -455,39 +546,40 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
 
   if (!goalPack) return null;
 
-  // Animation variants
-  const backdropVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1 },
-  };
-
-  const modalVariants = {
-    hidden: { y: "100%" },
-    visible: { y: 0, transition: { type: "spring", damping: 25, stiffness: 300 } },
-  };
-
   return (
     <AnimatePresence>
       {isOpen && (
         <>
+          {/* Background overlay */}
           <motion.div 
             className="fixed inset-0 bg-black/35 bg-opacity-50 z-40"
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            variants={backdropVariants}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
             onClick={onClose}
           />
-          <motion.div 
-            ref={modalRef}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-xl h-[90vh] overflow-y-auto flex flex-col"
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            variants={modalVariants}
-          >
-            {renderContent()}
-          </motion.div>
+          
+          {/* Modal container */}
+          <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center">
+            <motion.div 
+              ref={modalRef}
+              className="bg-white rounded-t-3xl shadow-xl h-[90vh] overflow-y-auto flex flex-col w-full"
+              initial={{ y: "100%" }}
+              animate={{ y: 0, transition: { type: "spring", damping: 25, stiffness: 300 } }}
+              exit={{ y: "100%" }}
+              style={{
+                transform: `translateY(${dragY}px)`,
+                transition: isDragging ? 'none' : 'transform 0.3s ease-out'
+              }}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onMouseDown={handleMouseDown}
+            >
+              {renderContent()}
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>

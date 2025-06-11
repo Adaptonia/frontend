@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Target, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Target, Trash2, Type, List } from 'lucide-react';
 import { Milestone, MilestoneComponentProps } from '@/lib/types';
 import { format } from 'date-fns';
 import { reminderService } from '@/src/services/appwrite/reminderService';
@@ -28,36 +28,46 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
     }
   };
 
-  // Auto-format description with bullet points or proper punctuation
-  const formatDescription = (description: string): string => {
-    if (!description) return '';
-    
-    const trimmed = description.trim();
+  // Manual formatting functions
+  const formatAsParagraph = (text: string): string => {
+    if (!text) return '';
+    const trimmed = text.trim();
     if (!trimmed) return '';
     
-    // Check if it's already formatted with bullet points or has multiple lines
-    const hasMultipleLines = trimmed.includes('\n');
-    const startsWithBullet = /^[•·\-\*]/.test(trimmed);
+    // Split by lines and format each as a sentence
+    return trimmed.split('\n').map(line => {
+      const cleanLine = line.trim();
+      if (!cleanLine) return '';
+      // Add period if doesn't end with punctuation
+      return cleanLine.endsWith('.') || cleanLine.endsWith('!') || cleanLine.endsWith('?') 
+        ? cleanLine 
+        : `${cleanLine}.`;
+    }).filter(line => line).join('\n');
+  };
+
+  const formatAsBulletList = (text: string): string => {
+    if (!text) return '';
+    const trimmed = text.trim();
+    if (!trimmed) return '';
     
-    if (hasMultipleLines || startsWithBullet) {
-      // Format each line with bullet points if not already present
-      return trimmed.split('\n').map(line => {
-        const cleanLine = line.trim();
-        if (!cleanLine) return '';
-        
-        // If line doesn't start with bullet point, add one
-        if (!/^[•·\-\*]/.test(cleanLine)) {
-          return `• ${cleanLine}${cleanLine.endsWith('.') || cleanLine.endsWith('!') || cleanLine.endsWith('?') ? '' : '.'}`;
-        }
-        
-        // If it has bullet but no ending punctuation, add period
-        return cleanLine.endsWith('.') || cleanLine.endsWith('!') || cleanLine.endsWith('?') ? cleanLine : `${cleanLine}.`;
-      }).filter(line => line).join('\n');
-    } else {
-      // Single line - just ensure it ends with proper punctuation
-      const endsWithPunctuation = /[.!?]$/.test(trimmed);
-      return endsWithPunctuation ? trimmed : `${trimmed}.`;
-    }
+    // Split by lines and format each as a bullet point
+    return trimmed.split('\n').map(line => {
+      const cleanLine = line.trim();
+      if (!cleanLine) return '';
+      
+      // If line doesn't start with bullet point, add one
+      if (!/^[•·\-\*]/.test(cleanLine)) {
+        const withPeriod = cleanLine.endsWith('.') || cleanLine.endsWith('!') || cleanLine.endsWith('?') 
+          ? cleanLine 
+          : `${cleanLine}.`;
+        return `• ${withPeriod}`;
+      }
+      
+      // If it has bullet but no ending punctuation, add period
+      return cleanLine.endsWith('.') || cleanLine.endsWith('!') || cleanLine.endsWith('?') 
+        ? cleanLine 
+        : `${cleanLine}.`;
+    }).filter(line => line).join('\n');
   };
 
   // Auto-generate 6 milestones when component mounts if no milestones exist
@@ -94,11 +104,6 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
   }, [milestones.length, onMilestonesChange]);
 
   const updateMilestone = async (id: string, updates: Partial<Milestone>) => {
-    // Auto-format description when saving
-    if (updates.description !== undefined) {
-      updates.description = formatDescription(updates.description);
-    }
-    
     const updatedMilestones = milestones.map(milestone =>
       milestone.id === id ? { ...milestone, ...updates } : milestone
     );
@@ -153,6 +158,18 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
     setEditingField(null);
   };
 
+  const handleFormatDescription = (id: string, formatType: 'paragraph' | 'bullets') => {
+    const milestone = milestones.find(m => m.id === id);
+    if (!milestone || !milestone.description) return;
+
+    const formattedDescription = formatType === 'paragraph' 
+      ? formatAsParagraph(milestone.description)
+      : formatAsBulletList(milestone.description);
+
+    updateMilestone(id, { description: formattedDescription });
+    toast.success(`Description formatted as ${formatType === 'paragraph' ? 'sentences' : 'bullet list'}`);
+  };
+
   const deleteMilestone = async (id: string) => {
     try {
       // Remove milestone from array
@@ -189,10 +206,10 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
         </h3>
       </div>
 
-      {/* Auto-formatting info */}
+      {/* Manual formatting info */}
       <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
         <p className="text-xs text-blue-600">
-          💡 <strong>Auto-formatting:</strong> Your milestone descriptions will be automatically formatted with bullet points for multiple lines or proper punctuation for single lines.
+          💡 <strong>Formatting:</strong> Click to edit milestone details. Formatting buttons will appear to help organize your text as sentences or bullet points.
         </p>
       </div>
 
@@ -202,12 +219,12 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
         
         <div className="space-y-6">
           {milestones.map((milestone, index) => (
-                         <div 
-               key={milestone.id} 
-               className="relative group transition-all duration-300 ease-in-out"
-             >
-                             {/* Milestone row */}
-               <div className="flex items-center transition-all duration-300 ease-in-out">
+            <div 
+              key={milestone.id} 
+              className="relative group transition-all duration-300 ease-in-out"
+            >
+              {/* Milestone row */}
+              <div className="flex items-center transition-all duration-300 ease-in-out">
                 {/* Dot bullet point */}
                 <div className="relative z-10 w-4 h-4 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 mr-4 flex-shrink-0 shadow-sm transition-all duration-200 group-hover:shadow-md group-hover:scale-110"></div>
                 
@@ -220,7 +237,7 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
                       onChange={(e) => updateMilestone(milestone.id, { title: e.target.value })}
                       onBlur={handleFieldSave}
                       onKeyPress={(e) => e.key === 'Enter' && handleFieldSave()}
-                      className="font-medium text-gray-900 bg-transparent border-b-2 border-blue-500 outline-none w-full transition-all duration-200 focus:border-blue-600"
+                      className="font-medium text-gray-900 bg-transparent border-b-2 border-blue-500 outline-none w-full transition-all duration-200 focus:border-blue-600 mobile-input-fix"
                       autoFocus
                     />
                   ) : (
@@ -242,7 +259,7 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
                       value={milestone.date}
                       onChange={(e) => updateMilestone(milestone.id, { date: e.target.value })}
                       onBlur={handleFieldSave}
-                      className="text-sm text-gray-500 bg-transparent border-b-2 border-blue-500 outline-none transition-all duration-200 focus:border-blue-600"
+                      className="text-sm text-gray-500 bg-transparent border-b-2 border-blue-500 outline-none transition-all duration-200 focus:border-blue-600 mobile-input-fix"
                       autoFocus
                     />
                   ) : (
@@ -285,35 +302,51 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
               {/* Description display for milestones with description */}
               {milestone.description && (
                 <div className="ml-8 mt-2">
-                  <div className=" rounded-lg p-4  border ">
+                  <div className="rounded-lg p-4 border">
                     {editingField?.id === milestone.id && editingField?.field === 'description' ? (
-                      <textarea
-                        value={milestone.description}
-                        onChange={(e) => updateMilestone(milestone.id, { description: e.target.value })}
-                        onBlur={() => {
-                          // Apply formatting when user finishes editing
-                          updateMilestone(milestone.id, { description: milestone.description });
-                          handleFieldSave();
-                        }}
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter' && e.ctrlKey) {
-                            // Apply formatting when user presses Ctrl+Enter
-                            updateMilestone(milestone.id, { description: milestone.description });
-                            handleFieldSave();
-                          }
-                        }}
-                        className="w-full bg-transparent border-none outline-none resize-none text-sm text-gray-700 focus:text-gray-900"
-                        rows={3}
-                        autoFocus
-                        placeholder="Enter details. Multiple lines will auto-format with bullet points."
-                      />
+                      <>
+                        {/* Formatting buttons - only show when editing */}
+                        <div className="flex gap-2 mb-3">
+                          <button
+                            onClick={() => handleFormatDescription(milestone.id, 'paragraph')}
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                            title="Format as sentences"
+                          >
+                            <Type size={12} />
+                            Sentences
+                          </button>
+                          <button
+                            onClick={() => handleFormatDescription(milestone.id, 'bullets')}
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                            title="Format as bullet list"
+                          >
+                            <List size={12} />
+                            Bullets
+                          </button>
+                        </div>
+
+                        <textarea
+                          value={milestone.description}
+                          onChange={(e) => updateMilestone(milestone.id, { description: e.target.value })}
+                          onBlur={handleFieldSave}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && e.ctrlKey) {
+                              handleFieldSave();
+                            }
+                          }}
+                          className="w-full bg-transparent border-none outline-none resize-none text-sm text-gray-700 focus:text-gray-900 mobile-input-fix"
+                          rows={3}
+                          autoFocus
+                          placeholder="Enter details. Use formatting buttons above to organize your text."
+                        />
+                      </>
                     ) : (
                       <div 
                         className="text-sm text-gray-700 leading-relaxed cursor-pointer hover:text-gray-900 transition-colors duration-200"
                         onClick={() => handleFieldEdit(milestone.id, 'description')}
                         title="Click to edit description"
                       >
-                        {formatDescription(milestone.description).split('\n').map((line, lineIndex) => (
+                        {milestone.description.split('\n').map((line, lineIndex) => (
                           <div key={lineIndex} className={lineIndex > 0 ? 'mt-1' : ''}>
                             {line}
                           </div>
@@ -331,11 +364,31 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
                 >
                   <div className="ml-8 transform transition-all duration-300 ease-in-out">
                     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 shadow-sm border border-blue-100">
+                      {/* Formatting buttons for new descriptions */}
+                      <div className="flex gap-2 mb-3">
+                        <button
+                          onClick={() => handleFormatDescription(milestone.id, 'paragraph')}
+                          className="flex items-center gap-1 px-2 py-1 text-xs bg-white hover:bg-gray-50 rounded transition-colors border"
+                          title="Format as sentences"
+                        >
+                          <Type size={12} />
+                          Sentences
+                        </button>
+                        <button
+                          onClick={() => handleFormatDescription(milestone.id, 'bullets')}
+                          className="flex items-center gap-1 px-2 py-1 text-xs bg-white hover:bg-gray-50 rounded transition-colors border"
+                          title="Format as bullet list"
+                        >
+                          <List size={12} />
+                          Bullets
+                        </button>
+                      </div>
+
                       <textarea
                         value={milestone.description || ''}
                         onChange={(e) => updateMilestone(milestone.id, { description: e.target.value })}
-                        placeholder="Enter your milestone details. Multiple lines will auto-format with bullet points, single lines will get proper punctuation."
-                        className="w-full bg-transparent border-none outline-none resize-none text-sm text-gray-700 placeholder-gray-400 transition-all duration-200 focus:text-gray-900"
+                        placeholder="Enter your milestone details. Use formatting buttons above to organize your text."
+                        className="w-full bg-transparent border-none outline-none resize-none text-sm text-gray-700 placeholder-gray-400 transition-all duration-200 focus:text-gray-900 mobile-input-fix"
                         rows={3}
                         autoFocus
                       />
