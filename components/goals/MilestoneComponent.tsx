@@ -12,7 +12,7 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
   onMilestonesChange
 }) => {
   const [expandedMilestone, setExpandedMilestone] = useState<string | null>(null);
-  const [editingField, setEditingField] = useState<{id: string, field: 'title' | 'date'} | null>(null);
+  const [editingField, setEditingField] = useState<{id: string, field: 'title' | 'date' | 'description'} | null>(null);
 
   const generateId = () => {
     return Math.random().toString(36).substr(2, 9);
@@ -108,7 +108,7 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
     setExpandedMilestone(expandedMilestone === id ? null : id);
   };
 
-  const handleFieldEdit = (id: string, field: 'title' | 'date') => {
+  const handleFieldEdit = (id: string, field: 'title' | 'date' | 'description') => {
     setEditingField({ id, field });
   };
 
@@ -238,26 +238,56 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
                 </button>
               </div>
 
-              {/* Expanded description section with smooth animation */}
-              <div 
-                className={`overflow-hidden transition-all duration-500 ease-in-out ${
-                  expandedMilestone === milestone.id 
-                    ? 'max-h-40 opacity-100 mt-3' 
-                    : 'max-h-0 opacity-0'
-                }`}
-              >
-                <div className="ml-8 transform transition-all duration-300 ease-in-out">
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 shadow-sm border border-blue-100">
-                    <textarea
-                      value={milestone.description || ''}
-                      onChange={(e) => updateMilestone(milestone.id, { description: e.target.value })}
-                      placeholder="Apply what you've learned through exercises and simple projects."
-                      className="w-full bg-transparent border-none outline-none resize-none text-sm text-gray-700 placeholder-gray-400 transition-all duration-200 focus:text-gray-900"
-                      rows={3}
-                    />
+              {/* Description display for milestones with description */}
+              {milestone.description && (
+                <div className="ml-8 mt-2">
+                  <div className=" rounded-lg p-4  border ">
+                    {editingField?.id === milestone.id && editingField?.field === 'description' ? (
+                      <textarea
+                        value={milestone.description}
+                        onChange={(e) => updateMilestone(milestone.id, { description: e.target.value })}
+                        onBlur={handleFieldSave}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && e.ctrlKey) {
+                            handleFieldSave();
+                          }
+                        }}
+                        className="w-full bg-transparent border-none outline-none resize-none text-sm text-gray-700 focus:text-gray-900"
+                        rows={3}
+                        autoFocus
+                      />
+                    ) : (
+                      <p 
+                        className="text-sm text-gray-700 leading-relaxed cursor-pointer hover:text-gray-900 transition-colors duration-200"
+                        onClick={() => handleFieldEdit(milestone.id, 'description')}
+                        title="Click to edit description"
+                      >
+                        {milestone.description}
+                      </p>
+                    )}
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* Expanded description editor for milestones without description */}
+              {!milestone.description && expandedMilestone === milestone.id && (
+                <div 
+                  className="overflow-hidden transition-all duration-500 ease-in-out max-h-40 opacity-100 mt-3"
+                >
+                  <div className="ml-8 transform transition-all duration-300 ease-in-out">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 shadow-sm border border-blue-100">
+                      <textarea
+                        value={milestone.description || ''}
+                        onChange={(e) => updateMilestone(milestone.id, { description: e.target.value })}
+                        placeholder="Apply what you've learned through exercises and simple projects."
+                        className="w-full bg-transparent border-none outline-none resize-none text-sm text-gray-700 placeholder-gray-400 transition-all duration-200 focus:text-gray-900"
+                        rows={3}
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

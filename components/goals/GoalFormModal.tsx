@@ -585,7 +585,10 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       <div className="p-5">
         {/* Drag handle */}
         <div className="flex items-center justify-center mb-5">
-          <div className="w-16 h-1 bg-gray-200 rounded-full"></div>
+          <div 
+            className="w-16 h-1 bg-gray-200 rounded-full cursor-pointer hover:bg-gray-300 transition-colors" 
+            onClick={onClose}
+          ></div>
         </div>
         
         {/* Action buttons */}
