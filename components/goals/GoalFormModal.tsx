@@ -689,7 +689,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="e.g Complete savings for school fees"
-          className={`w-full mb-2 text-xl font-medium border-none outline-none ${validationError ? 'text-red-500' : ''}`}
+          className={`w-full mb-2 text-xl font-medium border-none outline-none mobile-input-fix ${validationError ? 'text-red-500' : ''}`}
         />
         {validationError && <p className="text-red-500 text-sm mb-4">{validationError}</p>}
         
@@ -697,7 +697,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Description"
-          className="w-full min-h-[150px] mb-6 text-gray-500 border-none outline-none resize-none"
+          className="w-full min-h-[150px] mb-6 text-gray-500 border-none outline-none resize-none mobile-input-fix"
         />
         
         {/* Milestone Component - Show after description is written */}

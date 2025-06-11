@@ -86,15 +86,15 @@ const TaskItem: React.FC<TaskItemProps> = ({
           )}
         </div>
         
-        {/* Delete button - more visible for testing */}
+        {/* Delete button - subtle styling */}
         {onDelete && (
-          <div className="ml-2 bg-red-50 border border-red-200 rounded">
+          <div className="ml-2">
             <button
               onClick={handleDelete}
-              className="p-2 bg-red-100 hover:bg-red-200 rounded transition-all duration-200 group/delete"
+              className="p-2 hover:bg-red-100 rounded-full transition-all duration-200 opacity-70 hover:opacity-100 group/delete mobile-input-fix"
               title="Delete goal"
             >
-              <Trash2 size={16} className="text-red-600 group-hover/delete:text-red-700 transition-colors" />
+              <Trash2 size={16} className="text-gray-400 group-hover/delete:text-red-500 transition-colors" />
             </button>
           </div>
         )}

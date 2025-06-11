@@ -244,3 +244,76 @@ textarea,
     z-index: -1;
   }
 }
+
+/* Prevent zoom on mobile inputs */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  input[type="date"],
+  input[type="time"],
+  textarea,
+  select {
+    font-size: 16px !important;
+    font-size: max(16px, 1rem) !important;
+    transform: scale(1) !important;
+  }
+  
+  /* Prevent zoom on focus for specific input types */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    font-size: 16px !important;
+    font-size: max(16px, 1rem) !important;
+    transform: scale(1) !important;
+  }
+}
+
+/* Ensure inputs are properly styled for mobile */
+@media screen and (max-width: 768px) {
+  .mobile-input-fix {
+    font-size: 16px !important;
+    font-size: max(16px, 1rem) !important;
+  }
+}
+
+/* PWA specific styles */
+.full-screen {
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile browsers */
+}
+
+/* Override any potential zoom-triggering styles */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific styles */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Prevent horizontal scroll on mobile */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Hide scrollbar but allow scrolling */
+.scrollable {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollable::-webkit-scrollbar {
+  display: none;
+}

@@ -253,7 +253,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Edit goal title..."
-          className={`w-full mb-2 text-xl font-medium border-none outline-none ${validationError ? 'text-red-500' : ''}`}
+          className={`w-full mb-2 text-xl font-medium border-none outline-none mobile-input-fix ${validationError ? 'text-red-500' : ''}`}
         />
         {validationError && <p className="text-red-500 text-sm mb-4">{validationError}</p>}
         
@@ -261,7 +261,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Edit description or add your personal notes..."
-          className="w-full min-h-[150px] mb-6 text-gray-500 border-none outline-none resize-none"
+          className="w-full min-h-[150px] mb-6 text-gray-500 border-none outline-none resize-none mobile-input-fix"
         />
         
         {/* Editable Milestone Component */}
