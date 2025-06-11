@@ -134,3 +134,46 @@ export interface UpdateGoalRequest {
   reminderSettings?: string;
   milestones?: string;
 }
+
+// Goal Pack types
+export interface GoalPack {
+  id: string;
+  title: string;
+  description?: string;
+  category: 'finance' | 'schedule' | 'career' | 'audio_books';
+  targetUserType: 'student' | 'non-student' | 'all';
+  milestones?: string; // JSON stringified milestones array
+  tags?: string;
+  isActive: boolean;
+  createdBy: string; // Admin user ID
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateGoalPackRequest {
+  title: string;
+  description?: string;
+  category: 'finance' | 'schedule' | 'career' | 'audio_books';
+  targetUserType: 'student' | 'non-student' | 'all';
+  milestones?: string;
+  tags?: string;
+  isActive?: boolean;
+}
+
+export interface UpdateGoalPackRequest {
+  title?: string;
+  description?: string;
+  category?: 'finance' | 'schedule' | 'career' | 'audio_books';
+  targetUserType?: 'student' | 'non-student' | 'all';
+  milestones?: string;
+  tags?: string;
+  isActive?: boolean;
+}
+
+export interface GoalPackModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave?: (savedGoalPack: GoalPack) => void;
+  initialData?: GoalPack | null;
+  mode?: 'create' | 'edit';
+}

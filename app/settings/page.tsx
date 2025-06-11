@@ -15,12 +15,14 @@ import BottomNav from "@/components/dashboard/BottomNav";
 import EditProfile from "@/components/EditProfile";
 import UserTypeSelectionModal from "@/components/UserTypeSelectionModal";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useAuth } from "@/context/AuthContext";
 import { hasCompletedUserTypeSelection, updateUserType } from "@/src/services/appwrite/userService";
 import { UserType } from "@/lib/types";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
   const { loading, user } = useRequireAuth();
+  const { updateUser } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [showUserTypeModal, setShowUserTypeModal] = useState(false);
   const [hasCheckedUserType, setHasCheckedUserType] = useState(false);
@@ -63,6 +65,13 @@ export default function SettingsPage() {
         userId: user.id,
         userType,
         schoolName
+      });
+
+      // Update the user context immediately
+      updateUser({
+        userType,
+        schoolName,
+        hasCompletedUserTypeSelection: true
       });
 
       setShowUserTypeModal(false);

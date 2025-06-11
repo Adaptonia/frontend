@@ -18,4 +18,5 @@ export const functions = new Functions(client);
 export const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || '';
 export const GOALS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_GOALS_COLLECTION_ID || '';
 export const USERS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID || '';
-export const REMINDERS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_REMINDERS_COLLECTION_ID || 'reminders'; 
+export const REMINDERS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_REMINDERS_COLLECTION_ID || 'reminders';
+export const GOAL_PACKS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_GOAL_PACKS_COLLECTION_ID || 'goal_packs'; 

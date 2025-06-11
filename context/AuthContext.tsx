@@ -19,6 +19,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Get user from Appwrite
       const data = await getCurrentUser();
       console.log("✅ Found authenticated user:", data?.email);
+      console.log("🔍 User data details:", {
+        userType: data?.userType,
+        hasCompletedUserTypeSelection: data?.hasCompletedUserTypeSelection,
+        role: data?.role
+      });
       setUser(data);
     } catch (error) {
       // This is expected when no user is logged in - don't log as error

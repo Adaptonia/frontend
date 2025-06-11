@@ -28,6 +28,38 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
     }
   };
 
+  // Auto-format description with bullet points or proper punctuation
+  const formatDescription = (description: string): string => {
+    if (!description) return '';
+    
+    const trimmed = description.trim();
+    if (!trimmed) return '';
+    
+    // Check if it's already formatted with bullet points or has multiple lines
+    const hasMultipleLines = trimmed.includes('\n');
+    const startsWithBullet = /^[•·\-\*]/.test(trimmed);
+    
+    if (hasMultipleLines || startsWithBullet) {
+      // Format each line with bullet points if not already present
+      return trimmed.split('\n').map(line => {
+        const cleanLine = line.trim();
+        if (!cleanLine) return '';
+        
+        // If line doesn't start with bullet point, add one
+        if (!/^[•·\-\*]/.test(cleanLine)) {
+          return `• ${cleanLine}${cleanLine.endsWith('.') || cleanLine.endsWith('!') || cleanLine.endsWith('?') ? '' : '.'}`;
+        }
+        
+        // If it has bullet but no ending punctuation, add period
+        return cleanLine.endsWith('.') || cleanLine.endsWith('!') || cleanLine.endsWith('?') ? cleanLine : `${cleanLine}.`;
+      }).filter(line => line).join('\n');
+    } else {
+      // Single line - just ensure it ends with proper punctuation
+      const endsWithPunctuation = /[.!?]$/.test(trimmed);
+      return endsWithPunctuation ? trimmed : `${trimmed}.`;
+    }
+  };
+
   // Auto-generate 6 milestones when component mounts if no milestones exist
   useEffect(() => {
     if (milestones.length === 0) {
@@ -62,6 +94,11 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
   }, [milestones.length, onMilestonesChange]);
 
   const updateMilestone = async (id: string, updates: Partial<Milestone>) => {
+    // Auto-format description when saving
+    if (updates.description !== undefined) {
+      updates.description = formatDescription(updates.description);
+    }
+    
     const updatedMilestones = milestones.map(milestone =>
       milestone.id === id ? { ...milestone, ...updates } : milestone
     );
@@ -150,6 +187,13 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
           </div>
           Milestones
         </h3>
+      </div>
+
+      {/* Auto-formatting info */}
+      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <p className="text-xs text-blue-600">
+          💡 <strong>Auto-formatting:</strong> Your milestone descriptions will be automatically formatted with bullet points for multiple lines or proper punctuation for single lines.
+        </p>
       </div>
 
       <div className="relative">
@@ -246,24 +290,35 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
                       <textarea
                         value={milestone.description}
                         onChange={(e) => updateMilestone(milestone.id, { description: e.target.value })}
-                        onBlur={handleFieldSave}
+                        onBlur={() => {
+                          // Apply formatting when user finishes editing
+                          updateMilestone(milestone.id, { description: milestone.description });
+                          handleFieldSave();
+                        }}
                         onKeyPress={(e) => {
                           if (e.key === 'Enter' && e.ctrlKey) {
+                            // Apply formatting when user presses Ctrl+Enter
+                            updateMilestone(milestone.id, { description: milestone.description });
                             handleFieldSave();
                           }
                         }}
                         className="w-full bg-transparent border-none outline-none resize-none text-sm text-gray-700 focus:text-gray-900"
                         rows={3}
                         autoFocus
+                        placeholder="Enter details. Multiple lines will auto-format with bullet points."
                       />
                     ) : (
-                      <p 
+                      <div 
                         className="text-sm text-gray-700 leading-relaxed cursor-pointer hover:text-gray-900 transition-colors duration-200"
                         onClick={() => handleFieldEdit(milestone.id, 'description')}
                         title="Click to edit description"
                       >
-                        {milestone.description}
-                      </p>
+                        {formatDescription(milestone.description).split('\n').map((line, lineIndex) => (
+                          <div key={lineIndex} className={lineIndex > 0 ? 'mt-1' : ''}>
+                            {line}
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -279,7 +334,7 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
                       <textarea
                         value={milestone.description || ''}
                         onChange={(e) => updateMilestone(milestone.id, { description: e.target.value })}
-                        placeholder="Apply what you've learned through exercises and simple projects."
+                        placeholder="Enter your milestone details. Multiple lines will auto-format with bullet points, single lines will get proper punctuation."
                         className="w-full bg-transparent border-none outline-none resize-none text-sm text-gray-700 placeholder-gray-400 transition-all duration-200 focus:text-gray-900"
                         rows={3}
                         autoFocus

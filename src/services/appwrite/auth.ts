@@ -162,7 +162,10 @@ export const getCurrentUser = async (): Promise<User | null> => {
               email: accountDetails.email,
               name: accountDetails.name || accountDetails.email.split('@')[0],
               profilePicture: null,
-              role: userRole
+              role: userRole,
+              userType: null,
+              schoolName: null,
+              hasCompletedUserTypeSelection: false
             }
           );
           
@@ -171,7 +174,10 @@ export const getCurrentUser = async (): Promise<User | null> => {
             email: accountDetails.email,
             name: newUser.name,
             profilePicture: '',
-            role: userRole
+            role: userRole,
+            userType: null,
+            schoolName: undefined,
+            hasCompletedUserTypeSelection: false
           };
         }
         
@@ -197,7 +203,10 @@ export const getCurrentUser = async (): Promise<User | null> => {
         email: accountDetails.email,
         name: userData.name,
         profilePicture: userData.profilePicture,
-        role: role
+        role: role,
+        userType: userData.userType || null,
+        schoolName: userData.schoolName || undefined,
+        hasCompletedUserTypeSelection: userData.hasCompletedUserTypeSelection || false
       };
     } catch (dbError) {
       console.error('Error getting user data from database:', dbError);
@@ -209,7 +218,10 @@ export const getCurrentUser = async (): Promise<User | null> => {
           id: accountDetails.$id,
           email: accountDetails.email,
           name: accountDetails.name || accountDetails.email.split('@')[0],
-          role: 'user'
+          role: 'user',
+          userType: null,
+          schoolName: undefined,
+          hasCompletedUserTypeSelection: false
         };
       }
       

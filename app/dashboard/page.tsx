@@ -1,9 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Plus, Calendar, User, BookOpen, BarChart3 } from 'lucide-react'
+import { Plus, Calendar, User, BookOpen, BarChart3, Edit3 } from 'lucide-react'
 import Image from 'next/image'
-import { Toaster } from 'sonner'
+import { Toaster, toast } from 'sonner'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 
 // Custom components
@@ -12,12 +12,16 @@ import CategoryCard from '@/components/dashboard/CategoryCard'
 import TaskItem from '@/components/dashboard/TaskItem'
 import BottomNav from '@/components/dashboard/BottomNav'
 import GoalFormModal from '@/components/goals/GoalFormModal'
+import GoalPackEditModal from '@/components/goals/GoalPackEditModal'
+import ConfirmDeleteModal from '@/components/modals/ConfirmDeleteModal'
 import { PWAInstallPrompt } from '@/components/pwa/PWAInstallPrompt'
 import { NotificationToggle } from '@/components/pwa/NotificationToggle'
 
 // Appwrite services
-import { getGoals, toggleGoalCompletion } from '../../src/services/appwrite/database'
-import { Goal } from '@/lib/types'
+import { getGoals, toggleGoalCompletion, deleteGoal } from '../../src/services/appwrite/database'
+import { Goal, GoalPack } from '@/lib/types'
+import GoalPackModal from '@/components/admin/GoalPackModal'
+import { getAllGoalPacks, getGoalPacksForUserType } from '@/src/services/appwrite/goalPackService'
 
 const Dashboard = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -26,6 +30,15 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true)
   const [activeGoal, setActiveGoal] = useState<Goal | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [goalPacks, setGoalPacks] = useState<GoalPack[]>([])
+  const [userGoalPacks, setUserGoalPacks] = useState<GoalPack[]>([])
+  const [isGoalPackModalOpen, setIsGoalPackModalOpen] = useState(false)
+  const [activeGoalPack, setActiveGoalPack] = useState<GoalPack | null>(null)
+  const [isGoalPackEditModalOpen, setIsGoalPackEditModalOpen] = useState(false)
+  const [editingGoalPack, setEditingGoalPack] = useState<GoalPack | null>(null)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [goalToDelete, setGoalToDelete] = useState<Goal | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const { user, loading: authLoading } = useRequireAuth()
   
   // Categories for the dashboard
@@ -41,8 +54,27 @@ const Dashboard = () => {
     if (user && !authLoading) {
       console.log("📊 User authenticated, loading goals for:", user.email);
       loadGoals();
+      // Load goal packs if user is admin
+      if (user.role === 'admin') {
+        loadGoalPacks();
+      }
+      // Load user-specific goal packs for regular users
+      if (user.userType && user.userType !== null) {
+        console.log('🎯 User has userType:', user.userType, '- Loading goal packs...');
+        loadUserGoalPacks();
+      } else {
+        console.log('⚠️ User userType not set:', user.userType);
+      }
     }
   }, [user, authLoading]);
+
+  // Reload goal packs when user type changes
+  useEffect(() => {
+    if (user?.userType && !authLoading) {
+      console.log('🔄 User type changed to:', user.userType, '- Reloading goal packs...');
+      loadUserGoalPacks();
+    }
+  }, [user?.userType]);
 
   // Show loading state while authenticating
   // if (authLoading) {
@@ -67,6 +99,75 @@ const Dashboard = () => {
       console.error('Error fetching goals:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadGoalPacks = async () => {
+    try {
+      const data = await getAllGoalPacks();
+      setGoalPacks(data);
+    } catch (error) {
+      console.error('Error fetching goal packs:', error);
+    }
+  };
+
+  const loadUserGoalPacks = async () => {
+    if (!user?.userType) return;
+    
+    try {
+      const data = await getGoalPacksForUserType(user.userType);
+      setUserGoalPacks(data);
+    } catch (error) {
+      console.error('Error fetching user goal packs:', error);
+    }
+  };
+
+  const handleGoalPackSaved = (savedGoalPack: GoalPack) => {
+    // Update the goal packs list
+    setGoalPacks(goalPacks.map(pack => 
+      pack.id === savedGoalPack.id ? savedGoalPack : pack
+    ));
+    setActiveGoalPack(null);
+  };
+
+  const handleEditGoalPack = (goalPack: GoalPack) => {
+    setEditingGoalPack(goalPack);
+    setIsGoalPackEditModalOpen(true);
+  };
+
+  const handleGoalPackEdited = (savedGoal: any) => {
+    // Update goals list with the new customized goal
+    setGoals([...goals, savedGoal]);
+    setEditingGoalPack(null);
+  };
+
+  const handleDeleteGoal = (goalId: string) => {
+    const goal = goals.find(g => g.id === goalId);
+    if (goal) {
+      setGoalToDelete(goal);
+      setIsDeleteModalOpen(true);
+    }
+  };
+
+  const confirmDeleteGoal = async () => {
+    if (!user?.id || !goalToDelete) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      await deleteGoal(goalToDelete.id, user.id);
+      
+      // Remove goal from local state
+      setGoals(goals.filter(goal => goal.id !== goalToDelete.id));
+      
+      toast.success('Goal deleted successfully');
+      setIsDeleteModalOpen(false);
+      setGoalToDelete(null);
+    } catch (error) {
+      console.error('Error deleting goal:', error);
+      toast.error('Failed to delete goal. Please try again.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -127,6 +228,12 @@ const Dashboard = () => {
     }
   };
 
+  // Helper function to get goal packs for a specific category
+  const getGoalPacksForCategory = (categoryId: string): GoalPack[] => {
+    const formattedCategory = formatCategoryForFiltering(categoryId);
+    return userGoalPacks.filter(pack => pack.category === formattedCategory);
+  };
+
   return (
     <div className="bg-gray-100 min-h-screen pb-20">
       {/* PWA Installation Prompt will automatically show based on criteria */}
@@ -170,6 +277,50 @@ const Dashboard = () => {
           <NotificationToggle />
         </div>
 
+        {/* Admin Goal Pack Section - Only visible to admins */}
+        {user?.role === 'admin' && (
+          <div className="bg-white rounded-xl p-5 mb-6 shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-blue-500 text-lg font-medium">Admin: Goal Packs</h2>
+              <button 
+                onClick={() => {
+                  setActiveGoalPack(null);
+                  setIsGoalPackModalOpen(true);
+                }}
+                className="bg-blue-500  text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                <Plus size={16} className="inline mr-1" />
+                Create Pack
+              </button>
+            </div>
+            
+            <div className="space-y-2">
+              {goalPacks.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No goal packs created yet</p>
+              ) : (
+                goalPacks.map(pack => (
+                  <div 
+                    key={pack.id}
+                    onClick={() => {
+                      setActiveGoalPack(pack);
+                      setIsGoalPackModalOpen(true);
+                    }}
+                    className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                  >
+                    <div>
+                      <h3 className="font-medium">{pack.title}</h3>
+                      <p className="text-sm text-gray-500">
+                        {pack.category} • {pack.targetUserType} • {pack.isActive ? 'Active' : 'Inactive'}
+                      </p>
+                    </div>
+                    <div className={`w-3 h-3 rounded-full ${pack.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Category Cards */}
         {categories.map((category) => (
           <CategoryCard 
@@ -179,10 +330,50 @@ const Dashboard = () => {
             icon={category.icon}
             onGoalCreated={loadGoals}
           >
+            {/* Goal Packs for this category */}
+            {getGoalPacksForCategory(category.id).length > 0 && (
+              <div className="mb-4">
+                <h4 className="text-sm font-medium text-gray-600 mb-2 px-4">📦 Goal Packs</h4>
+                {getGoalPacksForCategory(category.id).map(pack => (
+                  <div 
+                    key={pack.id}
+                    className="mx-4 mb-2 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg cursor-pointer hover:shadow-md transition-all"
+                    onClick={() => handleEditGoalPack(pack)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h5 className="font-medium text-blue-800">{pack.title}</h5>
+                        {pack.description && (
+                          <p className="text-sm text-blue-600 mt-1">{pack.description}</p>
+                        )}
+                        <p className="text-xs text-blue-400 mt-1">
+                          📝 Click to customize and add to your goals
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          {pack.tags && (
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                              {pack.tags}
+                            </span>
+                          )}
+                          <span className="text-xs text-blue-500">
+                            For {pack.targetUserType === 'all' ? 'All Users' : pack.targetUserType}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="ml-3 flex flex-col items-center">
+                        <Edit3 className="w-5 h-5 text-blue-500" />
+                        <span className="text-xs text-blue-400 mt-1">Edit</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Filter and show tasks that belong to this category */}
             {loading ? (
               <div className="p-4 text-center text-gray-500">Loading goals...</div>
-            ) : goals.filter(goal => goal.category === formatCategoryForFiltering(category.id)).length === 0 ? (
+            ) : goals.filter(goal => goal.category === formatCategoryForFiltering(category.id)).length === 0 && getGoalPacksForCategory(category.id).length === 0 ? (
               <div className="p-4 text-center text-gray-500">No goals in this category yet</div>
             ) : (
               goals
@@ -203,6 +394,11 @@ const Dashboard = () => {
                         // Stop event propagation
                         event?.stopPropagation();
                         handleToggleComplete(id);
+                      }}
+                      onDelete={(id) => {
+                        // Stop event propagation
+                        event?.stopPropagation();
+                        handleDeleteGoal(id);
                       }}
                     />
                   </div>
@@ -248,6 +444,44 @@ const Dashboard = () => {
           mode="edit"
         />
       )}
+
+      {/* Goal Pack Modal - Admin Only */}
+      {user?.role === 'admin' && (
+        <GoalPackModal
+          isOpen={isGoalPackModalOpen}
+          onClose={() => {
+            setIsGoalPackModalOpen(false);
+            setActiveGoalPack(null);
+          }}
+          onSave={handleGoalPackSaved}
+          initialData={activeGoalPack}
+          mode={activeGoalPack ? 'edit' : 'create'}
+        />
+      )}
+
+      {/* Goal Pack Edit Modal - For Users */}
+      <GoalPackEditModal
+        isOpen={isGoalPackEditModalOpen}
+        onClose={() => {
+          setIsGoalPackEditModalOpen(false);
+          setEditingGoalPack(null);
+        }}
+        onSave={handleGoalPackEdited}
+        goalPack={editingGoalPack}
+      />
+
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setGoalToDelete(null);
+        }}
+        onConfirm={confirmDeleteGoal}
+        title="Delete Goal"
+        itemName={goalToDelete?.title}
+        isDeleting={isDeleting}
+      />
       
       {/* Toast notifications */}
       <Toaster position="bottom-center" />
