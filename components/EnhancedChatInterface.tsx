@@ -404,12 +404,12 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
                 {msg.sender.profilePicture ? (
   <img
     src={msg.sender.profilePicture}
-    alt={msg.sender.name}
+    alt={msg.sender.name || msg.sender.email}
     className="w-10 h-10 rounded-full object-cover"
   />
 ) : (
   <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
-    {msg.sender.email?.charAt(0).toUpperCase() || '?'}
+    {(msg.sender.name || msg.sender.email)?.charAt(0).toUpperCase() || '?'}
   </div>
 )}
                 </div>
@@ -419,7 +419,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
                   {/* Username and Timestamp */}
                   <div className="flex items-center space-x-2 mb-1">
                     <span className="text-sm font-semibold text-gray-900">
-                      {msg.sender.email}
+                      {msg.sender.name || msg.sender.email}
                     </span>
                     <span className="text-xs text-gray-500">
                       {new Date(msg.$createdAt).toLocaleString()}

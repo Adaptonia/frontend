@@ -1,24 +1,21 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
+  MessageSquare, 
   ChevronRight, 
   Search, 
+  Hash, 
+  Users, 
+  Folder, 
   Palette, 
   Calendar, 
-  MessageSquare, 
-  Folder, 
   Mic,
-  Hash,
-  Users
+  Loader2 
 } from 'lucide-react'
-import { useChannels } from '../hooks/useChannels'
-import { useRequireAuth } from '@/hooks/useRequireAuth'
-
-
-
-
+import { useChannelsWithCache } from '../hooks/useChannelsWithCache'
+import { useRequireAuth } from '../hooks/useRequireAuth'
 
 interface ChannelListProps {
   onChannelSelect: (channelId: string) => void
@@ -35,15 +32,9 @@ const ChannelList: React.FC<ChannelListProps> = ({ onChannelSelect }) => {
     userChannels,
     publicChannels,
     isLoading: channelsLoading,
-    fetchPublicChannels
-  } = useChannels(user?.id)
-
-  // Load public channels on mount
-  useEffect(() => {
-    if (user?.id) {
-      fetchPublicChannels()
-    }
-  }, [fetchPublicChannels, user?.id])
+    isCacheHit,
+    isRefreshing
+  } = useChannelsWithCache(user?.id)
 
   const toggleSection = (sectionId: string) => {
     const newCollapsed = new Set(collapsedSections)
@@ -71,15 +62,14 @@ const ChannelList: React.FC<ChannelListProps> = ({ onChannelSelect }) => {
     )
   }, [publicChannels, searchQuery])
 
-  // if (!user) {
-  //   return (
-  //     <div className="flex-1 bg-white flex flex-col h-full">
-  //       {/* <div className="flex items-center justify-center h-full">
-  //         <p className="text-gray-500">Please log in to view channels</p>
-  //       </div> */}
-  //     </div>
-  //   )
-  // }
+  // Determine if channels are clickable (not loading fresh data)
+  const channelsClickable = !channelsLoading || isCacheHit
+
+  const handleChannelClick = (channelId: string) => {
+    if (channelsClickable) {
+      onChannelSelect(channelId)
+    }
+  }
 
   return (
     <div className="flex-1 bg-white flex flex-col h-full rounded-tl-3xl mt-16">
@@ -100,6 +90,25 @@ const ChannelList: React.FC<ChannelListProps> = ({ onChannelSelect }) => {
             <span>Adaptonia Finance</span>
             <ChevronRight size={16} className="text-gray-400" />
           </h1>
+          {/* Loading/Cache Status Indicator */}
+          {channelsLoading && !isCacheHit && (
+            <div className="flex items-center space-x-2 text-blue-500">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-xs">Loading</span>
+            </div>
+          )}
+          {isCacheHit && (
+            <div className="flex items-center space-x-2 text-green-500">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-xs">Cached</span>
+            </div>
+          )}
+          {isRefreshing && (
+            <div className="flex items-center space-x-2 text-blue-500">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span className="text-xs">Updating</span>
+            </div>
+          )}
         </div>
         <p className="text-sm text-gray-500">102 members • Channel</p>
       </div>
@@ -115,6 +124,7 @@ const ChannelList: React.FC<ChannelListProps> = ({ onChannelSelect }) => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={!channelsClickable}
             />
           </div>
           <div className="flex items-center space-x-3 ml-4">
@@ -140,6 +150,7 @@ const ChannelList: React.FC<ChannelListProps> = ({ onChannelSelect }) => {
           <button
             onClick={() => toggleSection('public-groups')}
             className="w-full p-4 flex items-center space-x-3 hover:bg-gray-50 text-left transition-colors"
+            disabled={!channelsClickable}
           >
             <motion.div
               animate={{ rotate: collapsedSections.has('public-groups') ? 0 : 90 }}
@@ -170,12 +181,17 @@ const ChannelList: React.FC<ChannelListProps> = ({ onChannelSelect }) => {
                       return (
                         <motion.button
                           key={channel.$id}
-                          onClick={() => onChannelSelect(channel.$id)}
-                          className="w-full px-6 py-2 flex items-center justify-between hover:bg-gray-50 group transition-colors"
+                          onClick={() => handleChannelClick(channel.$id)}
+                          disabled={!channelsClickable}
+                          className={`w-full px-6 py-2 flex items-center justify-between group transition-colors ${
+                            channelsClickable 
+                              ? 'hover:bg-gray-50 cursor-pointer' 
+                              : 'cursor-not-allowed opacity-70'
+                          }`}
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ duration: 0.3 }}
-                          whileHover={{ x: 4 }}
+                          whileHover={channelsClickable ? { x: 4 } : {}}
                         >
                           <div className="flex items-center space-x-3 flex-1">
                             <Hash size={16} className="text-gray-400" />
@@ -202,6 +218,16 @@ const ChannelList: React.FC<ChannelListProps> = ({ onChannelSelect }) => {
                         </motion.button>
                       )
                     })
+                  ) : channelsLoading && !isCacheHit ? (
+                    // Loading state when no cache
+                    <div className="px-6 py-8 text-center">
+                      <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                      </div>
+                      <p className="text-sm text-gray-500 mb-2">
+                        Loading channels...
+                      </p>
+                    </div>
                   ) : (
                     // Empty state
                     <div className="px-6 py-8 text-center">

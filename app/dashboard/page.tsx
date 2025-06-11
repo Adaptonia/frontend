@@ -19,7 +19,7 @@ import { NotificationToggle } from '@/components/pwa/NotificationToggle'
 
 // Appwrite services
 import { getGoals, toggleGoalCompletion, deleteGoal } from '../../src/services/appwrite/database'
-import { Goal, GoalPack } from '@/lib/types'
+import { Goal, UserType, Milestone, GoalPack } from '@/lib/types'
 import GoalPackModal from '@/components/admin/GoalPackModal'
 import { getAllGoalPacks, getGoalPacksForUserType } from '@/src/services/appwrite/goalPackService'
 
@@ -233,6 +233,8 @@ const Dashboard = () => {
     const formattedCategory = formatCategoryForFiltering(categoryId);
     return userGoalPacks.filter(pack => pack.category === formattedCategory);
   };
+
+
 
   return (
     <div className="bg-gray-100 min-h-screen pb-20">

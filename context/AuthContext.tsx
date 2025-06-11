@@ -7,12 +7,73 @@ import { useState, createContext, useEffect, useContext, useCallback } from "rea
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// User type cache utilities
+const USER_TYPE_CACHE_KEY = 'adaptonia_user_type_cache';
+
+interface UserTypeCache {
+  userId: string;
+  userType: string | null;
+  schoolName?: string;
+  hasCompletedUserTypeSelection: boolean;
+  timestamp: number;
+}
+
+const getUserTypeFromCache = (userId: string): Partial<User> | null => {
+  if (typeof window === 'undefined') return null;
+  
+  try {
+    const cached = localStorage.getItem(USER_TYPE_CACHE_KEY);
+    if (!cached) return null;
+    
+    const cacheData: UserTypeCache = JSON.parse(cached);
+    
+    // Check if cache is for the right user and not too old (24 hours)
+    const isValidCache = cacheData.userId === userId && 
+                        Date.now() - cacheData.timestamp < 24 * 60 * 60 * 1000;
+    
+    if (!isValidCache) return null;
+    
+    return {
+      userType: cacheData.userType as any,
+      schoolName: cacheData.schoolName,
+      hasCompletedUserTypeSelection: cacheData.hasCompletedUserTypeSelection
+    };
+  } catch (error) {
+    console.warn('Failed to read user type cache:', error);
+    return null;
+  }
+};
+
+const setUserTypeCache = (user: User): void => {
+  if (typeof window === 'undefined' || !user.id) return;
+  
+  try {
+    const cacheData: UserTypeCache = {
+      userId: user.id,
+      userType: user.userType || null,
+      schoolName: user.schoolName,
+      hasCompletedUserTypeSelection: user.hasCompletedUserTypeSelection || false,
+      timestamp: Date.now()
+    };
+    
+    localStorage.setItem(USER_TYPE_CACHE_KEY, JSON.stringify(cacheData));
+    console.log('✅ User type cached locally for offline access');
+  } catch (error) {
+    console.warn('Failed to cache user type:', error);
+  }
+};
+
+const clearUserTypeCache = (): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(USER_TYPE_CACHE_KEY);
+};
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Enhanced fetchUser function with proper error handling and logging
+  // Enhanced fetchUser function with proper error handling and offline support
   const fetchUser = useCallback(async () => {
     console.log("🔍 Checking for existing Appwrite session...");
     try {
@@ -24,10 +85,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         hasCompletedUserTypeSelection: data?.hasCompletedUserTypeSelection,
         role: data?.role
       });
-      setUser(data);
+      
+      if (data) {
+        // Cache user type info for offline access
+        setUserTypeCache(data);
+        setUser(data);
+      }
     } catch (error) {
-      // This is expected when no user is logged in - don't log as error
-      console.log("ℹ️ No authenticated user found (guest session)");
+      console.log("ℹ️ No authenticated user found or network error (checking offline cache)");
+      
+      // Try to use cached auth info for offline scenarios
+      const cachedAuth = localStorage.getItem('adaptonia_auth_cache');
+      if (cachedAuth) {
+        try {
+          const authData = JSON.parse(cachedAuth);
+          if (authData.id) {
+            const cachedUserType = getUserTypeFromCache(authData.id);
+            if (cachedUserType) {
+              console.log("🔄 Using cached user data for offline access");
+              setUser({
+                ...authData,
+                ...cachedUserType
+              });
+              return;
+            }
+          }
+        } catch (cacheError) {
+          console.warn('Failed to parse cached auth data:', cacheError);
+        }
+      }
+      
       // Only log detailed error in development
       if (process.env.NODE_ENV === 'development') {
         console.log('Auth check details:', error);
@@ -42,15 +129,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     console.log("🔄 AuthContext mounted - checking authentication");
     fetchUser();
-    
-    // We could also set up a periodic refresh here if needed
-    // const interval = setInterval(fetchUser, 5 * 60 * 1000); // Refresh every 5 minutes
-    // return () => clearInterval(interval);
   }, [fetchUser]);
 
   const logout = async () => {
     try {
       await logoutUser();
+      // Clear all cached data on logout
+      clearUserTypeCache();
+      localStorage.removeItem('adaptonia_auth_cache');
       setUser(null);
       router.push('/login');
     } catch (error) {
@@ -59,7 +145,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const updateUser = (updated: Partial<User>) => {
-    setUser((prev) => (prev ? { ...prev, ...updated } : prev));
+    setUser((prev) => {
+      if (!prev) return prev;
+      
+      const updatedUser = { ...prev, ...updated };
+      
+      // Update cache with new user type information
+      if (updated.userType !== undefined || updated.schoolName !== undefined || updated.hasCompletedUserTypeSelection !== undefined) {
+        setUserTypeCache(updatedUser);
+        console.log('✅ User type cache updated');
+      }
+      
+      // Also update basic auth cache
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('adaptonia_auth_cache', JSON.stringify({
+          id: updatedUser.id,
+          email: updatedUser.email,
+          name: updatedUser.name,
+          role: updatedUser.role
+        }));
+      }
+      
+      return updatedUser;
+    });
   };
 
   const value = {

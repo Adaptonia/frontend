@@ -30,6 +30,7 @@ export interface UseChannelMessagesReturn extends UseChannelMessagesState, UseCh
 export const useChannelMessages = (
   channelId: string | null, 
   userId?: string,
+  currentUser?: any,
   limit: number = 50
 ): UseChannelMessagesReturn => {
   const [state, setState] = useState<UseChannelMessagesState>({
@@ -44,6 +45,7 @@ export const useChannelMessages = (
 
   const currentChannelId = useRef<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const lastUserUpdate = useRef<string>('')
 
   // Initialize Appwrite client for realtime subscriptions
   const client = new Client()
@@ -52,7 +54,7 @@ export const useChannelMessages = (
     .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || '')
 
   // Fetch messages for a channel
-  const fetchMessages = useCallback(async (isLoadingMore = false) => {
+  const fetchMessages = useCallback(async (isLoadingMore: boolean = false) => {
     if (!channelId) return
 
     setState(prev => ({ 
@@ -277,6 +279,21 @@ export const useChannelMessages = (
       return () => clearTimeout(timer)
     }
   }, [state.messages, state.lastReadMessageId, markAsRead])
+
+  // Handle current user profile updates (refresh messages to get updated sender names)
+  useEffect(() => {
+    if (currentUser && currentUser.name) {
+      const userKey = `${currentUser.id}-${currentUser.name}-${currentUser.email}`;
+      if (lastUserUpdate.current !== userKey && lastUserUpdate.current !== '') {
+        // User profile was updated, refresh messages to get updated sender info
+        console.log('🔄 User profile updated, refreshing messages to show updated names');
+        if (channelId) {
+          fetchMessages(false);
+        }
+      }
+      lastUserUpdate.current = userKey;
+    }
+  }, [currentUser?.name, currentUser?.email, currentUser?.id, channelId, fetchMessages]);
 
   return {
     ...state,

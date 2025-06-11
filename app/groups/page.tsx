@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MessageSquare, Moon, Command } from 'lucide-react'
+import { MessageSquare, Moon, Command, RefreshCw } from 'lucide-react'
 import Sidebar from '../../components/Sidebar'
 import ChannelList from '../../components/ChannelList'
 import ChatList from '../../components/ChatList'
@@ -11,7 +11,8 @@ import CreateChannelModal from '../../components/CreateChannelModal'
 import ContactsIntegration from '../../components/ContactsIntegration'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import { ToastProvider, useToast } from '../../components/ToastNotification'
-import { useChannels } from '../../hooks/useChannels'
+import { ChannelCacheProvider } from '../../context/ChannelCacheContext'
+import { useChannelsWithCache } from '../../hooks/useChannelsWithCache'
 import { useChannelMessages } from '../../hooks/useChannelMessages'
 import { useTypingIndicator,} from '../../hooks/useTyping'
 import { 
@@ -66,11 +67,15 @@ const GroupsPageContent: React.FC = () => {
     isLoading: channelsLoading,
     isCreating,
     isJoining,
+    isRefreshing,
+    isCacheHit,
     createChannel,
     joinChannel,
+    refreshChannels,
+    invalidateAndRefresh,
     error: channelsError,
     clearError: clearChannelsError
-  } = useChannels(userInitialized ? user?.id : undefined)
+  } = useChannelsWithCache(userInitialized ? user?.id : undefined)
 
   const {
     messages,
@@ -79,7 +84,7 @@ const GroupsPageContent: React.FC = () => {
     sendMessage,
     error: messagesError,
     clearError: clearMessagesError
-  } = useChannelMessages(selectedChannelId, userInitialized ? user?.id : undefined)
+  } = useChannelMessages(selectedChannelId, userInitialized ? user?.id : undefined, user)
 
   const {
     startTyping,
@@ -188,6 +193,16 @@ const GroupsPageContent: React.FC = () => {
         return
       }
 
+      // Check for cached user initialization first
+      const cacheKey = `adaptonia_user_init_${user.id}`;
+      const cachedInit = localStorage.getItem(cacheKey);
+      
+      if (cachedInit) {
+        // Use cached initialization for offline scenarios
+        setUserInitialized(true);
+        return;
+      }
+
       try {
         const userResponse = await userService.createOrGetUser({
           userId: user.id,
@@ -199,8 +214,26 @@ const GroupsPageContent: React.FC = () => {
 
         if (userResponse.success) {
           setUserInitialized(true)
+          // Cache successful initialization
+          localStorage.setItem(cacheKey, JSON.stringify({
+            timestamp: Date.now(),
+            userId: user.id
+          }));
         } else {
           console.error('Failed to initialize user:', userResponse.error)
+          
+          // For offline scenarios, still allow initialization if we have auth user
+          if (user.id && user.name) {
+            console.log('Using fallback initialization for offline mode');
+            setUserInitialized(true);
+            localStorage.setItem(cacheKey, JSON.stringify({
+              timestamp: Date.now(),
+              userId: user.id,
+              fallback: true
+            }));
+            return;
+          }
+          
           addToast({
             type: 'error',
             title: 'Initialization Error',
@@ -209,6 +242,19 @@ const GroupsPageContent: React.FC = () => {
         }
       } catch (error) {
         console.error('Error initializing user:', error)
+        
+        // For offline scenarios, use fallback initialization
+        if (user.id && user.name) {
+          console.log('Network error - using fallback initialization for offline mode');
+          setUserInitialized(true);
+          localStorage.setItem(cacheKey, JSON.stringify({
+            timestamp: Date.now(),
+            userId: user.id,
+            fallback: true
+          }));
+          return;
+        }
+        
         addToast({
           type: 'error',
           title: 'Initialization Error',
@@ -416,6 +462,94 @@ const GroupsPageContent: React.FC = () => {
           >
              <Moon size={16} /> 
           </motion.button>
+
+          {/* Cache Indicator & Refresh Button */}
+          <div className="absolute bottom-16 left-4 space-y-2">
+            {/* Cache Status Indicator */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`p-2 rounded-lg shadow-lg text-xs font-medium transition-all duration-200 ${
+                isCacheHit 
+                  ? 'bg-green-100 text-green-700 border border-green-200' 
+                  : channelsLoading 
+                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                    : 'bg-gray-100 text-gray-700 border border-gray-200'
+              }`}
+              title={
+                isCacheHit 
+                  ? 'Data loaded from cache - Instant loading!' 
+                  : channelsLoading 
+                    ? 'Loading fresh data from server...'
+                    : 'Data loaded from server'
+              }
+              onClick={() => {
+                // Debug info on click
+                console.log('🔍 Cache Debug Info:', {
+                  isCacheHit,
+                  channelsLoading,
+                  isRefreshing,
+                  userChannelsCount: userChannels.length,
+                  publicChannelsCount: publicChannels.length,
+                  userInitialized,
+                  isOnline: navigator.onLine
+                });
+              }}
+            >
+              <div className="flex items-center space-x-1">
+                <div className={`w-2 h-2 rounded-full ${
+                  isCacheHit 
+                    ? 'bg-green-500' 
+                    : channelsLoading 
+                      ? 'bg-blue-500 animate-pulse'
+                      : 'bg-gray-500'
+                }`} />
+                <span>
+                  {isCacheHit 
+                    ? 'Cached' 
+                    : channelsLoading 
+                      ? 'Loading...'
+                      : 'Fresh'
+                  }
+                </span>
+              </div>
+              {isRefreshing && (
+                <div className="text-xs text-gray-500 mt-1">
+                  Updating in background...
+                </div>
+              )}
+            </motion.div>
+
+            {/* Manual Refresh Button */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => invalidateAndRefresh()}
+              disabled={channelsLoading}
+              className="p-2 rounded-lg transition-colors bg-white text-gray-600 hover:bg-gray-100 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Force refresh channels data"
+            >
+              <RefreshCw 
+                size={16} 
+                className={channelsLoading ? 'animate-spin' : ''} 
+              />
+            </motion.button>
+
+            {/* Offline Indicator */}
+            {!navigator.onLine && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="p-2 rounded-lg shadow-lg text-xs font-medium bg-orange-100 text-orange-700 border border-orange-200"
+                title="You're offline - viewing cached data"
+              >
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 rounded-full bg-orange-500" />
+                  <span>Offline</span>
+                </div>
+              </motion.div>
+            )}
+          </div>
         </div>
       )}
 
@@ -781,11 +915,13 @@ const GroupsPageContent: React.FC = () => {
 
 const GroupsPage: React.FC = () => {
   return (
-    <ToastProvider>
-      <ErrorBoundary>
-        <GroupsPageContent />
-      </ErrorBoundary>
-    </ToastProvider>
+    <ChannelCacheProvider>
+      <ToastProvider>
+        <ErrorBoundary>
+          <GroupsPageContent />
+        </ErrorBoundary>
+      </ToastProvider>
+    </ChannelCacheProvider>
   )
 }
 

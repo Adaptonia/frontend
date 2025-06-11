@@ -18,7 +18,7 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useAuth } from "@/context/AuthContext";
 import { hasCompletedUserTypeSelection, updateUserType } from "@/src/services/appwrite/userService";
 import { UserType } from "@/lib/types";
-import { toast } from "sonner";
+import { toast, Toaster } from "sonner";
 
 export default function SettingsPage() {
   const { loading, user } = useRequireAuth();
@@ -121,9 +121,15 @@ export default function SettingsPage() {
       >
         <div className="flex items-center">
           <div className="relative h-12 w-12 rounded-full bg-orange-300 overflow-hidden mr-4">
-            <div className="absolute inset-0 flex items-center justify-center text-orange-600">
-              <User size={24} />
-            </div>
+            {user?.profilePicture ? (
+              <div className="w-full h-full">
+                <User size={24} className="absolute inset-0 flex items-center justify-center text-orange-600" />
+              </div>
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-white text-xl font-bold">
+                {(user?.name || user?.email || "U")[0].toUpperCase()}
+              </div>
+            )}
           </div>
           <div>
             <h2 className="font-bold text-lg">{user?.name || "Guest"}</h2>
@@ -217,6 +223,9 @@ export default function SettingsPage() {
         onClose={handleUserTypeModalClose}
         onComplete={handleUserTypeComplete}
       />
+      
+      {/* Toast notifications */}
+      <Toaster position="bottom-center" />
     </div>
   );
 }

@@ -50,8 +50,17 @@ export interface MessageWithSender extends ChannelMessage {
 
 export interface UserChannelInfo {
   channel: Channel
-  role: 'admin' | 'moderator' | 'member'
-  joinedAt: string
+  member: {
+    $id: string
+    channelId: string
+    userId: string
+    role: 'admin' | 'moderator' | 'member'
+    isActive: boolean
+    lastActiveAt: string
+    $createdAt: string
+    $updatedAt: string
+  }
+  unreadCount: number
 }
 
 export interface CreateChannelData {
