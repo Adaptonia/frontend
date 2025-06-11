@@ -148,10 +148,10 @@ const requestNotificationPermissionForMobile = async (): Promise<boolean> => {
     
     if (isMobile) {
       // Show a user-friendly message before requesting permission
-      toast.info('Enable Notifications', {
-        description: 'Allow notifications to receive reminders for your goals, even when the app is closed.',
-        duration: 5000
-      });
+      // toast.info('Enable Notifications', {
+      //   description: 'Allow notifications to receive reminders for your goals, even when the app is closed.',
+      //   duration: 5000
+      // });
       
       // Wait a moment for user to read the message
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -174,9 +174,7 @@ const requestNotificationPermissionForMobile = async (): Promise<boolean> => {
       }
     } else {
       console.warn('❌ Notification permission denied');
-      toast.error('Notifications disabled', {
-        description: 'You won\'t receive reminder notifications. You can enable them later in settings.'
-      });
+      
     }
     
     return granted;
