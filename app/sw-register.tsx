@@ -426,21 +426,32 @@ export const playNotificationSound = async (): Promise<void> => {
     const soundSources = [
       '/sounds/notification.wav',
       '/sounds/notification.mp3',
-      '/sounds/notification.ogg'
+      '/sounds/notification.ogg',
+      '/sounds/alarm.wav',
+      '/sounds/alarm.mp3',
+      '/sounds/alarm.ogg'
     ];
     
     let audio: HTMLAudioElement | null = null;
+    let compatibleSource: string | null = null;
     
     // Try each sound source until one works
     for (const source of soundSources) {
       try {
-        audio = new Audio(source);
+        const testAudio = new Audio();
+        const canPlay = testAudio.canPlayType('audio/wav') || 
+                       testAudio.canPlayType('audio/mp3') || 
+                       testAudio.canPlayType('audio/ogg');
         
-        // Test if the audio can be loaded
-        const canPlay = audio.canPlayType('audio/wav') || audio.canPlayType('audio/mp3') || audio.canPlayType('audio/ogg');
         if (canPlay) {
-          console.log('✅ Found compatible audio source:', source);
-          break;
+          // Test if the file exists
+          const response = await fetch(source, { method: 'HEAD' });
+          if (response.ok) {
+            compatibleSource = source;
+            audio = testAudio;
+            console.log('✅ Found compatible audio source:', source);
+            break;
+          }
         }
       } catch {
         console.warn('⚠️ Failed to load audio source:', source);
@@ -448,12 +459,13 @@ export const playNotificationSound = async (): Promise<void> => {
       }
     }
     
-    if (!audio) {
+    if (!audio || !compatibleSource) {
       console.warn('❌ No compatible audio source found');
       return;
     }
     
     // Set properties for notification sound
+    audio.src = compatibleSource;
     audio.volume = 0.7;
     audio.loop = false;
     
@@ -469,8 +481,8 @@ export const playNotificationSound = async (): Promise<void> => {
           // Stop after 3 seconds to prevent long-running audio
           setTimeout(() => {
             if (audio) {
-            audio.pause();
-            audio.currentTime = 0;
+              audio.pause();
+              audio.currentTime = 0;
             }
           }, 3000);
         })

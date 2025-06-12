@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { iosNotificationManager } from '@/lib/ios-notifications'
 
 interface PWANotificationManagerProps {
   children?: React.ReactNode
@@ -52,6 +53,27 @@ export default function PWANotificationManager({ children }: PWANotificationMana
   const initializePWANotifications = async () => {
     try {
       console.log('🚀 PWA Manager: Initializing comprehensive notification system')
+
+      // Check if running on iOS
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      
+      if (isIOS) {
+        console.log('📱 PWA Manager: iOS device detected - using iOS notification system');
+        
+        // Initialize iOS notification manager
+        const permissionGranted = await iosNotificationManager.requestPermission();
+        setNotificationPermission(iosNotificationManager.getPermissionStatus());
+        
+        if (permissionGranted) {
+          setIsServiceWorkerReady(true);
+          console.log('✅ PWA Manager: iOS notification system initialized');
+          toast.success('Notifications enabled for iOS!');
+          
+          // Process any queued notifications
+          await iosNotificationManager.processNotificationQueue();
+        }
+        return;
+      }
 
       // Step 1: Check service worker support
       if (!('serviceWorker' in navigator)) {
@@ -365,6 +387,32 @@ export default function PWANotificationManager({ children }: PWANotificationMana
   // Public API for scheduling reminders
   const scheduleReminder = async (reminderData: ReminderData): Promise<boolean> => {
     try {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      
+      if (isIOS) {
+        // Use iOS notification manager for scheduling
+        await iosNotificationManager.showNotification({
+          title: reminderData.title,
+          body: reminderData.description,
+          data: reminderData,
+          actions: [
+            {
+              action: 'view',
+              title: 'View Goal'
+            },
+            {
+              action: 'complete',
+              title: 'Mark Complete'
+            },
+            {
+              action: 'snooze',
+              title: 'Snooze 5 min'
+            }
+          ]
+        });
+        return true;
+      }
+
       if (!isServiceWorkerReady) {
         console.warn('⚠️ PWA Manager: Service worker not ready')
         return false
@@ -389,6 +437,13 @@ export default function PWANotificationManager({ children }: PWANotificationMana
   // Public API for canceling reminders
   const cancelReminder = async (goalId: string): Promise<boolean> => {
     try {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      
+      if (isIOS) {
+        // iOS notifications are one-time, so no need to cancel
+        return true;
+      }
+
       if (!isServiceWorkerReady) {
         console.warn('⚠️ PWA Manager: Service worker not ready')
         return false
