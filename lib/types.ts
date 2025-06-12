@@ -240,3 +240,52 @@ export interface LibraryModalProps {
   initialData?: LibraryItem | null;
   mode?: 'create' | 'edit';
 }
+
+// Goal Pack Review types
+export interface GoalPackReview {
+  id: string;
+  goalPackId: string;
+  userId: string;
+  userName: string;
+  userProfilePicture?: string;
+  rating: number; // 1-5 stars
+  reviewText?: string;
+  isHelpful?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateGoalPackReviewRequest {
+  goalPackId: string;
+  rating: number;
+  reviewText?: string;
+}
+
+export interface UpdateGoalPackReviewRequest {
+  rating?: number;
+  reviewText?: string;
+}
+
+// Enhanced Goal Pack with review stats
+export interface GoalPackWithStats extends GoalPack {
+  averageRating: number;
+  totalReviews: number;
+  totalPurchases: number;
+  isPurchased?: boolean;
+  userReview?: GoalPackReview;
+}
+
+// Goal Pack Purchase types
+export interface GoalPackPurchase {
+  id: string;
+  goalPackId: string;
+  userId: string;
+  purchasePrice: number;
+  purchaseDate: string;
+  createdAt: string;
+}
+
+export interface CreateGoalPackPurchaseRequest {
+  goalPackId: string;
+  purchasePrice: number;
+}

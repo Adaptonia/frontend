@@ -21,10 +21,6 @@ export const USERS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLEC
 export const REMINDERS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_REMINDERS_COLLECTION_ID || 'reminders';
 export const GOAL_PACKS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_GOAL_PACKS_COLLECTION_ID || 'goal_packs';
 export const LIBRARY_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_LIBRARY_COLLECTION_ID || 'library';
+export const GOAL_PACK_REVIEWS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_GOAL_PACK_REVIEWS_COLLECTION_ID || 'goal_pack_reviews';
+export const GOAL_PACK_PURCHASES_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_GOAL_PACK_PURCHASES_COLLECTION_ID || 'goal_pack_purchases';
 
-// Debug logging for goal packs collection ID
-// console.log('🔍 Goal Packs Collection ID Debug:', {
-//   envVar: process.env.NEXT_PUBLIC_APPWRITE_GOAL_PACKS_COLLECTION_ID,
-//   finalValue: GOAL_PACKS_COLLECTION_ID,
-//   allEnvVars: Object.keys(process.env).filter(key => key.includes('GOAL_PACKS'))
-// }); 
