@@ -19,8 +19,14 @@ class IOSNotificationManager {
   private isProcessingQueue: boolean = false;
 
   private constructor() {
-    this.isSupported = 'Notification' in window;
-    this.permission = this.isSupported ? Notification.permission : 'denied';
+    // Check if we're in a browser environment
+    if (typeof window !== 'undefined') {
+      this.isSupported = 'Notification' in window;
+      this.permission = this.isSupported ? Notification.permission : 'denied';
+    } else {
+      this.isSupported = false;
+      this.permission = 'denied';
+    }
   }
 
   public static getInstance(): IOSNotificationManager {
@@ -31,6 +37,8 @@ class IOSNotificationManager {
   }
 
   public async requestPermission(): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
+    
     if (!this.isSupported) {
       console.warn('Notifications not supported on this device');
       return false;
@@ -47,6 +55,8 @@ class IOSNotificationManager {
   }
 
   public async showNotification(options: IOSNotificationOptions): Promise<void> {
+    if (typeof window === 'undefined') return;
+    
     if (!this.isSupported || this.permission !== 'granted') {
       // Queue the notification for when permission is granted
       this.notificationQueue.push(options);
@@ -72,8 +82,7 @@ class IOSNotificationManager {
           badge: '/icons/icon-72x72.png',
           tag: `ios-notification-${Date.now()}`,
           requireInteraction: true,
-          silent: false,
-        //   vibrate: [200, 100, 200]
+          silent: false
         });
 
         // Handle notification click
@@ -95,6 +104,8 @@ class IOSNotificationManager {
   }
 
   private async handleNotificationAction(action: string, data: any): Promise<void> {
+    if (typeof window === 'undefined') return;
+    
     switch (action) {
       case 'view':
         if (data?.url) {
@@ -125,6 +136,8 @@ class IOSNotificationManager {
   }
 
   private async playNotificationSound(): Promise<void> {
+    if (typeof window === 'undefined') return;
+    
     try {
       const audio = new Audio('/sounds/notification.wav');
       audio.volume = 0.7;
@@ -135,6 +148,8 @@ class IOSNotificationManager {
   }
 
   public async processNotificationQueue(): Promise<void> {
+    if (typeof window === 'undefined') return;
+    
     if (this.isProcessingQueue || this.notificationQueue.length === 0) {
       return;
     }
@@ -160,4 +175,7 @@ class IOSNotificationManager {
   }
 }
 
-export const iosNotificationManager = IOSNotificationManager.getInstance(); 
+// Create a singleton instance only in browser environment
+export const iosNotificationManager = typeof window !== 'undefined' 
+  ? IOSNotificationManager.getInstance()
+  : null; 

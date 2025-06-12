@@ -55,9 +55,9 @@ export default function PWANotificationManager({ children }: PWANotificationMana
       console.log('🚀 PWA Manager: Initializing comprehensive notification system')
 
       // Check if running on iOS
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      const isIOS = typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       
-      if (isIOS) {
+      if (isIOS && iosNotificationManager) {
         console.log('📱 PWA Manager: iOS device detected - using iOS notification system');
         
         // Initialize iOS notification manager
@@ -76,7 +76,7 @@ export default function PWANotificationManager({ children }: PWANotificationMana
       }
 
       // Step 1: Check service worker support
-      if (!('serviceWorker' in navigator)) {
+      if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
         console.warn('⚠️ PWA Manager: Service Worker not supported')
         toast.error('Your browser doesn\'t support background notifications')
         return
@@ -387,9 +387,9 @@ export default function PWANotificationManager({ children }: PWANotificationMana
   // Public API for scheduling reminders
   const scheduleReminder = async (reminderData: ReminderData): Promise<boolean> => {
     try {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      const isIOS = typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       
-      if (isIOS) {
+      if (isIOS && iosNotificationManager) {
         // Use iOS notification manager for scheduling
         await iosNotificationManager.showNotification({
           title: reminderData.title,
@@ -437,9 +437,9 @@ export default function PWANotificationManager({ children }: PWANotificationMana
   // Public API for canceling reminders
   const cancelReminder = async (goalId: string): Promise<boolean> => {
     try {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      const isIOS = typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       
-      if (isIOS) {
+      if (isIOS && iosNotificationManager) {
         // iOS notifications are one-time, so no need to cancel
         return true;
       }
