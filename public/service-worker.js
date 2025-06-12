@@ -304,13 +304,15 @@ async function checkAndProcessDueReminders() {
     const dueReminders = [];
     const remainingReminders = [];
     
-    // Separate due and future reminders with tolerance
+    // Separate due and future reminders with more reasonable tolerance
     storedReminders.forEach(reminder => {
       const reminderTime = new Date(reminder.sendDate).getTime();
       
-      // Check if reminder is due (within 2 minute tolerance for reliability)
-      if (reminderTime <= now + 120000) { // 2 minute tolerance
+      // Check if reminder is actually due (only past due reminders, no future tolerance)
+      // Allow 30 seconds past due for processing delays
+      if (reminderTime <= now + 30000) { // 30 second tolerance for processing delays only
         dueReminders.push(reminder);
+        console.log(`Service Worker: Reminder due - ${reminder.title} scheduled for ${new Date(reminder.sendDate).toLocaleString()}`);
       } else {
         remainingReminders.push(reminder);
       }
@@ -399,6 +401,15 @@ async function showNotificationForReminder(reminder) {
     
     console.log('Service Worker: Notification shown for goal', reminder.goalId);
     
+    // Trigger immediate check if reminder is due soon
+    const reminderTime = new Date(reminder.sendDate).getTime();
+    const now = Date.now();
+    
+    if (reminderTime - now < 60000) { // If due within 1 minute (reduced from 5 minutes)
+      console.log('Service Worker: Reminder due very soon, triggering immediate check');
+      setTimeout(performAutomaticReminderCheck, 1000);
+    }
+    
   } catch (error) {
     console.error('Service Worker: Failed to show notification for reminder:', error);
     throw error; // Re-throw to handle in caller
@@ -463,8 +474,8 @@ class AutomaticBackgroundReminderManager {
       const reminderTime = new Date(reminder.sendDate).getTime();
       const now = Date.now();
       
-      if (reminderTime - now < 300000) { // If due within 5 minutes
-        console.log('Service Worker: Reminder due soon, triggering immediate check');
+      if (reminderTime - now < 60000) { // If due within 1 minute (reduced from 5 minutes)
+        console.log('Service Worker: Reminder due very soon, triggering immediate check');
         setTimeout(performAutomaticReminderCheck, 1000);
       }
       

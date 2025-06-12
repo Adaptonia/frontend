@@ -331,23 +331,27 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
         today.setHours(0, 0, 0, 0); // Reset time to start of day
         
         if (milestoneDate >= today) {
+          // Create milestone reminder at 9 AM in user's local timezone
+          const reminderDateTime = new Date(milestone.date);
+          reminderDateTime.setHours(9, 0, 0, 0); // 9:00 AM local time
+          
           const reminderData = {
             goalId: `${goalId}-milestone-${milestone.id}`,
             userId: user?.id || 'system',
             title: `Milestone Due: ${milestone.title}`,
             description: `Time to work on "${milestone.title}" for your goal "${goalTitle}". ${milestone.description || ''}`,
-            sendDate: milestone.date + 'T09:00:00.000Z', // 9 AM on milestone date
-            dueDate: milestone.date
+            sendDate: reminderDateTime.toISOString(), // Proper ISO string in user's timezone
+            dueDate: milestoneDate.toISOString() // Milestone due date as ISO string
           };
 
           await reminderService.createReminder(reminderData);
-          console.log(`✅ Milestone notification scheduled: ${milestone.title}`);
+          console.log(`✅ Milestone notification scheduled: ${milestone.title} at ${reminderDateTime.toLocaleString()}`);
         }
       }
 
       if (milestones.filter(m => new Date(m.date) >= new Date()).length > 0) {
         toast.success('Milestone notifications scheduled', {
-          description: `You'll be reminded about upcoming milestones`
+          description: `You'll be reminded at 9 AM on milestone dates`
         });
       }
     } catch (error) {
@@ -369,9 +373,15 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       const reminderDates: string[] = [];
       
       if (reminderSettings.interval === "once") {
-        // Single reminder
+        // Single reminder - ensure proper local timezone handling
         const reminderDateTime = new Date(`${reminderSettings.date}T${reminderSettings.time}`);
-        reminderDates.push(reminderDateTime.toISOString());
+        
+        // Validate the date is in the future
+        if (reminderDateTime > new Date()) {
+          reminderDates.push(reminderDateTime.toISOString());
+        } else {
+          console.warn('Reminder time is in the past, skipping:', reminderDateTime.toLocaleString());
+        }
       } else {
         // Multiple reminders based on interval
         for (let i = 0; i < reminderSettings.count; i++) {
@@ -392,9 +402,19 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
               break;
           }
           
-          reminderDates.push(nextDate.toISOString());
+          // Only add future dates
+          if (nextDate > new Date()) {
+            reminderDates.push(nextDate.toISOString());
+          }
         }
       }
+      
+      if (reminderDates.length === 0) {
+        toast.warning('No future reminder dates to schedule');
+        return;
+      }
+      
+      console.log('📅 Scheduling reminders for dates:', reminderDates.map(date => new Date(date).toLocaleString()));
       
       // Create reminders using the reminderService
       const reminderPromises = reminderDates.map(sendDate => 
@@ -404,7 +424,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           title: `Reminder: ${title}`,
           description: description || 'Time to work on your goal!',
           sendDate,
-          dueDate: selectedDate || undefined
+          dueDate: selectedDate ? new Date(selectedDate).toISOString() : undefined
         })
       );
       
@@ -430,11 +450,12 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
         
         if (successfulSchedules.length === reminderDates.length) {
           // All reminders scheduled successfully
+          const nextReminderTime = new Date(reminderDates[0]).toLocaleString();
           toast.success(
             <div className="flex flex-col gap-1">
               <span className="font-medium">Automatic Background Reminders Set! 🚀</span>
               <span className="text-sm text-gray-600">
-                {reminderSettings.count} {reminderSettings.count === 1 ? 'reminder' : 'reminders'} will work across all browsers and PWA
+                Next reminder: {nextReminderTime}
               </span>
             </div>
           );
@@ -452,27 +473,24 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
         }
       } else if (permissionGranted) {
         // PWA Manager not ready yet - show info message
+        const nextReminderTime = new Date(reminderDates[0]).toLocaleString();
         toast.info(
           <div className="flex flex-col gap-1">
             <span className="font-medium">Reminders Scheduled ⏰</span>
             <span className="text-sm text-gray-600">
-              Background system initializing - reminders will work automatically
+              Next reminder: {nextReminderTime}
             </span>
           </div>
         );
       } else {
         // No permission - only database reminders
-        const formattedTime = new Date(`2000-01-01T${reminderSettings.time}`).toLocaleTimeString([], {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
-        });
+        const nextReminderTime = new Date(reminderDates[0]).toLocaleString();
         
         toast.warning(
           <div className="flex flex-col gap-1">
             <span className="font-medium">Reminders Created (No Notifications) ⏰</span>
             <span className="text-sm text-gray-600">
-              {reminderSettings.count} {reminderSettings.count === 1 ? 'reminder' : 'reminders'} at {formattedTime} - enable notifications for alerts
+              Next reminder: {nextReminderTime} - enable notifications for alerts
             </span>
           </div>
         );
