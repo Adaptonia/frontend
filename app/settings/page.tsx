@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Head from "next/head";
 import {
   Bell,
@@ -13,41 +13,12 @@ import {
 } from "lucide-react";
 import BottomNav from "@/components/dashboard/BottomNav";
 import EditProfile from "@/components/EditProfile";
-import UserTypeSelectionModal from "@/components/UserTypeSelectionModal";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-import { useAuth } from "@/context/AuthContext";
-import { hasCompletedUserTypeSelection, updateUserType } from "@/src/services/appwrite/userService";
-import { UserType } from "@/lib/types";
 import { toast, Toaster } from "sonner";
 
 export default function SettingsPage() {
   const { loading, user } = useRequireAuth();
-  const { updateUser } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [showUserTypeModal, setShowUserTypeModal] = useState(false);
-  const [hasCheckedUserType, setHasCheckedUserType] = useState(false);
-
-  // Check if user needs to complete user type selection
-  useEffect(() => {
-    const checkUserTypeCompletion = async () => {
-      if (!user?.id || user?.role === 'admin' || hasCheckedUserType) return;
-      
-      try {
-        const hasCompleted = await hasCompletedUserTypeSelection(user.id);
-        if (!hasCompleted) {
-          setShowUserTypeModal(true);
-        }
-        setHasCheckedUserType(true);
-      } catch (error) {
-        console.error('Failed to check user type completion:', error);
-        setHasCheckedUserType(true);
-      }
-    };
-
-    if (!loading && user) {
-      checkUserTypeCompletion();
-    }
-  }, [loading, user, hasCheckedUserType]);
 
   const openProfileEditor = () => {
     setIsProfileOpen(true);
@@ -55,51 +26,6 @@ export default function SettingsPage() {
 
   const closeProfileEditor = () => {
     setIsProfileOpen(false);
-  };
-
-  const handleUserTypeComplete = async (userType: UserType, schoolName?: string) => {
-    if (!user?.id) return;
-
-    try {
-      await updateUserType({
-        userId: user.id,
-        userType,
-        schoolName
-      });
-
-      // Update the user context immediately
-      updateUser({
-        userType,
-        schoolName,
-        hasCompletedUserTypeSelection: true
-      });
-
-      setShowUserTypeModal(false);
-      
-      // Show success message
-      if (userType === 'student') {
-        toast.success("Welcome, Student! 🎓", {
-          description: `We've noted that you attend ${schoolName}. Your experience is now personalized for students.`
-        });
-      } else {
-        toast.success("Profile Updated! 💼", {
-          description: "Your experience is now personalized for working professionals."
-        });
-      }
-    } catch (error) {
-      console.error('Failed to update user type:', error);
-      toast.error("Failed to update profile", {
-        description: "Please try again later."
-      });
-    }
-  };
-
-  const handleUserTypeModalClose = () => {
-    // Only allow closing if user is admin (they don't need to complete this)
-    if (user?.role === 'admin') {
-      setShowUserTypeModal(false);
-    }
-    // For regular users, the modal stays open until they complete the selection
   };
 
   if (loading) {
@@ -216,13 +142,6 @@ export default function SettingsPage() {
 
       {/* Edit Profile Component */}
       <EditProfile isOpen={isProfileOpen} onClose={closeProfileEditor} />
-
-      {/* User Type Selection Modal */}
-      <UserTypeSelectionModal
-        isOpen={showUserTypeModal}
-        onClose={handleUserTypeModalClose}
-        onComplete={handleUserTypeComplete}
-      />
       
       {/* Toast notifications */}
       <Toaster position="bottom-center" />

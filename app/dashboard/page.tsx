@@ -1,10 +1,11 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Plus, Calendar, User, BookOpen, BarChart3, Edit3 } from 'lucide-react'
+import { Plus, Calendar, User, BookOpen, BarChart3, Edit3, GraduationCap, Briefcase } from 'lucide-react'
 import Image from 'next/image'
 import { Toaster, toast } from 'sonner'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
+import { useAuth } from '@/context/AuthContext'
 
 // Custom components
 import DashboardCalendar from '@/components/dashboard/Calendar'
@@ -16,6 +17,7 @@ import GoalPackEditModal from '@/components/goals/GoalPackEditModal'
 import ConfirmDeleteModal from '@/components/modals/ConfirmDeleteModal'
 import { PWAInstallPrompt } from '@/components/pwa/PWAInstallPrompt'
 import { NotificationToggle } from '@/components/pwa/NotificationToggle'
+import UserTypeSelectionModal from '@/components/UserTypeSelectionModal'
 
 // Appwrite services
 import { getGoals, toggleGoalCompletion, deleteGoal } from '../../src/services/appwrite/database'
@@ -25,6 +27,7 @@ import { getAllGoalPacks, getGoalPacksForUserType } from '@/src/services/appwrit
 import LibraryModal from '@/components/library/LibraryModal'
 import LibraryItemCard from '@/components/library/LibraryItemCard'
 import { getLibraryItems, deleteLibraryItem, toggleLibraryItemFavorite, toggleLibraryItemCompletion } from '@/src/services/appwrite/libraryService'
+import { hasCompletedUserTypeSelection, updateUserType } from '@/src/services/appwrite/userService'
 
 const Dashboard = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -45,7 +48,13 @@ const Dashboard = () => {
   const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([])
   const [isLibraryModalOpen, setIsLibraryModalOpen] = useState(false)
   const [activeLibraryItem, setActiveLibraryItem] = useState<LibraryItem | null>(null)
+  
+  // User type selection states
+  const [showUserTypeModal, setShowUserTypeModal] = useState(false)
+  const [hasCheckedUserType, setHasCheckedUserType] = useState(false)
+  
   const { user, loading: authLoading } = useRequireAuth()
+  const { updateUser } = useAuth()
   
   // Categories for the dashboard
   const categories = [
@@ -54,6 +63,31 @@ const Dashboard = () => {
     { id: 'career', name: 'Career', icon: <User className="w-5 h-5 text-blue-500" /> },
     { id: 'audio_books', name: 'Audio books', icon: <BookOpen className="w-5 h-5 text-gray-500" /> },
   ]
+
+  // Calculate completed goals for metrics
+  const completedGoals = goals.filter(goal => goal.isCompleted).length
+
+  // Check if user needs to complete user type selection
+  useEffect(() => {
+    const checkUserTypeCompletion = async () => {
+      if (!user?.id || user?.role === 'admin' || hasCheckedUserType) return;
+      
+      try {
+        const hasCompleted = await hasCompletedUserTypeSelection(user.id);
+        if (!hasCompleted) {
+          setShowUserTypeModal(true);
+        }
+        setHasCheckedUserType(true);
+      } catch (error) {
+        console.error('Failed to check user type completion:', error);
+        setHasCheckedUserType(true);
+      }
+    };
+
+    if (!authLoading && user) {
+      checkUserTypeCompletion();
+    }
+  }, [authLoading, user, hasCheckedUserType]);
 
   // Load goals when user is available
   useEffect(() => {
@@ -127,6 +161,55 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error fetching user goal packs:', error);
     }
+  };
+
+  const handleUserTypeComplete = async (userType: UserType, schoolName?: string) => {
+    if (!user?.id) return;
+
+    try {
+      await updateUserType({
+        userId: user.id,
+        userType,
+        schoolName
+      });
+
+      // Update the user context immediately
+      updateUser({
+        userType,
+        schoolName,
+        hasCompletedUserTypeSelection: true
+      });
+
+      setShowUserTypeModal(false);
+      
+      // Show success message
+      if (userType === 'student') {
+        toast.success("Welcome, Student! 🎓", {
+          description: `We've noted that you attend ${schoolName}. Your experience is now personalized for students.`
+        });
+      } else {
+        toast.success("Profile Updated! 💼", {
+          description: "Your experience is now personalized for working professionals."
+        });
+      }
+    } catch (error) {
+      console.error('Failed to update user type:', error);
+      toast.error("Failed to update profile", {
+        description: "Please try again later."
+      });
+    }
+  };
+
+  const handleUserTypeModalClose = () => {
+    // Only allow closing if user is admin (they don't need to complete this)
+    if (user?.role === 'admin') {
+      setShowUserTypeModal(false);
+    }
+    // For regular users, the modal stays open until they complete the selection
+  };
+
+  const handleManualUserTypeChange = () => {
+    setShowUserTypeModal(true);
   };
 
   const handleGoalPackSaved = (savedGoalPack: GoalPack) => {
@@ -213,9 +296,6 @@ const Dashboard = () => {
     ));
     setActiveGoal(null);
   };
-
-  // Count completed goals
-  const completedGoals = goals.filter(goal => goal.isCompleted).length;
 
   // Helper function to format category for filtering
   const formatCategoryForFiltering = (categoryId: string): string => {
@@ -348,6 +428,57 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* User Type Section */}
+        {user?.role !== 'admin' && (
+          <div className="bg-white rounded-xl p-5 mb-6 shadow-sm">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-blue-500 text-lg font-medium">Profile Type</h2>
+              <button 
+                onClick={handleManualUserTypeChange}
+                className="text-blue-500 text-sm font-medium hover:text-blue-600 transition-colors"
+              >
+                Change
+              </button>
+            </div>
+            
+            <div className="flex items-center">
+              <div className={`w-12 h-12 rounded-lg flex items-center justify-center mr-4 ${
+                user?.userType === 'student' 
+                  ? 'bg-blue-100' 
+                  : user?.userType === 'non-student' 
+                    ? 'bg-green-100' 
+                    : 'bg-gray-100'
+              }`}>
+                {user?.userType === 'student' ? (
+                  <GraduationCap className="w-6 h-6 text-blue-600" />
+                ) : user?.userType === 'non-student' ? (
+                  <Briefcase className="w-6 h-6 text-green-600" />
+                ) : (
+                  <User className="w-6 h-6 text-gray-600" />
+                )}
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">
+                  {user?.userType === 'student' 
+                    ? 'Student' 
+                    : user?.userType === 'non-student' 
+                      ? 'Professional' 
+                      : 'Not Set'}
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  {user?.userType === 'student' && user?.schoolName
+                    ? `${user.schoolName}`
+                    : user?.userType === 'student'
+                      ? 'Student profile'
+                      : user?.userType === 'non-student'
+                        ? 'Working professional'
+                        : 'Tap "Change" to set your profile type'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Notification Settings */}
         <div className="mb-6">
@@ -606,6 +737,13 @@ const Dashboard = () => {
       
       {/* Toast notifications */}
       <Toaster position="bottom-center" />
+
+      {/* User Type Selection Modal */}
+      <UserTypeSelectionModal
+        isOpen={showUserTypeModal}
+        onClose={handleUserTypeModalClose}
+        onComplete={handleUserTypeComplete}
+      />
     </div>
   )
 }
