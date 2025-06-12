@@ -177,3 +177,66 @@ export interface GoalPackModalProps {
   initialData?: GoalPack | null;
   mode?: 'create' | 'edit';
 }
+
+// Library types
+export type LibraryItemType = 'book' | 'article' | 'video' | 'podcast' | 'course' | 'document' | 'other';
+
+export interface LibraryItem {
+  id: string;
+  title: string;
+  description?: string;
+  type: LibraryItemType;
+  author?: string;
+  url?: string;
+  tags?: string;
+  category: 'finance' | 'schedule' | 'career' | 'audio_books' | 'general';
+  isFavorite?: boolean;
+  isCompleted?: boolean;
+  rating?: number; // 1-5 stars
+  notes?: string;
+  dateAdded: string;
+  dateCompleted?: string;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateLibraryItemRequest {
+  title: string;
+  description?: string;
+  type: LibraryItemType;
+  author?: string;
+  url?: string;
+  tags?: string;
+  category: 'finance' | 'schedule' | 'career' | 'audio_books' | 'general';
+  isFavorite?: boolean;
+  isCompleted?: boolean;
+  rating?: number;
+  notes?: string;
+  dateAdded?: string;
+  dateCompleted?: string;
+}
+
+export interface UpdateLibraryItemRequest {
+  title?: string;
+  description?: string;
+  type?: LibraryItemType;
+  author?: string;
+  url?: string;
+  tags?: string;
+  category?: 'finance' | 'schedule' | 'career' | 'audio_books' | 'general';
+  isFavorite?: boolean;
+  isCompleted?: boolean;
+  rating?: number;
+  notes?: string;
+  dateAdded?: string;
+  dateCompleted?: string;
+}
+
+export interface LibraryModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave?: (savedItem: LibraryItem) => void;
+  initialData?: LibraryItem | null;
+  mode?: 'create' | 'edit';
+}

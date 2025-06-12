@@ -19,9 +19,12 @@ import { NotificationToggle } from '@/components/pwa/NotificationToggle'
 
 // Appwrite services
 import { getGoals, toggleGoalCompletion, deleteGoal } from '../../src/services/appwrite/database'
-import { Goal, UserType, Milestone, GoalPack } from '@/lib/types'
+import { Goal, UserType, Milestone, GoalPack, LibraryItem } from '@/lib/types'
 import GoalPackModal from '@/components/admin/GoalPackModal'
 import { getAllGoalPacks, getGoalPacksForUserType } from '@/src/services/appwrite/goalPackService'
+import LibraryModal from '@/components/library/LibraryModal'
+import LibraryItemCard from '@/components/library/LibraryItemCard'
+import { getLibraryItems, deleteLibraryItem, toggleLibraryItemFavorite, toggleLibraryItemCompletion } from '@/src/services/appwrite/libraryService'
 
 const Dashboard = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -39,6 +42,9 @@ const Dashboard = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [goalToDelete, setGoalToDelete] = useState<Goal | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([])
+  const [isLibraryModalOpen, setIsLibraryModalOpen] = useState(false)
+  const [activeLibraryItem, setActiveLibraryItem] = useState<LibraryItem | null>(null)
   const { user, loading: authLoading } = useRequireAuth()
   
   // Categories for the dashboard
@@ -54,6 +60,7 @@ const Dashboard = () => {
     if (user && !authLoading) {
       console.log("📊 User authenticated, loading goals for:", user.email);
       loadGoals();
+      loadLibraryItems();
       // Load goal packs if user is admin
       if (user.role === 'admin') {
         loadGoalPacks();
@@ -234,7 +241,75 @@ const Dashboard = () => {
     return userGoalPacks.filter(pack => pack.category === formattedCategory);
   };
 
+  const loadLibraryItems = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const data = await getLibraryItems(user.id);
+      setLibraryItems(data);
+    } catch (error) {
+      console.error('Error fetching library items:', error);
+    }
+  };
 
+  const handleLibraryItemSaved = (savedItem: LibraryItem) => {
+    if (activeLibraryItem) {
+      // Update existing item
+      setLibraryItems(libraryItems.map(item => 
+        item.id === savedItem.id ? savedItem : item
+      ));
+    } else {
+      // Add new item
+      setLibraryItems([savedItem, ...libraryItems]);
+    }
+    setActiveLibraryItem(null);
+  };
+
+  const handleEditLibraryItem = (item: LibraryItem) => {
+    setActiveLibraryItem(item);
+    setIsLibraryModalOpen(true);
+  };
+
+  const handleDeleteLibraryItem = async (itemId: string) => {
+    if (!user?.id) return;
+    
+    try {
+      await deleteLibraryItem(itemId, user.id);
+      setLibraryItems(libraryItems.filter(item => item.id !== itemId));
+      toast.success('Library item deleted successfully');
+    } catch (error) {
+      console.error('Error deleting library item:', error);
+      toast.error('Failed to delete library item');
+    }
+  };
+
+  const handleToggleLibraryItemFavorite = async (itemId: string) => {
+    if (!user?.id) return;
+    
+    try {
+      const updatedItem = await toggleLibraryItemFavorite(itemId, user.id);
+      setLibraryItems(libraryItems.map(item => 
+        item.id === itemId ? updatedItem : item
+      ));
+    } catch (error) {
+      console.error('Error toggling library item favorite:', error);
+      toast.error('Failed to update favorite status');
+    }
+  };
+
+  const handleToggleLibraryItemCompletion = async (itemId: string) => {
+    if (!user?.id) return;
+    
+    try {
+      const updatedItem = await toggleLibraryItemCompletion(itemId, user.id);
+      setLibraryItems(libraryItems.map(item => 
+        item.id === itemId ? updatedItem : item
+      ));
+    } catch (error) {
+      console.error('Error toggling library item completion:', error);
+      toast.error('Failed to update completion status');
+    }
+  };
 
   return (
     <div className="bg-gray-100 min-h-screen pb-20">
@@ -418,9 +493,41 @@ const Dashboard = () => {
               </div>
               <h3 className="font-medium">Adaptonia Library</h3>
             </div>
+            {libraryItems.length > 0 && (
+              <span className="text-sm text-gray-500">{libraryItems.length} items</span>
+            )}
           </div>
           
-          <div className="bg-blue-100 p-4 flex items-center justify-between cursor-pointer hover:bg-blue-200 transition-colors">
+          {/* Library Items */}
+          {libraryItems.length > 0 && (
+            <div className="px-4 pb-4 space-y-3">
+              {libraryItems.slice(0, 3).map((item) => (
+                <LibraryItemCard
+                  key={item.id}
+                  item={item}
+                  onEdit={handleEditLibraryItem}
+                  onDelete={handleDeleteLibraryItem}
+                  onToggleFavorite={handleToggleLibraryItemFavorite}
+                  onToggleComplete={handleToggleLibraryItemCompletion}
+                />
+              ))}
+              {libraryItems.length > 3 && (
+                <div className="text-center pt-2">
+                  <span className="text-sm text-gray-500">
+                    +{libraryItems.length - 3} more items
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <div 
+            className="bg-blue-100 p-4 flex items-center justify-between cursor-pointer hover:bg-blue-200 transition-colors"
+            onClick={() => {
+              setActiveLibraryItem(null);
+              setIsLibraryModalOpen(true);
+            }}
+          >
             <div className="flex items-center">
               <Plus className="w-5 h-5 text-blue-500 mr-2" />
               <span className="font-medium">Create your Library</span>
@@ -470,6 +577,18 @@ const Dashboard = () => {
         }}
         onSave={handleGoalPackEdited}
         goalPack={editingGoalPack}
+      />
+
+      {/* Library Modal */}
+      <LibraryModal
+        isOpen={isLibraryModalOpen}
+        onClose={() => {
+          setIsLibraryModalOpen(false);
+          setActiveLibraryItem(null);
+        }}
+        onSave={handleLibraryItemSaved}
+        initialData={activeLibraryItem}
+        mode={activeLibraryItem ? 'edit' : 'create'}
       />
 
       {/* Confirm Delete Modal */}

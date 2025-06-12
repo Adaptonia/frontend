@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Target, Trash2, Type, List } from 'lucide-react';
+import { ChevronDown, ChevronUp, Target, Trash2, Type, List, Check } from 'lucide-react';
 import { Milestone, MilestoneComponentProps } from '@/lib/types';
 import { format } from 'date-fns';
 import { reminderService } from '@/src/services/appwrite/reminderService';
@@ -195,6 +195,25 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
     }
   };
 
+  const toggleMilestoneCompletion = async (id: string) => {
+    const milestone = milestones.find(m => m.id === id);
+    if (!milestone) return;
+
+    const newCompletionStatus = !milestone.isCompleted;
+    await updateMilestone(id, { isCompleted: newCompletionStatus });
+
+    // Show appropriate toast message
+    if (newCompletionStatus) {
+      toast.success('Milestone completed! 🎉', {
+        description: `Great progress on "${milestone.title}"`
+      });
+    } else {
+      toast.success('Milestone marked as incomplete', {
+        description: `"${milestone.title}" needs more work`
+      });
+    }
+  };
+
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between mb-6">
@@ -204,18 +223,35 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
           </div>
           Milestones
         </h3>
+        
+        {/* Progress indicator */}
+        {milestones.length > 0 && (
+          <div className="flex items-center gap-3">
+            <div className="text-sm text-gray-600">
+              {milestones.filter(m => m.isCompleted).length} of {milestones.length} completed
+            </div>
+            <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-500 ease-out"
+                style={{ 
+                  width: `${milestones.length > 0 ? (milestones.filter(m => m.isCompleted).length / milestones.length) * 100 : 0}%` 
+                }}
+              ></div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Manual formatting info */}
       <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
         <p className="text-xs text-blue-600">
-          💡 <strong>Formatting:</strong> Click to edit milestone details. Formatting buttons will appear to help organize your text as sentences or bullet points.
+          💡 <strong>Progress:</strong> Check the boxes to mark milestones as complete. Click to edit titles, dates, and descriptions. Formatting buttons help organize your text.
         </p>
       </div>
 
       <div className="relative">
         {/* Vertical connecting line */}
-        <div className="absolute left-2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-200 via-blue-300 to-blue-200"></div>
+        <div className="absolute left-10 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-200 via-blue-300 to-blue-200"></div>
         
         <div className="space-y-6">
           {milestones.map((milestone, index) => (
@@ -225,8 +261,33 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
             >
               {/* Milestone row */}
               <div className="flex items-center transition-all duration-300 ease-in-out">
+                {/* Checkbox for completion */}
+                <div className="relative z-10 mr-3 flex-shrink-0">
+                  <button
+                    onClick={() => toggleMilestoneCompletion(milestone.id)}
+                    className={`
+                      w-5 h-5 rounded-full border-2 transition-all duration-200 flex items-center justify-center
+                      ${milestone.isCompleted 
+                        ? 'bg-green-500 border-green-500 hover:bg-green-600 hover:border-green-600' 
+                        : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                      }
+                    `}
+                    title={milestone.isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
+                  >
+                    {milestone.isCompleted && (
+                      <Check size={12} className="text-white" />
+                    )}
+                  </button>
+                </div>
+
                 {/* Dot bullet point */}
-                <div className="relative z-10 w-4 h-4 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 mr-4 flex-shrink-0 shadow-sm transition-all duration-200 group-hover:shadow-md group-hover:scale-110"></div>
+                <div className={`
+                  relative z-10 w-4 h-4 rounded-full mr-4 flex-shrink-0 shadow-sm transition-all duration-200 group-hover:shadow-md group-hover:scale-110
+                  ${milestone.isCompleted 
+                    ? 'bg-gradient-to-br from-green-400 to-green-600' 
+                    : 'bg-gradient-to-br from-blue-400 to-blue-600'
+                  }
+                `}></div>
                 
                 {/* Title */}
                 <div className="flex-1 min-w-0">
@@ -242,7 +303,13 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
                     />
                   ) : (
                     <span 
-                      className="font-medium text-gray-900 cursor-pointer hover:text-blue-600 transition-colors duration-200 block truncate"
+                      className={`
+                        font-medium cursor-pointer transition-colors duration-200 block truncate
+                        ${milestone.isCompleted 
+                          ? 'text-gray-500 line-through hover:text-gray-700' 
+                          : 'text-gray-900 hover:text-blue-600'
+                        }
+                      `}
                       onClick={() => handleFieldEdit(milestone.id, 'title')}
                       title={milestone.title}
                     >
@@ -301,7 +368,7 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
 
               {/* Description display for milestones with description */}
               {milestone.description && (
-                <div className="ml-8 mt-2">
+                <div className="ml-14 mt-2">
                   <div className="rounded-lg p-4 border">
                     {editingField?.id === milestone.id && editingField?.field === 'description' ? (
                       <>
@@ -362,7 +429,7 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
                 <div 
                   className="overflow-hidden transition-all duration-500 ease-in-out max-h-40 opacity-100 mt-3"
                 >
-                  <div className="ml-8 transform transition-all duration-300 ease-in-out">
+                  <div className="ml-14 transform transition-all duration-300 ease-in-out">
                     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 shadow-sm border border-blue-100">
                       {/* Formatting buttons for new descriptions */}
                       <div className="flex gap-2 mb-3">
