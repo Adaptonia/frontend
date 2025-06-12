@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Home, Users, CalendarDays } from 'lucide-react'
+import { Home, Users, Compass } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -32,7 +32,7 @@ const BottomNav = () => {
         
         <Link href="/explore" className="flex flex-col items-center">
           <div className={`p-2 rounded-full ${isActive('/explore') ? 'bg-blue-100' : 'bg-gray-100'}`}>
-            <CalendarDays className={`w-5 h-5 ${isActive('/explore') ? 'text-blue-500' : 'text-gray-400'}`} />
+            <Compass className={`w-5 h-5 ${isActive('/explore') ? 'text-blue-500' : 'text-gray-400'}`} />
           </div>
           {isActive('/explore') && <div className="w-1 h-1 bg-blue-500 rounded-full mt-1"></div>}
         </Link>
