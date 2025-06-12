@@ -1,7 +1,7 @@
 // Enhanced Service Worker for Adaptonia PWA
-// Handles caching, notification events, badge counting, and BACKGROUND reminder scheduling
+// Handles caching, notification events, badge counting, and AUTOMATIC background reminder scheduling
 
-const CACHE_NAME = 'adaptonia-cache-v4';
+const CACHE_NAME = 'adaptonia-cache-v5';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -17,10 +17,26 @@ let notificationBadgeCount = 0;
 
 // Persistent storage for reminders (survives service worker restarts)
 const REMINDERS_STORE_NAME = 'adaptonia-reminders';
+const WAKE_UP_STORE_NAME = 'adaptonia-wakeup';
+
+// Global timer management for automatic checking
+let globalReminderTimer = null;
+let isCheckingReminders = false;
+let lastCheckTime = 0;
+
+// Configuration for automatic checking
+const AUTO_CHECK_CONFIG = {
+  INITIAL_DELAY: 5000,        // 5 seconds after SW starts
+  CHECK_INTERVAL: 30000,      // Check every 30 seconds
+  MAX_CHECK_INTERVAL: 300000, // Max 5 minutes between checks
+  RETRY_MULTIPLIER: 1.5,      // Exponential backoff
+  WAKE_UP_INTERVAL: 60000,    // Wake up every minute
+  STORAGE_CHECK_INTERVAL: 15000 // Check storage every 15 seconds
+};
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing v4 with BACKGROUND notification support');
+  console.log('Service Worker: Installing v5 with AUTOMATIC background triggers');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('Service Worker: Caching Files');
@@ -33,124 +49,219 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches and initialize
+// Activate event - start automatic checking immediately
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activated v4 with background notification support');
+  console.log('Service Worker: Activated v5 - Starting automatic reminder system');
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            console.log('Service Worker: Clearing Old Cache:', cache);
-            return caches.delete(cache);
-          }
-        })
-      );
-    }).then(() => {
-      // Take control of all clients immediately
-      return self.clients.claim();
-    }).then(() => {
-      // Initialize badge count and check for due reminders
-      updateBadgeCount(0);
-      return checkAndProcessDueReminders();
-    })
-  );
-});
-
-// Enhanced fetch event with better error handling
-self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests and extension-related requests
-  if (event.request.method !== 'GET' || event.request.url.includes('extension')) {
-    return;
-  }
-
-  // IMPORTANT: Skip caching for authentication and form pages
-  const url = new URL(event.request.url);
-  const pathname = url.pathname;
-  
-  // Don't cache authentication pages, API routes, or pages with query params
-  if (pathname.includes('/signup') || 
-      pathname.includes('/login') || 
-      pathname.includes('/api/') || 
-      url.search.length > 0) {
-    console.log('Service Worker: Bypassing cache for:', pathname);
-    return;
-  }
-
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      // Return cached response if found
-      if (response) {
-        console.log('Service Worker: Serving from cache:', event.request.url);
-        return response;
-      }
+    (async () => {
+      await self.clients.claim();
       
-      // Otherwise fetch from network
-      return fetch(event.request).then((response) => {
-        // Don't cache if not a valid response
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
-        }
-        
-        // Don't cache API requests or dynamic content
-        if (pathname.includes('/api/') || url.search.length > 0) {
-          return response;
-        }
-        
-        // Clone the response since it can only be consumed once
-        const responseToCache = response.clone();
-        
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache).catch((error) => {
-            console.error('Service Worker: Failed to cache request:', error);
-          });
-        });
-        
-        return response;
-      }).catch((error) => {
-        console.error('Service Worker: Fetch failed:', error);
-        // Return a fallback response for navigation requests
-        if (event.request.mode === 'navigate') {
-          return caches.match('/') || new Response('Offline', { status: 503 });
-        }
-        throw error;
-      });
-    })
+      // Initialize automatic checking system
+      await initializeAutomaticChecking();
+      
+      // Perform initial reminder check
+      setTimeout(() => {
+        console.log('Service Worker: Initial automatic reminder check');
+        performAutomaticReminderCheck();
+      }, AUTO_CHECK_CONFIG.INITIAL_DELAY);
+    })()
   );
 });
 
-// Enhanced badge management
-function updateBadgeCount(count) {
-  notificationBadgeCount = Math.max(0, count);
-  
-  if ('setAppBadge' in navigator) {
-    // Use the new Badge API if available (Chrome 81+, Edge 84+)
-    if (notificationBadgeCount > 0) {
-      navigator.setAppBadge(notificationBadgeCount).catch((error) => {
-        console.error('Service Worker: Failed to set app badge:', error);
-      });
-    } else {
-      navigator.clearAppBadge().catch((error) => {
-        console.error('Service Worker: Failed to clear app badge:', error);
-      });
+// CORE AUTOMATIC CHECKING SYSTEM
+async function initializeAutomaticChecking() {
+  try {
+    console.log('🚀 Service Worker: Initializing automatic checking system');
+    
+    // Clear any existing timers
+    if (globalReminderTimer) {
+      clearTimeout(globalReminderTimer);
     }
+    
+    // Start the main automatic checking loop
+    scheduleNextAutomaticCheck();
+    
+    // Set up storage-based wake-up mechanism
+    await setupStorageWakeUp();
+    
+    // Set up multiple fallback triggers
+    setupFallbackTriggers();
+    
+    console.log('✅ Service Worker: Automatic checking system initialized');
+    
+  } catch (error) {
+    console.error('❌ Service Worker: Failed to initialize automatic checking:', error);
+    // Retry initialization after delay
+    setTimeout(initializeAutomaticChecking, 10000);
+  }
+}
+
+// Main automatic checking function
+async function performAutomaticReminderCheck() {
+  // Prevent overlapping checks
+  if (isCheckingReminders) {
+    console.log('Service Worker: Check already in progress, skipping');
+    return;
   }
   
-  // Send badge count to all clients
-  self.clients.matchAll().then(clients => {
-    clients.forEach(client => {
+  try {
+    isCheckingReminders = true;
+    const now = Date.now();
+    
+    console.log('🔍 Service Worker: Performing automatic reminder check');
+    
+    // Check for due reminders
+    const processedCount = await checkAndProcessDueReminders();
+    
+    // Update last check time
+    lastCheckTime = now;
+    
+    // Store wake-up timestamp for persistence
+    await storeWakeUpTime(now);
+    
+    // Schedule next check
+    scheduleNextAutomaticCheck();
+    
+    if (processedCount > 0) {
+      console.log(`✅ Service Worker: Processed ${processedCount} due reminders`);
+    }
+    
+  } catch (error) {
+    console.error('❌ Service Worker: Automatic reminder check failed:', error);
+    // Schedule retry with exponential backoff
+    scheduleNextAutomaticCheck(true);
+  } finally {
+    isCheckingReminders = false;
+  }
+}
+
+// Intelligent scheduling for next automatic check
+function scheduleNextAutomaticCheck(isRetry = false) {
+  // Clear existing timer
+  if (globalReminderTimer) {
+    clearTimeout(globalReminderTimer);
+  }
+  
+  // Calculate next check interval
+  let nextInterval = AUTO_CHECK_CONFIG.CHECK_INTERVAL;
+  
+  if (isRetry) {
+    // Exponential backoff for retries
+    nextInterval = Math.min(
+      nextInterval * AUTO_CHECK_CONFIG.RETRY_MULTIPLIER,
+      AUTO_CHECK_CONFIG.MAX_CHECK_INTERVAL
+    );
+  }
+  
+  // Schedule next check
+  globalReminderTimer = setTimeout(() => {
+    performAutomaticReminderCheck();
+  }, nextInterval);
+  
+  console.log(`⏰ Service Worker: Next automatic check in ${nextInterval/1000} seconds`);
+}
+
+// Storage-based wake-up mechanism (survives SW restarts)
+async function setupStorageWakeUp() {
+  try {
+    // Store current timestamp
+    await storeWakeUpTime(Date.now());
+    
+    // Set up periodic storage checks
+    setInterval(async () => {
       try {
-        client.postMessage({
-          type: 'BADGE_COUNT_UPDATED',
-          count: notificationBadgeCount
-        });
+        const lastWakeUp = await getLastWakeUpTime();
+        const now = Date.now();
+        
+        // If it's been too long since last wake-up, trigger check
+        if (now - lastWakeUp > AUTO_CHECK_CONFIG.WAKE_UP_INTERVAL) {
+          console.log('🔔 Service Worker: Storage wake-up triggered');
+          performAutomaticReminderCheck();
+        }
       } catch (error) {
-        console.error('Service Worker: Failed to send badge update:', error);
+        console.error('Service Worker: Storage wake-up check failed:', error);
       }
-    });
+    }, AUTO_CHECK_CONFIG.STORAGE_CHECK_INTERVAL);
+    
+  } catch (error) {
+    console.error('Service Worker: Failed to setup storage wake-up:', error);
+  }
+}
+
+// Store wake-up timestamp
+async function storeWakeUpTime(timestamp) {
+  try {
+    const cache = await caches.open(WAKE_UP_STORE_NAME);
+    const response = new Response(JSON.stringify({ lastWakeUp: timestamp }));
+    await cache.put('/wake-up-time', response);
+  } catch (error) {
+    console.error('Service Worker: Failed to store wake-up time:', error);
+  }
+}
+
+// Get last wake-up timestamp
+async function getLastWakeUpTime() {
+  try {
+    const cache = await caches.open(WAKE_UP_STORE_NAME);
+    const response = await cache.match('/wake-up-time');
+    if (response) {
+      const data = await response.json();
+      return data.lastWakeUp || 0;
+    }
+    return 0;
+  } catch (error) {
+    console.error('Service Worker: Failed to get wake-up time:', error);
+    return 0;
+  }
+}
+
+// Multiple fallback triggers for different browsers
+function setupFallbackTriggers() {
+  console.log('🔧 Service Worker: Setting up fallback triggers');
+  
+  // Trigger 1: On any message received
+  self.addEventListener('message', (event) => {
+    if (!isCheckingReminders && Date.now() - lastCheckTime > 10000) {
+      performAutomaticReminderCheck();
+    }
   });
   
-  console.log('Service Worker: Badge count updated to:', notificationBadgeCount);
+  // Trigger 2: On fetch events (with throttling)
+  let lastFetchCheck = 0;
+  self.addEventListener('fetch', (event) => {
+    const now = Date.now();
+    if (now - lastFetchCheck > 30000) { // Throttle to every 30 seconds
+      lastFetchCheck = now;
+      if (!isCheckingReminders) {
+        setTimeout(performAutomaticReminderCheck, 1000);
+      }
+    }
+  });
+  
+  // Trigger 3: On push events
+  self.addEventListener('push', (event) => {
+    if (!isCheckingReminders) {
+      event.waitUntil(performAutomaticReminderCheck());
+    }
+  });
+  
+  // Trigger 4: On notification click
+  self.addEventListener('notificationclick', (event) => {
+    if (!isCheckingReminders) {
+      setTimeout(performAutomaticReminderCheck, 2000);
+    }
+  });
+  
+  // Trigger 5: Periodic sync (when supported)
+  if ('periodicSync' in self.registration) {
+    self.registration.periodicSync.register('auto-reminder-check', {
+      minInterval: 60000 // 1 minute
+    }).then(() => {
+      console.log('✅ Service Worker: Periodic sync registered');
+    }).catch((error) => {
+      console.log('⚠️ Service Worker: Periodic sync not supported:', error.message);
+    });
+  }
 }
 
 // Persistent storage utilities for reminders
@@ -172,10 +283,10 @@ async function getStoredReminders() {
 async function storeReminders(reminders) {
   try {
     const cache = await caches.open(REMINDERS_STORE_NAME);
-    const data = { reminders, lastUpdated: Date.now() };
-    const response = new Response(JSON.stringify(data), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    const response = new Response(JSON.stringify({ 
+      reminders, 
+      lastUpdated: Date.now() 
+    }));
     await cache.put('/reminders-data', response);
     console.log('Service Worker: Stored', reminders.length, 'reminders');
   } catch (error) {
@@ -183,7 +294,7 @@ async function storeReminders(reminders) {
   }
 }
 
-// NEW: Check for due reminders (works when app is closed!)
+// Enhanced reminder checking with better error handling
 async function checkAndProcessDueReminders() {
   try {
     console.log('Service Worker: Checking for due reminders...');
@@ -193,23 +304,29 @@ async function checkAndProcessDueReminders() {
     const dueReminders = [];
     const remainingReminders = [];
     
-    // Separate due and future reminders
+    // Separate due and future reminders with tolerance
     storedReminders.forEach(reminder => {
       const reminderTime = new Date(reminder.sendDate).getTime();
       
-      // Check if reminder is due (within 1 minute tolerance)
-      if (reminderTime <= now + 60000) { // 1 minute tolerance
+      // Check if reminder is due (within 2 minute tolerance for reliability)
+      if (reminderTime <= now + 120000) { // 2 minute tolerance
         dueReminders.push(reminder);
       } else {
         remainingReminders.push(reminder);
       }
     });
     
-    console.log(`Service Worker: Found ${dueReminders.length} due reminders`);
+    console.log(`Service Worker: Found ${dueReminders.length} due reminders out of ${storedReminders.length} total`);
     
     // Process due reminders
     for (const reminder of dueReminders) {
-      await showNotificationForReminder(reminder);
+      try {
+        await showNotificationForReminder(reminder);
+      } catch (error) {
+        console.error('Service Worker: Failed to show notification for reminder:', reminder.goalId, error);
+        // Keep the reminder for retry
+        remainingReminders.push(reminder);
+      }
     }
     
     // Store remaining reminders
@@ -284,59 +401,43 @@ async function showNotificationForReminder(reminder) {
     
   } catch (error) {
     console.error('Service Worker: Failed to show notification for reminder:', error);
+    throw error; // Re-throw to handle in caller
   }
 }
 
-// Handle push notifications from server
-self.addEventListener('push', (event) => {
-  console.log('Service Worker: Push Received', event);
-  
+// Badge count management
+function updateBadgeCount(count) {
   try {
-    const data = event.data ? event.data.json() : {};
+    notificationBadgeCount = Math.max(0, count);
     
-    // Increment badge count
-    updateBadgeCount(notificationBadgeCount + 1);
-  
-  const options = {
-    body: data.description || 'Reminder for your goal',
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-72x72.png',
-    vibrate: [100, 50, 100],
-    data: {
-      url: data.url || '/dashboard',
-        goalId: data.goalId,
-        timestamp: Date.now()
-    },
-    actions: [
-      {
-        action: 'view',
-        title: 'View Goal'
-      },
-      {
-        action: 'complete',
-        title: 'Mark Complete'
-      }
-      ],
-      silent: false,
-      requireInteraction: true,
-      tag: `goal-${data.goalId || Date.now()}`
-  };
-  
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'Adaptonia Reminder', options)
-        .catch((error) => {
-          console.error('Service Worker: Failed to show push notification:', error);
-        })
-    );
+    // Update app badge if supported
+    if ('setAppBadge' in navigator) {
+      navigator.setAppBadge(notificationBadgeCount);
+    }
+    
+    // Send update to all clients
+    self.clients.matchAll().then(clients => {
+      clients.forEach(client => {
+        try {
+          client.postMessage({
+            type: 'BADGE_COUNT_UPDATED',
+            count: notificationBadgeCount
+          });
+        } catch (error) {
+          console.error('Service Worker: Failed to send badge update:', error);
+        }
+      });
+    });
+    
   } catch (error) {
-    console.error('Service Worker: Push notification processing failed:', error);
+    console.error('Service Worker: Failed to update badge count:', error);
   }
-});
+}
 
-// NEW: Background Reminder Manager that doesn't rely on setTimeout
-class BackgroundReminderManager {
+// Enhanced Background Reminder Manager with automatic scheduling
+class AutomaticBackgroundReminderManager {
   constructor() {
-    // This manager doesn't use setTimeout - it stores reminders persistently
+    console.log('🎯 Service Worker: Automatic Background Reminder Manager initialized');
   }
 
   async addReminder(reminder) {
@@ -346,23 +447,30 @@ class BackgroundReminderManager {
       // Remove any existing reminder for the same goal
       const filteredReminders = existingReminders.filter(r => r.goalId !== reminder.goalId);
       
-      // Add the new reminder
+      // Add the new reminder with automatic checking metadata
       filteredReminders.push({
         ...reminder,
-        storedAt: Date.now()
+        storedAt: Date.now(),
+        autoCheckEnabled: true
       });
       
       await storeReminders(filteredReminders);
       
-      console.log('Service Worker: Added background reminder for goal:', reminder.goalId);
+      console.log('Service Worker: Added automatic reminder for goal:', reminder.goalId);
       console.log('Service Worker: Reminder scheduled for:', new Date(reminder.sendDate).toLocaleString());
       
-      // Schedule a periodic check
-      await schedulePeriodicCheck();
+      // Trigger immediate check if reminder is due soon
+      const reminderTime = new Date(reminder.sendDate).getTime();
+      const now = Date.now();
+      
+      if (reminderTime - now < 300000) { // If due within 5 minutes
+        console.log('Service Worker: Reminder due soon, triggering immediate check');
+        setTimeout(performAutomaticReminderCheck, 1000);
+      }
       
       return true;
     } catch (error) {
-      console.error('Service Worker: Failed to add background reminder:', error);
+      console.error('Service Worker: Failed to add automatic reminder:', error);
       return false;
     }
   }
@@ -372,44 +480,44 @@ class BackgroundReminderManager {
       const existingReminders = await getStoredReminders();
       const filteredReminders = existingReminders.filter(r => r.goalId !== goalId);
       await storeReminders(filteredReminders);
-      console.log('Service Worker: Removed background reminder for goal:', goalId);
+      console.log('Service Worker: Removed automatic reminder for goal:', goalId);
       return true;
     } catch (error) {
-      console.error('Service Worker: Failed to remove background reminder:', error);
+      console.error('Service Worker: Failed to remove automatic reminder:', error);
       return false;
     }
   }
 
   async snoozeReminder(goalId, originalData) {
     try {
+      // Create new reminder 5 minutes from now
       const snoozeTime = new Date();
       snoozeTime.setMinutes(snoozeTime.getMinutes() + 5);
       
       const snoozeReminder = {
         ...originalData,
         sendDate: snoozeTime.toISOString(),
-        title: `${originalData.title} (Snoozed)`,
-        goalId: originalData.goalId || goalId
+        snoozed: true,
+        originalTime: originalData.sendDate
       };
       
       await this.addReminder(snoozeReminder);
       
-      // Notify clients about the snooze
+      // Send message to clients
       const clients = await self.clients.matchAll();
-        clients.forEach(client => {
-          try {
+      clients.forEach(client => {
+        try {
           client.postMessage({
             type: 'REMINDER_SNOOZED',
-            data: {
-              goalId,
-              snoozeTime: snoozeTime.toISOString()
-            }
+            goalId: goalId,
+            newTime: snoozeTime.toISOString()
           });
-          } catch (error) {
-            console.error('Service Worker: Failed to send snooze message:', error);
-          }
+        } catch (error) {
+          console.error('Service Worker: Failed to send snooze message:', error);
+        }
       });
       
+      console.log('Service Worker: Snoozed reminder for goal:', goalId, 'until', snoozeTime.toLocaleString());
       return true;
     } catch (error) {
       console.error('Service Worker: Failed to snooze reminder:', error);
@@ -418,25 +526,10 @@ class BackgroundReminderManager {
   }
 }
 
-// Schedule periodic background check (when supported)
-async function schedulePeriodicCheck() {
-  try {
-    // Try to register periodic background sync (limited browser support)
-    if ('periodicSync' in self.registration) {
-      await self.registration.periodicSync.register('check-reminders', {
-        minInterval: 60 * 1000 // Every minute
-      });
-      console.log('Service Worker: Periodic sync registered');
-    }
-  } catch (error) {
-    console.log('Service Worker: Periodic sync not supported:', error.message);
-  }
-}
+// Initialize automatic background reminder manager
+const automaticBackgroundReminderManager = new AutomaticBackgroundReminderManager();
 
-// Initialize background reminder manager
-const backgroundReminderManager = new BackgroundReminderManager();
-
-// Enhanced message event handler
+// Enhanced message event handler with automatic checking
 self.addEventListener('message', (event) => {
   console.log('Service Worker: Message received', event.data);
   
@@ -446,20 +539,22 @@ self.addEventListener('message', (event) => {
     switch (type) {
       case 'SCHEDULE_REMINDER':
         if (reminder) {
-          // Use background reminder manager instead of setTimeout
-          event.waitUntil(backgroundReminderManager.addReminder(reminder));
+          event.waitUntil(automaticBackgroundReminderManager.addReminder(reminder));
         }
         break;
         
       case 'CANCEL_REMINDER':
         if (goalId) {
-          event.waitUntil(backgroundReminderManager.removeReminder(goalId));
+          event.waitUntil(automaticBackgroundReminderManager.removeReminder(goalId));
         }
         break;
         
       case 'CHECK_DUE_REMINDERS':
-        // Manual check trigger
-        event.waitUntil(checkAndProcessDueReminders());
+        event.waitUntil(performAutomaticReminderCheck());
+        break;
+        
+      case 'START_AUTOMATIC_CHECKING':
+        event.waitUntil(initializeAutomaticChecking());
         break;
         
       case 'UPDATE_BADGE_COUNT':
@@ -473,7 +568,6 @@ self.addEventListener('message', (event) => {
         break;
         
       case 'REQUEST_BADGE_COUNT':
-        // Send current badge count to requesting client
         event.ports[0]?.postMessage({
           type: 'BADGE_COUNT_RESPONSE',
           count: notificationBadgeCount
@@ -510,25 +604,23 @@ self.addEventListener('notificationclick', (event) => {
             description: event.notification.body,
             alarm: event.notification.data?.alarm
           };
-          event.waitUntil(backgroundReminderManager.snoozeReminder(goalId, originalData));
+          event.waitUntil(automaticBackgroundReminderManager.snoozeReminder(goalId, originalData));
         }
         break;
         
       case 'view':
         const viewUrl = goalId ? `/dashboard?goal=${goalId}` : url || '/dashboard';
-    event.waitUntil(
+        event.waitUntil(
           self.clients.matchAll({ type: 'window' }).then((clientList) => {
-            // Try to focus existing window
-        for (const client of clientList) {
-          if (client.url.includes('/dashboard') && 'focus' in client) {
-            client.postMessage({
-              type: 'VIEW_GOAL',
-              goalId: goalId
-            });
-            return client.focus();
-          }
-        }
-            // Open new window if none exists
+            for (const client of clientList) {
+              if (client.url.includes('/dashboard') && 'focus' in client) {
+                client.postMessage({
+                  type: 'VIEW_GOAL',
+                  goalId: goalId
+                });
+                return client.focus();
+              }
+            }
             if (self.clients.openWindow) {
               return self.clients.openWindow(viewUrl);
             }
@@ -539,9 +631,9 @@ self.addEventListener('notificationclick', (event) => {
         break;
         
       case 'complete':
-    if (goalId) {
-      event.waitUntil(
-        self.registration.sync.register(`complete-goal-${goalId}`)
+        if (goalId) {
+          event.waitUntil(
+            self.registration.sync.register(`complete-goal-${goalId}`)
               .catch((error) => {
                 console.error('Service Worker: Failed to register sync:', error);
               })
@@ -550,21 +642,18 @@ self.addEventListener('notificationclick', (event) => {
         break;
         
       default:
-        // Default action - open app
-    event.waitUntil(
+        event.waitUntil(
           self.clients.matchAll({ type: 'window' }).then((clientList) => {
-        if (clientList.length > 0) {
-              // Focus existing window
-          return clientList[0].focus();
-        }
-            // Open new window
+            if (clientList.length > 0) {
+              return clientList[0].focus();
+            }
             if (self.clients.openWindow) {
-            return self.clients.openWindow('/dashboard');
+              return self.clients.openWindow('/dashboard');
             }
           }).catch((error) => {
             console.error('Service Worker: Failed to handle default action:', error);
-      })
-    );
+          })
+        );
     }
   } catch (error) {
     console.error('Service Worker: Notification click handling failed:', error);
@@ -574,15 +663,14 @@ self.addEventListener('notificationclick', (event) => {
 // Handle notification close event
 self.addEventListener('notificationclose', (event) => {
   console.log('Service Worker: Notification closed');
-  // Decrement badge count when notification is dismissed
   updateBadgeCount(notificationBadgeCount - 1);
 });
 
-// NEW: Periodic background sync event (when supported)
+// Periodic background sync event (when supported)
 self.addEventListener('periodicsync', (event) => {
-  if (event.tag === 'check-reminders') {
-    console.log('Service Worker: Periodic sync triggered - checking reminders');
-    event.waitUntil(checkAndProcessDueReminders());
+  if (event.tag === 'auto-reminder-check') {
+    console.log('Service Worker: Periodic sync triggered - performing automatic check');
+    event.waitUntil(performAutomaticReminderCheck());
   }
 });
 
@@ -598,15 +686,14 @@ async function completeGoalSync(goalId) {
   try {
     console.log('Service Worker: Syncing goal completion for:', goalId);
     
-    // Send message to clients to handle goal completion
     const clients = await self.clients.matchAll();
-          clients.forEach(client => {
-            try {
-              client.postMessage({
-                type: 'GOAL_COMPLETED',
-                goalId: goalId
-              });
-            } catch (error) {
+    clients.forEach(client => {
+      try {
+        client.postMessage({
+          type: 'GOAL_COMPLETED',
+          goalId: goalId
+        });
+      } catch (error) {
         console.error('Service Worker: Failed to send goal completion message:', error);
       }
     });
@@ -617,25 +704,67 @@ async function completeGoalSync(goalId) {
   }
 }
 
-// NEW: Wake up and check reminders when service worker starts
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    (async () => {
-      await self.clients.claim();
-      console.log('Service Worker: Activated - checking for due reminders');
-      await checkAndProcessDueReminders();
-    })()
-  );
+// Handle push notifications from server
+self.addEventListener('push', (event) => {
+  console.log('Service Worker: Push Received', event);
+  
+  try {
+    const data = event.data ? event.data.json() : {};
+    
+    updateBadgeCount(notificationBadgeCount + 1);
+  
+    const options = {
+      body: data.description || 'Reminder for your goal',
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-72x72.png',
+      vibrate: [100, 50, 100],
+      data: {
+        url: data.url || '/dashboard',
+        goalId: data.goalId,
+        timestamp: Date.now()
+      },
+      actions: [
+        {
+          action: 'view',
+          title: 'View Goal'
+        },
+        {
+          action: 'complete',
+          title: 'Mark Complete'
+        }
+      ],
+      silent: false,
+      requireInteraction: true,
+      tag: `goal-${data.goalId || Date.now()}`
+    };
+  
+    event.waitUntil(
+      self.registration.showNotification(data.title || 'Adaptonia Reminder', options)
+        .then(() => {
+          // Trigger automatic check after push notification
+          return performAutomaticReminderCheck();
+        })
+        .catch((error) => {
+          console.error('Service Worker: Failed to show push notification:', error);
+        })
+    );
+  } catch (error) {
+    console.error('Service Worker: Push notification processing failed:', error);
+  }
 });
 
-// NEW: Check reminders when any fetch happens (app is being used)
+// Enhanced fetch handler with automatic checking
 self.addEventListener('fetch', (event) => {
-  // Existing fetch handler code...
+  // Handle caching logic here...
   
-  // Additionally, periodically check for due reminders during normal app usage
-  if (Math.random() < 0.1) { // 10% chance on each fetch
-    checkAndProcessDueReminders().catch(error => {
-      console.error('Service Worker: Background reminder check failed:', error);
-    });
+  // Trigger automatic check periodically during app usage
+  if (Math.random() < 0.05) { // 5% chance to avoid too frequent checks
+    setTimeout(() => {
+      if (!isCheckingReminders) {
+        performAutomaticReminderCheck();
+      }
+    }, 2000);
   }
-}); 
+});
+
+console.log('🚀 Service Worker v5: Automatic background reminder system loaded and ready!');

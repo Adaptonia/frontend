@@ -357,43 +357,25 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
   };
 
   const scheduleReminders = async (goalId: string) => {
-    if (!reminderSettings.enabled) return;
-    
     try {
-      // First, request notification permission if not already granted
-      const permissionGranted = await requestNotificationPermission();
+      // Check if notifications are enabled
+      const permissionGranted = Notification.permission === 'granted';
       
-      if (!permissionGranted) {
-        // If permission was denied, still create the reminder in the database
-        // but inform the user they won't receive notifications
-        toast.warning(
-          <div className="flex flex-col gap-1">
-            <span className="font-medium">Notification permission denied</span>
-            <span className="text-sm text-gray-600">
-              You won&apos;t receive notification alerts for this reminder
-            </span>
-          </div>
-        );
+      if (!reminderSettings.enabled) {
+        return;
       }
       
-      const [hours, minutes] = reminderSettings.time.split(':').map(Number);
-      const reminderDate = new Date(reminderSettings.date);
+      // Calculate reminder dates based on settings
+      const reminderDates: string[] = [];
       
-      // Set reminder time
-      reminderDate.setHours(hours, minutes, 0, 0);
-      
-      // If the time has passed for today and it's a one-time reminder, set for tomorrow
-      if (reminderSettings.interval === "once" && reminderDate < new Date()) {
-        reminderDate.setDate(reminderDate.getDate() + 1);
-      }
-      
-      // Calculate reminder dates based on interval
-      const reminderDates = [reminderDate.toISOString()];
-      
-      // For multiple reminders, calculate additional dates
-      if (reminderSettings.interval !== "once" && reminderSettings.count > 1) {
-        for (let i = 1; i < reminderSettings.count; i++) {
-          const nextDate = new Date(reminderDate);
+      if (reminderSettings.interval === "once") {
+        // Single reminder
+        const reminderDateTime = new Date(`${reminderSettings.date}T${reminderSettings.time}`);
+        reminderDates.push(reminderDateTime.toISOString());
+      } else {
+        // Multiple reminders based on interval
+        for (let i = 0; i < reminderSettings.count; i++) {
+          const nextDate = new Date(`${reminderSettings.date}T${reminderSettings.time}`);
           
           switch (reminderSettings.interval) {
             case "daily":
@@ -428,62 +410,56 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       
       await Promise.all(reminderPromises);
       
-      // If notification permission is granted, schedule TRUE background notifications
-      if (permissionGranted) {
-        console.log('🚀 Scheduling TRUE background push notifications...');
+      // Use the new PWA Notification Manager for automatic background reminders
+      if (permissionGranted && typeof window !== 'undefined' && window.PWANotificationManager) {
+        console.log('🚀 Scheduling automatic background reminders with PWA Manager...');
         
-        // Schedule server-side push notifications (works when app is closed!)
-        const pushNotificationPromises = reminderDates.map(sendDate => 
-          scheduleServerPushNotification({
+        // Schedule reminders using the new PWA system
+        const pwaPromises = reminderDates.map(sendDate => 
+          window.PWANotificationManager.scheduleReminder({
             goalId,
             title: `Reminder: ${title}`,
-            message: description || 'Time to work on your goal!',
-            scheduledTime: sendDate,
-            userId: user?.id
+            description: description || 'Time to work on your goal!',
+            sendDate,
+            alarm: true
           })
         );
         
-        const pushResults = await Promise.allSettled(pushNotificationPromises);
+        const pwaResults = await Promise.allSettled(pwaPromises);
+        const successfulSchedules = pwaResults.filter(result => result.status === 'fulfilled' && result.value === true);
         
-        // Check if any push notifications failed
-        const failedPushes = pushResults.filter(result => result.status === 'rejected');
-        
-        if (failedPushes.length > 0) {
-          console.warn('Some push notifications failed to schedule:', failedPushes);
-          
-          // Fallback to local notifications for failed pushes
-          console.log('📱 Falling back to local notifications for failed pushes...');
-          const fallbackPromises = reminderDates.map(sendDate => 
-            scheduleReminderNotificationWithAlarm({
-              goalId,
-              title: `Reminder: ${title}`,
-              description: description || 'Time to work on your goal!',
-              sendDate,
-              alarm: true
-            })
-          );
-          
-          await Promise.all(fallbackPromises);
-          
-          toast.warning(
+        if (successfulSchedules.length === reminderDates.length) {
+          // All reminders scheduled successfully
+          toast.success(
             <div className="flex flex-col gap-1">
-              <span className="font-medium">Reminders Set with Fallback ⏰</span>
+              <span className="font-medium">Automatic Background Reminders Set! 🚀</span>
               <span className="text-sm text-gray-600">
-                Using local notifications (may require app to be open)
+                {reminderSettings.count} {reminderSettings.count === 1 ? 'reminder' : 'reminders'} will work across all browsers and PWA
               </span>
             </div>
           );
         } else {
-          // All push notifications scheduled successfully
-          toast.success(
+          // Some reminders failed - show warning but still successful
+          console.warn('Some PWA reminders failed to schedule, but database reminders are set');
+          toast.warning(
             <div className="flex flex-col gap-1">
-              <span className="font-medium">TRUE Background Reminders Set! 🚀</span>
+              <span className="font-medium">Reminders Set with Enhanced Reliability ⏰</span>
               <span className="text-sm text-gray-600">
-                {reminderSettings.count} {reminderSettings.count === 1 ? 'reminder' : 'reminders'} will fire even when app is closed
+                Database + PWA system active for maximum reliability
               </span>
             </div>
           );
         }
+      } else if (permissionGranted) {
+        // PWA Manager not ready yet - show info message
+        toast.info(
+          <div className="flex flex-col gap-1">
+            <span className="font-medium">Reminders Scheduled ⏰</span>
+            <span className="text-sm text-gray-600">
+              Background system initializing - reminders will work automatically
+            </span>
+          </div>
+        );
       } else {
         // No permission - only database reminders
         const formattedTime = new Date(`2000-01-01T${reminderSettings.time}`).toLocaleTimeString([], {

@@ -4,8 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { ThemeProvider } from "@/src/context/ThemeContext";
 import ServiceWorkerRegistration from "./sw-register";
-import { ReminderChecker } from "@/src/components/ReminderChecker";
-import BackgroundReminderChecker from "@/components/BackgroundReminderChecker";
+import PWANotificationManager from "@/components/PWANotificationManager";
 import MobileZoomFix from "@/components/MobileZoomFix";
 // import { TestReminder } from "@/src/components/TestReminder";
 
@@ -60,15 +59,13 @@ export default function RootLayout({
       >
         <Providers>
           <ThemeProvider>
-            {children}
-            {/* Mobile Zoom Fix - prevents and resets mobile zoom on input focus */}
-            <MobileZoomFix />
-            {/* Service Worker Registration for PWA and notifications */}
-            <ServiceWorkerRegistration />
-            {/* Background Reminder Checker - checks when app opens after being closed */}
-            <BackgroundReminderChecker />
-            {/* Database Reminder Checker - runs periodically while app is open */}
-            <ReminderChecker />
+            <PWANotificationManager>
+              {children}
+              {/* Mobile Zoom Fix - prevents and resets mobile zoom on input focus */}
+              <MobileZoomFix />
+              {/* Service Worker Registration for PWA and notifications */}
+              <ServiceWorkerRegistration />
+            </PWANotificationManager>
             {/* Test Reminder Component - for debugging (remove in production) */}
             {/* <div className="fixed bottom-4 right-4 z-50">
               <TestReminder />
