@@ -1,12 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
-import { ArrowLeft, Camera, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Camera, Save, Loader2, GraduationCap, Briefcase, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
-import { EditProfileType } from "@/lib/types";
-import { updateUserProfile } from "@/src/services/appwrite/userService";
+import { EditProfileType, UserType } from "@/lib/types";
+import { updateUserProfile, hasCompletedUserTypeSelection, updateUserType } from "@/src/services/appwrite/userService";
 import { toast } from "sonner";
 import Image from "next/image";
+import UserTypeSelectionModal from "./UserTypeSelectionModal";
 
 export default function EditProfile({ isOpen, onClose }: EditProfileType) {
   const { user, updateUser, logout } = useAuth() || {
@@ -17,18 +18,44 @@ export default function EditProfile({ isOpen, onClose }: EditProfileType) {
   const [isLoading, setIsLoading] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [password, setPassword] = useState("************");
+  
+  // User type selection states
+  const [showUserTypeModal, setShowUserTypeModal] = useState(false);
+  const [hasCheckedUserType, setHasCheckedUserType] = useState(false);
+  
   // const [subscription, setSubscription] = useState("Not Subscribed");
   // const profileRef = useRef(null);
   console.log(email, "email");
 
   useEffect(() => {
     // Update form when user data changes
-
     if (user) {
       setName(user.name || "");
       setEmail(user.email || "");
     }
   }, [user]);
+
+  // Check if user needs to complete user type selection when profile opens
+  useEffect(() => {
+    const checkUserTypeCompletion = async () => {
+      if (!user?.id || user?.role === 'admin' || hasCheckedUserType || !isOpen) return;
+      
+      try {
+        const hasCompleted = await hasCompletedUserTypeSelection(user.id);
+        if (!hasCompleted) {
+          setShowUserTypeModal(true);
+        }
+        setHasCheckedUserType(true);
+      } catch (error) {
+        console.error('Failed to check user type completion:', error);
+        setHasCheckedUserType(true);
+      }
+    };
+
+    if (isOpen && user) {
+      checkUserTypeCompletion();
+    }
+  }, [isOpen, user, hasCheckedUserType]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +108,57 @@ export default function EditProfile({ isOpen, onClose }: EditProfileType) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleUserTypeComplete = async (userType: UserType, schoolName?: string) => {
+    if (!user?.id) return;
+
+    try {
+      await updateUserType({
+        userId: user.id,
+        userType,
+        schoolName
+      });
+
+      // Update the user context immediately
+      if (updateUser) {
+        updateUser({
+          userType,
+          schoolName,
+          hasCompletedUserTypeSelection: true
+        });
+      }
+
+      setShowUserTypeModal(false);
+      
+      // Show success message
+      if (userType === 'student') {
+        toast.success("Welcome, Student! 🎓", {
+          description: `We've noted that you attend ${schoolName}. Your experience is now personalized for students.`
+        });
+      } else {
+        toast.success("Profile Updated! 💼", {
+          description: "Your experience is now personalized for working professionals."
+        });
+      }
+    } catch (error) {
+      console.error('Failed to update user type:', error);
+      toast.error("Failed to update profile", {
+        description: "Please try again later."
+      });
+    }
+  };
+
+  const handleUserTypeModalClose = () => {
+    // Only allow closing if user is admin (they don't need to complete this)
+    if (user?.role === 'admin') {
+      setShowUserTypeModal(false);
+    }
+    // For regular users, the modal stays open until they complete the selection
+  };
+
+  const handleManualUserTypeChange = () => {
+    setShowUserTypeModal(true);
   };
 
   const handleLogout = () => {
@@ -179,6 +257,61 @@ export default function EditProfile({ isOpen, onClose }: EditProfileType) {
                   />
                 </div>
 
+                {/* Profile Type Section */}
+                {user?.role !== 'admin' && (
+                  <div className="mb-4">
+                    <label className="block text-gray-800 font-medium mb-2">
+                      Profile Type
+                    </label>
+                    <div 
+                      onClick={handleManualUserTypeChange}
+                      className="w-full p-3 border border-gray-300 rounded-md cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all"
+                    >
+                      <div className="flex items-center">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-3 ${
+                          user?.userType === 'student' 
+                            ? 'bg-blue-100' 
+                            : user?.userType === 'non-student' 
+                              ? 'bg-green-100' 
+                              : 'bg-gray-100'
+                        }`}>
+                          {user?.userType === 'student' ? (
+                            <GraduationCap className="w-5 h-5 text-blue-600" />
+                          ) : user?.userType === 'non-student' ? (
+                            <Briefcase className="w-5 h-5 text-green-600" />
+                          ) : (
+                            <User className="w-5 h-5 text-gray-600" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">
+                            {user?.userType === 'student' 
+                              ? 'Student' 
+                              : user?.userType === 'non-student' 
+                                ? 'Professional' 
+                                : 'Not Set'}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {user?.userType === 'student' && user?.schoolName
+                              ? `${user.schoolName}`
+                              : user?.userType === 'student'
+                                ? 'Student profile'
+                                : user?.userType === 'non-student'
+                                  ? 'Working professional'
+                                  : 'Tap to set your profile type'}
+                          </p>
+                        </div>
+                        <div className="text-blue-500 text-sm font-medium">
+                          Change
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">
+                      This helps us personalize your experience and show relevant content
+                    </p>
+                  </div>
+                )}
+
                 <div className="mb-6">
                   <label
                     htmlFor="password"
@@ -246,6 +379,13 @@ export default function EditProfile({ isOpen, onClose }: EditProfileType) {
               </form>
             </div>
           </div>
+
+          {/* User Type Selection Modal */}
+          <UserTypeSelectionModal
+            isOpen={showUserTypeModal}
+            onClose={handleUserTypeModalClose}
+            onComplete={handleUserTypeComplete}
+          />
         </motion.div>
       )}
     </AnimatePresence>

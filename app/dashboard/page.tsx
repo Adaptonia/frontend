@@ -208,9 +208,7 @@ const Dashboard = () => {
     // For regular users, the modal stays open until they complete the selection
   };
 
-  const handleManualUserTypeChange = () => {
-    setShowUserTypeModal(true);
-  };
+
 
   const handleGoalPackSaved = (savedGoalPack: GoalPack) => {
     // Update the goal packs list
@@ -429,56 +427,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* User Type Section */}
-        {user?.role !== 'admin' && (
-          <div className="bg-white rounded-xl p-5 mb-6 shadow-sm">
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="text-blue-500 text-lg font-medium">Profile Type</h2>
-              <button 
-                onClick={handleManualUserTypeChange}
-                className="text-blue-500 text-sm font-medium hover:text-blue-600 transition-colors"
-              >
-                Change
-              </button>
-            </div>
-            
-            <div className="flex items-center">
-              <div className={`w-12 h-12 rounded-lg flex items-center justify-center mr-4 ${
-                user?.userType === 'student' 
-                  ? 'bg-blue-100' 
-                  : user?.userType === 'non-student' 
-                    ? 'bg-green-100' 
-                    : 'bg-gray-100'
-              }`}>
-                {user?.userType === 'student' ? (
-                  <GraduationCap className="w-6 h-6 text-blue-600" />
-                ) : user?.userType === 'non-student' ? (
-                  <Briefcase className="w-6 h-6 text-green-600" />
-                ) : (
-                  <User className="w-6 h-6 text-gray-600" />
-                )}
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold">
-                  {user?.userType === 'student' 
-                    ? 'Student' 
-                    : user?.userType === 'non-student' 
-                      ? 'Professional' 
-                      : 'Not Set'}
-                </h3>
-                <p className="text-gray-600 text-sm">
-                  {user?.userType === 'student' && user?.schoolName
-                    ? `${user.schoolName}`
-                    : user?.userType === 'student'
-                      ? 'Student profile'
-                      : user?.userType === 'non-student'
-                        ? 'Working professional'
-                        : 'Tap "Change" to set your profile type'}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+
 
         {/* Notification Settings */}
         <div className="mb-6">
