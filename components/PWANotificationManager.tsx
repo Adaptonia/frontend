@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { iosNotificationManager } from '@/lib/ios-notifications'
+import { requestNotificationPermission as requestFirebasePermission, onMessageListener } from '@/lib/firebase'
+import { pushNotificationService } from '@/lib/appwrite/push-notifications'
+import { account } from '@/lib/appwrite/config'
 
 interface PWANotificationManagerProps {
   children?: React.ReactNode
@@ -49,7 +52,6 @@ export default function PWANotificationManager({ children }: PWANotificationMana
     }
   }, [])
 
-  // Initialize comprehensive PWA notification system
   const initializePWANotifications = async () => {
     try {
       console.log('🚀 PWA Manager: Initializing comprehensive notification system')
@@ -57,61 +59,57 @@ export default function PWANotificationManager({ children }: PWANotificationMana
       // Check if running on iOS
       const isIOS = typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       
-      if (isIOS && iosNotificationManager) {
+      if (isIOS) {
         console.log('📱 PWA Manager: iOS device detected - using iOS notification system');
-        
-        // Initialize iOS notification manager
-        const permissionGranted = await iosNotificationManager.requestPermission();
-        setNotificationPermission(iosNotificationManager.getPermissionStatus());
-        
-        if (permissionGranted) {
-          setIsServiceWorkerReady(true);
-          console.log('✅ PWA Manager: iOS notification system initialized');
-          toast.success('Notifications enabled for iOS!');
-          
-          // Process any queued notifications
-          await iosNotificationManager.processNotificationQueue();
-        }
+        toast.warning('Push notifications are not supported on iOS. Please use in-app reminders.');
         return;
       }
 
-      // Step 1: Check service worker support
-      if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
-        console.warn('⚠️ PWA Manager: Service Worker not supported')
-        toast.error('Your browser doesn\'t support background notifications')
-        return
-      }
-
-      // Step 2: Register service worker with automatic retry
-      const registration = await registerServiceWorkerWithRetry()
+      // First register service workers
+      const registration = await registerServiceWorkerWithRetry();
       if (!registration) {
-        console.error('❌ PWA Manager: Failed to register service worker')
-        return
+        console.error('❌ PWA Manager: Failed to register service workers');
+        return;
       }
 
-      // Step 3: Request notification permission
-      const permission = await requestNotificationPermission()
-      setNotificationPermission(permission)
+      // Set up service worker communication
+      await setupServiceWorkerCommunication(registration);
 
-      if (permission !== 'granted') {
-        console.warn('⚠️ PWA Manager: Notification permission not granted')
-        toast.warning('Enable notifications for goal reminders')
-        return
+      // Initialize automatic systems
+      await initializeAutomaticSystems(registration);
+
+      // Start heartbeat and visibility monitoring
+      startHeartbeatSystem();
+      startVisibilityMonitoring();
+
+      // Request Firebase notification permission
+      const fcmToken = await requestFirebasePermission();
+      if (fcmToken) {
+        console.log('✅ PWA Manager: Firebase notification permission granted');
+        setNotificationPermission('granted');
+        setIsServiceWorkerReady(true);
+        
+        // Store FCM token in Appwrite
+        try {
+          const user = await account.get();
+          await pushNotificationService.storePushToken(user.$id, fcmToken);
+          console.log('✅ PWA Manager: FCM token stored in Appwrite');
+        } catch (error) {
+          console.error('❌ PWA Manager: Failed to store FCM token:', error);
+        }
+      } else {
+        console.warn('⚠️ PWA Manager: Firebase notification permission denied');
+        setNotificationPermission('denied');
       }
 
-      // Step 4: Set up service worker communication
-      await setupServiceWorkerCommunication(registration)
-
-      // Step 5: Initialize automatic checking systems
-      await initializeAutomaticSystems(registration)
-
-      // Step 6: Start heartbeat and monitoring
-      startHeartbeatSystem()
-      startVisibilityMonitoring()
-
-      setIsServiceWorkerReady(true)
-      console.log('✅ PWA Manager: Comprehensive notification system initialized')
-      toast.success('Background notifications enabled!')
+      // Set up foreground message listener
+      onMessageListener().then((payload: any) => {
+        console.log('📱 PWA Manager: Received foreground message:', payload);
+        toast(payload.notification.title, {
+          description: payload.notification.body,
+          duration: 5000
+        });
+      }).catch(err => console.error('❌ PWA Manager: Failed to receive message:', err));
 
     } catch (error) {
       console.error('❌ PWA Manager: Initialization failed:', error)
@@ -122,29 +120,59 @@ export default function PWANotificationManager({ children }: PWANotificationMana
   // Register service worker with automatic retry
   const registerServiceWorkerWithRetry = async (retries = 0): Promise<ServiceWorkerRegistration | null> => {
     try {
-      console.log(`🔄 PWA Manager: Registering service worker (attempt ${retries + 1})`)
+      console.log(`🔄 PWA Manager: Registering service workers (attempt ${retries + 1})`);
       
-      const registration = await navigator.serviceWorker.register('/service-worker.js', {
-        scope: '/',
-        updateViaCache: 'none' // Always check for updates
-      })
-
-      // Wait for service worker to be ready
-      await navigator.serviceWorker.ready
-
-      console.log('✅ PWA Manager: Service worker registered successfully')
-      return registration
-
-    } catch (error) {
-      console.error(`❌ PWA Manager: Service worker registration failed (attempt ${retries + 1}):`, error)
+      // First register Firebase messaging service worker
+      const fcmRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+        scope: '/firebase-cloud-messaging-push-scope'
+      });
+      console.log('✅ PWA Manager: Firebase messaging service worker registered');
       
-      if (retries < AUTO_CHECK_CONFIG.MAX_RETRIES) {
-        console.log(`🔄 PWA Manager: Retrying in ${AUTO_CHECK_CONFIG.RETRY_DELAY}ms...`)
-        await new Promise(resolve => setTimeout(resolve, AUTO_CHECK_CONFIG.RETRY_DELAY))
-        return registerServiceWorkerWithRetry(retries + 1)
+      // Wait for FCM service worker to be ready and activate
+      await navigator.serviceWorker.ready;
+      if (fcmRegistration.active) {
+        await fcmRegistration.active.postMessage({ type: 'ACTIVATE_WORKER' });
       }
       
-      return null
+      // Then register main service worker
+      const mainRegistration = await navigator.serviceWorker.register('/service-worker.js', {
+        scope: '/',
+        updateViaCache: 'none',
+        type: 'module'
+      });
+      console.log('✅ PWA Manager: Main service worker registered');
+      
+      // Wait for main service worker to be ready and activate
+      await navigator.serviceWorker.ready;
+
+      // Ensure the service worker is activated
+      if (mainRegistration.waiting) {
+        mainRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      }
+      
+      // Wait for the service worker to be activated
+      await new Promise<void>((resolve) => {
+        if (mainRegistration.active) {
+          resolve();
+        } else {
+          mainRegistration.addEventListener('activate', () => resolve());
+        }
+      });
+
+      console.log('✅ PWA Manager: Service workers activated');
+      return mainRegistration;
+
+    } catch (error) {
+      console.error(`❌ PWA Manager: Service worker registration failed (attempt ${retries + 1}):`, error);
+      
+      if (retries < AUTO_CHECK_CONFIG.MAX_RETRIES) {
+        console.log(`🔄 PWA Manager: Retrying in ${AUTO_CHECK_CONFIG.RETRY_DELAY}ms...`);
+        await new Promise(resolve => setTimeout(resolve, AUTO_CHECK_CONFIG.RETRY_DELAY));
+        return registerServiceWorkerWithRetry(retries + 1);
+      }
+      
+      toast.error('Failed to initialize notifications. Please refresh the page.');
+      return null;
     }
   }
 
@@ -384,63 +412,58 @@ export default function PWANotificationManager({ children }: PWANotificationMana
     }
   }
 
-  // Public API for scheduling reminders
+  // Public API for scheduling reminders with FCM-first approach
   const scheduleReminder = async (reminderData: ReminderData): Promise<boolean> => {
     try {
-      const isIOS = typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      console.log('📅 PWA Manager: Scheduling reminder:', reminderData);
       
-      if (isIOS && iosNotificationManager) {
-        // Use iOS notification manager for scheduling
-        await iosNotificationManager.showNotification({
-          title: reminderData.title,
-          body: reminderData.description,
-          data: reminderData,
-          actions: [
-            {
-              action: 'view',
-              title: 'View Goal'
-            },
-            {
-              action: 'complete',
-              title: 'Mark Complete'
-            },
-            {
-              action: 'snooze',
-              title: 'Snooze 5 min'
-            }
-          ]
-        });
-        return true;
-      }
-
+      // Ensure service worker is ready
       if (!isServiceWorkerReady) {
-        console.warn('⚠️ PWA Manager: Service worker not ready')
-        return false
+        console.log('🔄 PWA Manager: Service worker not ready, attempting to initialize...');
+        await initializePWANotifications();
+        
+        if (!isServiceWorkerReady) {
+          console.error('❌ PWA Manager: Service worker initialization failed');
+          return false;
+      }
+      }
+      
+      // Get the service worker registration
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (!registration || !registration.active) {
+        console.error('❌ PWA Manager: No active service worker found');
+        return false;
       }
 
-      console.log('📅 PWA Manager: Scheduling automatic reminder:', reminderData.goalId)
-
+      // Ensure the service worker is controlling the page
+      if (!navigator.serviceWorker.controller) {
+        console.log('🔄 PWA Manager: Service worker not controlling page, claiming clients...');
+        await registration.active.postMessage({ type: 'CLAIM_CLIENTS' });
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      // Schedule the reminder
       await sendMessageToServiceWorker({
         type: 'SCHEDULE_REMINDER',
         reminder: reminderData
-      })
-
-      console.log('✅ PWA Manager: Reminder scheduled successfully')
-      return true
-
+      });
+      
+      console.log('✅ PWA Manager: Reminder scheduled successfully');
+        return true;
     } catch (error) {
-      console.error('❌ PWA Manager: Failed to schedule reminder:', error)
-      return false
+      console.error('❌ PWA Manager: Failed to schedule reminder:', error);
+      return false;
     }
   }
 
   // Public API for canceling reminders
   const cancelReminder = async (goalId: string): Promise<boolean> => {
     try {
+      // Check if running on iOS
       const isIOS = typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       
-      if (isIOS && iosNotificationManager) {
-        // iOS notifications are one-time, so no need to cancel
+      if (isIOS) {
+        console.log('📱 PWA Manager: iOS device detected - no need to cancel in-app notification');
         return true;
       }
 
@@ -449,15 +472,30 @@ export default function PWANotificationManager({ children }: PWANotificationMana
         return false
       }
 
-      console.log('🚫 PWA Manager: Canceling reminder:', goalId)
+      // Get current user
+      const user = await account.get();
+      
+      // Call Appwrite function to cancel push notification
+      const response = await fetch('/api/cancel-push-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.$id,
+          goalId
+        })
+      });
 
-      await sendMessageToServiceWorker({
-        type: 'CANCEL_REMINDER',
-        goalId: goalId
-      })
-
-      console.log('✅ PWA Manager: Reminder canceled successfully')
-      return true
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ PWA Manager: Push notification canceled successfully');
+        return true;
+      } else {
+        console.error('❌ PWA Manager: Failed to cancel push notification:', result.message);
+        return false;
+      }
 
     } catch (error) {
       console.error('❌ PWA Manager: Failed to cancel reminder:', error)
@@ -493,10 +531,25 @@ export default function PWANotificationManager({ children }: PWANotificationMana
         checkReminders,
         isReady: isServiceWorkerReady,
         permission: notificationPermission,
-        badgeCount
+        badgeCount,
+        // Test function for debugging
+        testReminder: async () => {
+          const testReminder = {
+            goalId: 'test-' + Date.now(),
+            title: 'Test Reminder',
+            description: 'This is a test reminder to verify the system works',
+            sendDate: new Date(Date.now() + 10000).toISOString(), // 10 seconds from now
+            alarm: true
+          };
+          
+          console.log('🧪 Testing reminder system with:', testReminder);
+          const result = await scheduleReminder(testReminder);
+          console.log('🧪 Test reminder result:', result);
+          return result;
+        }
       }
     }
-  }, [isServiceWorkerReady, notificationPermission, badgeCount])
+  }, [scheduleReminder, cancelReminder, checkReminders, isServiceWorkerReady, notificationPermission, badgeCount])
 
   return (
     <>
@@ -524,6 +577,243 @@ declare global {
       isReady: boolean
       permission: NotificationPermission
       badgeCount: number
+      testReminder: () => Promise<boolean>
     }
   }
 }
+
+// Global state for badge count (accessible outside React)
+let globalBadgeCount = 0;
+
+// Utility functions for external use (replacing sw-register exports)
+export const getBadgeCount = (): number => {
+  return globalBadgeCount;
+};
+
+export const updateBadgeCount = async (count: number): Promise<void> => {
+  try {
+    globalBadgeCount = Math.max(0, count);
+    
+    // Update app badge if supported
+    if ('setAppBadge' in navigator) {
+      await (navigator as any).setAppBadge(globalBadgeCount);
+    }
+    
+    // Send message to service worker
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'UPDATE_BADGE_COUNT',
+        count: globalBadgeCount
+      });
+    }
+  } catch (error) {
+    console.error('Failed to update badge count:', error);
+  }
+};
+
+export const clearBadgeCount = async (): Promise<void> => {
+  await updateBadgeCount(0);
+};
+
+export const requestNotificationPermission = async (): Promise<boolean> => {
+  try {
+    if (!('Notification' in window)) {
+      console.warn('Notifications not supported');
+      return false;
+    }
+
+    let permission = Notification.permission;
+
+    if (permission === 'default') {
+      permission = await Notification.requestPermission();
+    }
+
+    return permission === 'granted';
+  } catch (error) {
+    console.error('Failed to request notification permission:', error);
+    return false;
+  }
+};
+
+const claimClients = async (registration: ServiceWorkerRegistration): Promise<boolean> => {
+  try {
+    // Wait for the service worker to be activated
+    if (registration.installing || registration.waiting) {
+      await new Promise<void>((resolve) => {
+        const stateChangeHandler = () => {
+          if (registration.active) {
+            registration.removeEventListener('statechange', stateChangeHandler);
+            resolve();
+          }
+        };
+        registration.addEventListener('statechange', stateChangeHandler);
+      });
+    }
+
+    if (!registration.active) {
+      console.error('❌ Service worker not active after waiting');
+      return false;
+    }
+    
+    // Create a promise that will resolve when we get a response from the service worker
+    const claimPromise = new Promise<boolean>((resolve) => {
+      const messageHandler = (event: MessageEvent) => {
+        if (event.data?.type === 'CLIENTS_CLAIMED') {
+          navigator.serviceWorker.removeEventListener('message', messageHandler);
+          resolve(event.data.success);
+        }
+      };
+      
+      navigator.serviceWorker.addEventListener('message', messageHandler);
+      
+      // Set a timeout in case we don't get a response
+      setTimeout(() => {
+        navigator.serviceWorker.removeEventListener('message', messageHandler);
+        resolve(false);
+      }, 3000);
+    });
+    
+    // Send the claim message
+    registration.active.postMessage({ type: 'CLAIM_CLIENTS' });
+    
+    // Wait for the response
+    const claimed = await claimPromise;
+    
+    if (!claimed) {
+      console.error('❌ Failed to claim clients - no response from service worker');
+      return false;
+    }
+    
+    // Verify the controller is set
+    return !!navigator.serviceWorker.controller;
+  } catch (error) {
+    console.error('Failed to claim clients:', error);
+    return false;
+  }
+};
+
+export const scheduleReminderNotification = async (reminder: {
+  goalId: string;
+  title: string;
+  description?: string;
+  sendDate: string;
+}): Promise<boolean> => {
+  try {
+    if (!('serviceWorker' in navigator)) {
+      console.warn('Service worker not supported');
+      return false;
+    }
+
+    // If service worker is not controlling the page, try to activate it
+    if (!navigator.serviceWorker.controller) {
+      console.log('🔄 Service worker not controlling page, attempting activation...');
+      
+      // Get or register service worker
+      let registration = await navigator.serviceWorker.getRegistration();
+      
+      if (!registration) {
+        console.log('📝 No registration found, registering service worker...');
+        try {
+          registration = await navigator.serviceWorker.register('/service-worker.js', {
+            scope: '/',
+            updateViaCache: 'none',
+            type: 'module'
+          });
+          console.log('✅ Service worker registered successfully');
+        } catch (error) {
+          console.error('❌ Failed to register service worker:', error);
+          return false;
+        }
+      }
+      
+      // Wait for activation and claim clients
+      const claimed = await claimClients(registration);
+      if (!claimed) {
+        console.error('❌ Failed to claim clients');
+        return false;
+      }
+    }
+
+    // Schedule the reminder
+    console.log('📱 Scheduling reminder with service worker:', reminder);
+    navigator.serviceWorker.controller!.postMessage({
+      type: 'SCHEDULE_REMINDER',
+      reminder
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Failed to schedule reminder notification:', error);
+    return false;
+  }
+};
+
+export const scheduleReminderNotificationWithAlarm = async (reminder: {
+  goalId: string;
+  title: string;
+  description?: string;
+  sendDate: string;
+  alarm?: boolean;
+}): Promise<boolean> => {
+  return scheduleReminderNotification(reminder);
+};
+
+export const cancelReminderNotification = async (goalId: string): Promise<boolean> => {
+  try {
+    if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) {
+      console.warn('Service worker not available');
+      return false;
+    }
+
+    navigator.serviceWorker.controller.postMessage({
+      type: 'CANCEL_REMINDER',
+      goalId
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Failed to cancel reminder notification:', error);
+    return false;
+  }
+};
+
+export const playNotificationSound = async (): Promise<void> => {
+  try {
+    const audio = new Audio('/sounds/notification.mp3');
+    audio.volume = 0.7;
+    await audio.play();
+  } catch (error) {
+    console.error('Failed to play notification sound:', error);
+  }
+};
+
+// React hook for badge count
+export const useNotificationBadge = () => {
+  const [badgeCount, setBadgeCount] = useState(0);
+
+  useEffect(() => {
+    // Get initial badge count
+    setBadgeCount(getBadgeCount());
+
+    // Listen for badge count updates from service worker
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'BADGE_COUNT_UPDATED') {
+        const newCount = event.data.count || 0;
+        globalBadgeCount = newCount;
+        setBadgeCount(newCount);
+      }
+    };
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', handleMessage);
+    }
+
+    return () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', handleMessage);
+      }
+    };
+  }, []);
+
+  return badgeCount;
+};

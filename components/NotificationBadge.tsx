@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getBadgeCount } from '@/app/sw-register';
+import { getBadgeCount } from '@/components/PWANotificationManager';
 
 interface NotificationBadgeProps {
   className?: string;

@@ -3,53 +3,6 @@ export const isPWASupported = (): boolean => {
   return 'serviceWorker' in navigator && 'PushManager' in window;
 };
 
-// Register the service worker
-export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration | null> => {
-  if (!isPWASupported()) {
-    console.warn('Service workers are not supported in this browser');
-    return null;
-  }
-
-  try {
-    const registration = await navigator.serviceWorker.register('/service-worker.js', {
-      scope: '/',
-      updateViaCache: 'none',
-    });
-
-    // Reload the page if a new service worker is installed 
-    // to ensure the user gets the latest version
-    registration.onupdatefound = () => {
-      const installingWorker = registration.installing;
-      if (installingWorker) {
-        installingWorker.onstatechange = () => {
-          if (installingWorker.state === 'installed') {
-            if (navigator.serviceWorker.controller) {
-              // At this point, the updated precached content has been fetched,
-              // but the previous service worker will still serve the older
-              // content until all client tabs are closed.
-              console.log('New content is available; please refresh.');
-              
-              // Optionally show a notification to the user
-              // if (window.confirm('New version available! Reload to update?')) {
-              //   window.location.reload();
-              // }
-            } else {
-              // At this point, everything has been precached.
-              console.log('Content is cached for offline use.');
-            }
-          }
-        };
-      }
-    };
-
-    console.log('Service worker registered successfully');
-    return registration;
-  } catch (error) {
-    console.error('Service worker registration failed:', error);
-    return null;
-  }
-};
-
 // Request notification permission
 export const requestNotificationPermission = async (): Promise<NotificationPermission> => {
   if (!('Notification' in window)) {

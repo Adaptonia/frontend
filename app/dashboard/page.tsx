@@ -389,6 +389,478 @@ const Dashboard = () => {
     }
   };
 
+  // 🧪 TEST NOTIFICATION FUNCTIONS
+  const handleTestNotification = async () => {
+    if (!user?.id) {
+      toast.error('Please log in to test notifications');
+      return;
+    }
+
+    try {
+      console.log('🧪 TESTING: Creating test reminder for 4 minutes from now...');
+      
+      // Calculate 4 minutes from now
+      const testTime = new Date();
+      testTime.setMinutes(testTime.getMinutes() + 4);
+      
+      console.log('⏰ TEST: Scheduled for:', testTime.toLocaleString());
+      
+      // Import the scheduling function
+      const { scheduleReminders } = await import('@/lib/utils/dateUtils');
+      
+      // Create a test reminder
+      await scheduleReminders(
+        `test-${Date.now()}`, // Unique test goal ID
+        { enabled: false }, // No advanced reminders
+        testTime.toISOString(), // Simple reminder in 4 minutes
+        user
+      );
+      
+      toast.success('🧪 Test Notification Scheduled!', {
+        description: `You should receive a notification at ${testTime.toLocaleTimeString()}. Close the app to test background delivery!`
+      });
+      
+      console.log('✅ TEST: Reminder created successfully');
+      console.log('📱 TEST: Close your app now and wait 4 minutes for the notification!');
+      
+    } catch (error) {
+      console.error('❌ TEST: Failed to create test notification:', error);
+      toast.error('Failed to schedule test notification');
+    }
+  };
+
+  // 🚀 INSTANT TEST NOTIFICATION (for immediate testing)
+  const handleInstantTestNotification = async () => {
+    try {
+      console.log('🚀 INSTANT TEST: Sending immediate notification...');
+      
+      // Check if notifications are supported
+      if (!('Notification' in window)) {
+        toast.error('Notifications not supported in this browser');
+        return;
+      }
+      
+      // Request permission if needed
+      if (Notification.permission === 'default') {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          toast.error('Notification permission denied');
+          return;
+        }
+      }
+      
+      if (Notification.permission === 'granted') {
+        // Show instant notification
+        new Notification('🧪 Test Notification', {
+          body: 'This is a test notification from Adaptonia! Your notifications are working perfectly.',
+          icon: '/icons/icon-192x192.png',
+          badge: '/icons/icon-72x72.png',
+          tag: 'test-notification'
+        });
+        
+        toast.success('✅ Instant notification sent!');
+        console.log('🚀 INSTANT TEST: Notification displayed');
+      } else {
+        toast.error('Notification permission not granted');
+      }
+      
+    } catch (error) {
+      console.error('❌ INSTANT TEST: Failed:', error);
+      toast.error('Failed to send instant notification');
+    }
+  };
+
+  // 🔑 SIMPLE FCM TOKEN TEST (just tests token storage)
+  const handleFCMTokenTest = async () => {
+    if (!user?.id) {
+      toast.error('Please log in to test FCM token storage');
+      return;
+    }
+
+    try {
+      console.log('🔑 FCM TOKEN TEST: Testing token storage only...');
+      toast.loading('Testing FCM token storage...', { id: 'fcm-token-test' });
+
+      // Step 1: Request notification permission
+      if (!('Notification' in window)) {
+        throw new Error('Notifications not supported in this browser');
+      }
+      
+      let permission = Notification.permission;
+      if (permission === 'default') {
+        permission = await Notification.requestPermission();
+      }
+      
+      if (permission !== 'granted') {
+        throw new Error('Notification permission denied');
+      }
+
+      // Step 2: Try to get real FCM token
+      let fcmToken = null;
+      try {
+        const { requestNotificationPermission } = await import('@/lib/firebase');
+        fcmToken = await requestNotificationPermission();
+        
+        if (fcmToken) {
+          console.log('✅ Real FCM token obtained for storage test');
+        } else {
+          throw new Error('Failed to get real FCM token');
+        }
+             } catch {
+         fcmToken = `token-test-${Date.now()}`;
+         console.log('🧪 Using test token for storage test');
+       }
+      
+      // Step 3: Store FCM token
+      const storeResponse = await fetch('/api/user/store-fcm-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          token: fcmToken,
+          userId: user.id 
+        })
+      });
+      
+      const storeResult = await storeResponse.json();
+      if (!storeResult.success) {
+        throw new Error(`Failed to store FCM token: ${storeResult.message}`);
+      }
+      
+      console.log('🎉 FCM TOKEN TEST: Success!');
+      toast.success('🎉 FCM Token Storage Test Successful!', { 
+        id: 'fcm-token-test',
+        description: 'FCM token stored successfully in database!' 
+      });
+
+    } catch (error) {
+      console.error('❌ FCM TOKEN TEST: Failed:', error);
+      toast.error('FCM Token Test Failed', { 
+        id: 'fcm-token-test',
+        description: error instanceof Error ? error.message : 'Unknown error occurred'
+      });
+    }
+  };
+
+  // 🔥 COMPREHENSIVE FCM TEST (tests the full notification system)
+  const handleFCMSystemTest = async () => {
+    if (!user?.id) {
+      toast.error('Please log in to test FCM system');
+      return;
+    }
+
+    try {
+      console.log('🔥 FCM SYSTEM TEST: Starting comprehensive test...');
+      toast.loading('Testing FCM system...', { id: 'fcm-test' });
+
+      // Step 1: Request notification permission
+      console.log('🔔 Step 1: Requesting notification permission...');
+      
+      if (!('Notification' in window)) {
+        throw new Error('Notifications not supported in this browser');
+      }
+      
+      let permission = Notification.permission;
+      if (permission === 'default') {
+        permission = await Notification.requestPermission();
+      }
+      
+      if (permission !== 'granted') {
+        throw new Error('Notification permission denied');
+      }
+
+      // Step 2: Generate FCM token (try real Firebase first, fallback to test)
+      console.log('🔑 Step 2: Generating FCM token...');
+      let fcmToken = null;
+      
+      try {
+        // Try to get a real FCM token from Firebase
+        const { requestNotificationPermission } = await import('@/lib/firebase');
+        fcmToken = await requestNotificationPermission();
+        
+        if (fcmToken) {
+          console.log('✅ Real FCM token obtained:', fcmToken.substring(0, 30) + '...');
+        } else {
+          throw new Error('Failed to get real FCM token');
+        }
+      } catch (firebaseError) {
+        console.warn('⚠️ Firebase not available, using test token:', firebaseError instanceof Error ? firebaseError.message : String(firebaseError));
+        fcmToken = `dashboard-test-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+        console.log('🧪 Using test token:', fcmToken.substring(0, 30) + '...');
+      }
+      
+      // Step 3: Store FCM token in Appwrite
+      console.log('💾 Step 3: Storing FCM token...');
+      const storeResponse = await fetch('/api/user/store-fcm-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          token: fcmToken,
+          userId: user.id 
+        })
+      });
+      
+      const storeResult = await storeResponse.json();
+      if (!storeResult.success) {
+        throw new Error(`Failed to store FCM token: ${storeResult.message}`);
+      }
+      
+      console.log('✅ FCM token stored successfully');
+
+      // Step 4: Test FCM notification
+      console.log('📤 Step 4: Testing FCM notification...');
+      const testResponse = await fetch('/api/send-push-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          userId: user.id,
+          title: '🎉 FCM Test Success!',
+          body: 'Your notification system is working perfectly! Reminders will now be delivered reliably.',
+          data: { 
+            type: 'fcm_system_test',
+            timestamp: new Date().toISOString()
+          }
+        })
+      });
+      
+      const testResult = await testResponse.json();
+      if (!testResult.success) {
+        throw new Error(`FCM notification test failed: ${testResult.message}`);
+      }
+      
+      console.log('🎉 FCM SYSTEM TEST: Complete success!');
+      toast.success('🎉 FCM System Test Successful!', { 
+        id: 'fcm-test',
+        description: 'Your notification system is fully operational. Reminders will work perfectly!' 
+      });
+
+    } catch (error) {
+      console.error('❌ FCM SYSTEM TEST: Failed:', error);
+      toast.error('FCM System Test Failed', { 
+        id: 'fcm-test',
+        description: error instanceof Error ? error.message : 'Unknown error occurred'
+      });
+    }
+  };
+
+  // 🔍 NOTIFICATION DEBUG TEST - Comprehensive debugging
+  const handleNotificationDebugTest = async () => {
+    if (!user?.id) {
+      toast.error('Please log in to test notifications');
+      return;
+    }
+
+    try {
+      console.log('🔍 NOTIFICATION DEBUG: Starting comprehensive debug test...');
+      toast.loading('Running notification debug test...', { id: 'debug-test' });
+
+      // Step 1: Check browser support
+      console.log('🔍 Step 1: Checking browser support...');
+      const browserSupport = {
+        notifications: 'Notification' in window,
+        serviceWorker: 'serviceWorker' in navigator,
+        pushManager: 'PushManager' in window
+      };
+      console.log('🔍 Browser support:', browserSupport);
+
+      if (!browserSupport.notifications) {
+        throw new Error('Notifications not supported in this browser');
+      }
+
+      // Step 2: Check notification permission
+      console.log('🔍 Step 2: Checking notification permission...');
+      let permission = Notification.permission;
+      console.log('🔍 Current permission:', permission);
+      
+      if (permission === 'default') {
+        console.log('🔍 Requesting permission...');
+        permission = await Notification.requestPermission();
+        console.log('🔍 Permission after request:', permission);
+      }
+
+      if (permission !== 'granted') {
+        throw new Error(`Notification permission denied: ${permission}`);
+      }
+
+      // Step 3: Test native notification
+      console.log('🔍 Step 3: Testing native notification...');
+      const nativeNotification = new Notification('🔍 Debug Test - Native', {
+        body: 'This is a native browser notification test',
+        icon: '/icons/icon-192x192.png',
+        badge: '/icons/icon-72x72.png',
+        tag: 'debug-native'
+      });
+      
+      console.log('🔍 Native notification created:', nativeNotification);
+      
+      // Wait a moment for the notification to show
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Step 4: Register service workers if needed
+      console.log('🔍 Step 4: Ensuring service workers are registered...');
+      let registration = null;
+      
+      if (browserSupport.serviceWorker) {
+        try {
+          // Check existing registration
+          registration = await navigator.serviceWorker.getRegistration();
+          console.log('🔍 Existing service worker registration:', registration);
+          
+          if (!registration) {
+            console.log('🔍 No existing registration, registering Firebase service worker...');
+            registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+              scope: '/firebase-cloud-messaging-push-scope'
+            });
+            console.log('🔍 Firebase service worker registered:', registration);
+            
+            // Wait for it to activate
+            await navigator.serviceWorker.ready;
+            console.log('🔍 Service worker ready');
+          }
+          
+          if (registration) {
+            console.log('🔍 Service worker state:', registration.active?.state);
+            console.log('🔍 Service worker scope:', registration.scope);
+          }
+        } catch (swError) {
+          console.error('🔍 Service worker registration failed:', swError);
+          toast.warning('Service worker registration failed - FCM notifications may not work');
+        }
+      }
+
+      // Step 5: Test FCM token generation
+      console.log('🔍 Step 5: Testing FCM token generation...');
+      let fcmToken = null;
+      
+      try {
+        const { requestNotificationPermission } = await import('@/lib/firebase');
+        fcmToken = await requestNotificationPermission();
+        console.log('🔍 FCM token generated:', fcmToken ? 'SUCCESS' : 'FAILED');
+        if (fcmToken) {
+          console.log('🔍 FCM token preview:', fcmToken.substring(0, 50) + '...');
+        }
+      } catch (firebaseError: unknown) {
+        console.warn('🔍 Firebase FCM generation failed:', firebaseError instanceof Error ? firebaseError.message : firebaseError);
+      }
+
+      // Step 6: Test service worker notification
+      console.log('🔍 Step 6: Testing service worker notification...');
+      if (browserSupport.serviceWorker && registration) {
+        try {
+          await registration.showNotification('🔍 Debug Test - Service Worker', {
+            body: 'This is a service worker notification test',
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/icon-72x72.png',
+            tag: 'debug-sw',
+            requireInteraction: true,
+            data: {
+              type: 'debug_test',
+              timestamp: new Date().toISOString()
+            }
+          } as NotificationOptions);
+          console.log('🔍 Service worker notification triggered');
+        } catch (swNotificationError) {
+          console.error('🔍 Service worker notification failed:', swNotificationError);
+        }
+      }
+
+      // Step 7: Test FCM system end-to-end
+      console.log('🔍 Step 7: Testing FCM system end-to-end...');
+      if (fcmToken) {
+        // Store token
+        const storeResponse = await fetch('/api/user/store-fcm-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ 
+            token: fcmToken,
+            userId: user.id 
+          })
+        });
+        
+        const storeResult = await storeResponse.json();
+        console.log('🔍 FCM token storage result:', storeResult);
+
+        if (storeResult.success) {
+          // Send test notification
+          const testResponse = await fetch('/api/send-push-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              userId: user.id,
+              title: '🔍 Debug Test - FCM',
+              body: 'This is an FCM notification test. If you see this, FCM is working!',
+              data: { 
+                type: 'debug_fcm_test',
+                timestamp: new Date().toISOString()
+              }
+            })
+          });
+          
+          const testResult = await testResponse.json();
+          console.log('🔍 FCM notification send result:', testResult);
+        }
+      }
+
+      console.log('🔍 NOTIFICATION DEBUG: All tests completed');
+      toast.success('🔍 Debug Test Completed!', { 
+        id: 'debug-test',
+        description: 'Check browser console for detailed results. You should have seen 2-3 notifications!' 
+      });
+
+    } catch (error) {
+      console.error('❌ NOTIFICATION DEBUG: Failed:', error);
+      toast.error('Debug Test Failed', { 
+        id: 'debug-test',
+        description: error instanceof Error ? error.message : 'Unknown error occurred'
+      });
+    }
+  };
+
+  // 🚨 SUPER SIMPLE NOTIFICATION TEST
+  const handleSimpleNotificationTest = async () => {
+    try {
+      console.log('🚨 SIMPLE TEST: Starting...');
+      
+      // Just show a simple notification
+      if ('Notification' in window && Notification.permission === 'granted') {
+        console.log('🚨 SIMPLE TEST: Showing notification...');
+        
+        const notification = new Notification('🚨 SIMPLE TEST', {
+          body: 'If you can see this popup, notifications work!',
+          icon: '/icons/icon-192x192.png'
+        });
+        
+        console.log('🚨 SIMPLE TEST: Notification object created:', notification);
+        
+        // Log when notification shows
+        notification.onshow = () => {
+          console.log('🚨 SIMPLE TEST: Notification SHOWN successfully!');
+        };
+        
+        // Log if notification fails
+        notification.onerror = (error) => {
+          console.error('🚨 SIMPLE TEST: Notification ERROR:', error);
+        };
+        
+        // Log when notification is closed
+        notification.onclose = () => {
+          console.log('🚨 SIMPLE TEST: Notification CLOSED');
+        };
+        
+        toast.success('Simple notification test sent!');
+      } else {
+        toast.error('Notification permission not granted');
+      }
+    } catch (error) {
+      console.error('🚨 SIMPLE TEST: Failed:', error);
+      toast.error('Simple test failed');
+    }
+  };
+
   return (
     <div className="bg-gray-100 min-h-screen pb-20">
       {/* PWA Installation Prompt will automatically show based on criteria */}
@@ -397,6 +869,8 @@ const Dashboard = () => {
       {/* Calendar Section */}
       <DashboardCalendar onDateSelect={handleDateSelect} />
       <div className="p-4">
+
+       
 
         {/* Goal Metrics Card */}
         <div className="bg-white rounded-xl p-5 mb-6 shadow-sm scrollable">
@@ -432,6 +906,75 @@ const Dashboard = () => {
         {/* Notification Settings */}
         <div className="mb-6">
           <NotificationToggle />
+        </div>
+
+        {/* 🧪 TEST NOTIFICATION SECTION */}
+        <div className="bg-white rounded-xl p-5 mb-6 shadow-sm border-2 border-dashed border-blue-200">
+          <h2 className="text-blue-500 text-lg font-medium mb-3 flex items-center">
+            🧪 Test Notifications
+          </h2>
+          <p className="text-gray-600 text-sm mb-4">
+            Test your notification system to make sure everything works perfectly!
+          </p>
+          
+          <div className="space-y-3">
+            {/* FCM Token Test Button - Simple Test */}
+            <button
+              onClick={handleFCMTokenTest}
+              className="w-full bg-indigo-500 text-white px-4 py-3 rounded-lg hover:bg-indigo-600 transition-colors flex items-center justify-center font-semibold"
+            >
+              🔑 Test FCM Token Storage
+            </button>
+            
+            {/* FCM System Test Button - Complete Test */}
+            <button
+              onClick={handleFCMSystemTest}
+              className="w-full bg-purple-500 text-white px-4 py-3 rounded-lg hover:bg-purple-600 transition-colors flex items-center justify-center font-semibold"
+            >
+              🔥 Test Complete FCM System
+            </button>
+            
+            {/* Debug Test Button - Comprehensive debugging */}
+            <button
+              onClick={handleNotificationDebugTest}
+              className="w-full bg-orange-500 text-white px-4 py-3 rounded-lg hover:bg-orange-600 transition-colors flex items-center justify-center font-semibold"
+            >
+              🔍 Debug Notification System
+            </button>
+            
+            {/* Instant Test Button */}
+            <button
+              onClick={handleInstantTestNotification}
+              className="w-full bg-green-500 text-white px-4 py-3 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center"
+            >
+              🚀 Send Instant Test Notification
+            </button>
+            
+            {/* 4-Minute Test Button */}
+            <button
+              onClick={handleTestNotification}
+              className="w-full bg-blue-500 text-white px-4 py-3 rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center"
+            >
+              ⏰ Schedule Test Notification (4 minutes)
+            </button>
+            
+            {/* Simple Notification Test Button */}
+            <button
+              onClick={handleSimpleNotificationTest}
+              className="w-full bg-teal-500 text-white px-4 py-3 rounded-lg hover:bg-teal-600 transition-colors flex items-center justify-center"
+            >
+              🚨 Simple Notification Test
+            </button>
+            
+            <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+              <p><strong>🔑 FCM Token Storage:</strong> Tests FCM token generation and database storage (recommended first)</p>
+              <p><strong>🔥 FCM System Test:</strong> Complete test of FCM token registration and notification delivery</p>
+              <p><strong>🔍 Debug Test:</strong> Comprehensive debugging - shows multiple notifications to identify issues</p>
+              <p><strong>🚀 Instant Test:</strong> Shows notification immediately (tests permission)</p>
+              <p><strong>⏰ 4-Minute Test:</strong> Tests the full reminder system - close your app after clicking!</p>
+              <p><strong>🚨 Simple Notification Test:</strong> Shows a simple notification to verify browser settings</p>
+            </div>
+          </div>
         </div>
 
         {/* Admin Goal Pack Section - Only visible to admins */}

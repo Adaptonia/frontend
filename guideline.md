@@ -93,7 +93,7 @@ As the project matures, we may migrate certain functionality back to a custom Ne
 
 ## Code Standards
 
-Don't write any code until you're very confident (95% or more) in what needs to be done. If unclear, ask for more info.
+check the codebase to understan what we have done, don't just create new files that are not neccessary, Don't write any code until you're very confident (95% or more) in what needs to be done. If unclear, ask for more info.
 
 ### Type Definitions
 - No duplicate type definitions across files

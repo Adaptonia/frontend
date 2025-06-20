@@ -3,7 +3,6 @@ import { Poppins } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { ThemeProvider } from "@/src/context/ThemeContext";
-import ServiceWorkerRegistration from "./sw-register";
 import PWANotificationManager from "@/components/PWANotificationManager";
 import MobileZoomFix from "@/components/MobileZoomFix";
 // import { TestReminder } from "@/src/components/TestReminder";
@@ -63,8 +62,6 @@ export default function RootLayout({
               {children}
               {/* Mobile Zoom Fix - prevents and resets mobile zoom on input focus */}
               <MobileZoomFix />
-              {/* Service Worker Registration for PWA and notifications */}
-              <ServiceWorkerRegistration />
             </PWANotificationManager>
             {/* Test Reminder Component - for debugging (remove in production) */}
             {/* <div className="fixed bottom-4 right-4 z-50">

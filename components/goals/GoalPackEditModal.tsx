@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar, Tag as TagIcon, Bell as BellIcon, Settings, Flag, Loader2, Edit3, Save, X } from 'lucide-react';
-import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { GoalPack, Milestone, ModalTab } from '@/lib/types';

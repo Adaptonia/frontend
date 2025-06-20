@@ -1,0 +1,10 @@
+{
+  "name": "send-push-notification",
+  "version": "1.0.0",
+  "description": "Appwrite function to send push notifications using Firebase",
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^11.11.0",
+    "node-appwrite": "^9.0.0"
+  }
+} 

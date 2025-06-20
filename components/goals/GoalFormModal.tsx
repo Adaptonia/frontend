@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Calendar, Tag as TagIcon, Bell as BellIcon, Settings, Flag, Loader2, MapPin, Clock, Check,  } from 'lucide-react';
+import { Calendar, Tag as TagIcon, Bell as BellIcon, Settings, Flag, Loader2, MapPin, Clock, Check, Hash } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { ActionButtonProps, CreateGoalRequest, GoalFormModalProps, ModalTab, PremiumFeatureModalProps, Milestone } from '@/lib/types';
+import { ActionButtonProps, CreateGoalRequest, GoalFormModalProps, ModalTab, PremiumFeatureModalProps, Milestone, Goal } from '@/lib/types';
 import MilestoneComponent from './MilestoneComponent';
 import { reminderService } from '@/src/services/appwrite/reminderService';
 import { useRouter } from 'next/navigation';
@@ -13,8 +13,9 @@ import { createGoal } from '@/src/services/appwrite/database';
 import { updateGoal } from '@/src/services/appwrite';
 import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
-import { requestNotificationPermission, scheduleReminderNotificationWithAlarm } from '@/app/sw-register';
+import { requestNotificationPermission, scheduleReminderNotificationWithAlarm } from '@/components/PWANotificationManager';
 import { scheduleServerPushNotification } from '@/lib/push-notifications';
+import { scheduleReminders } from '@/lib/utils/dateUtils';
 
 // Helper function to format dates nicely
 const formatDisplayDate = (dateString: string): string => {
@@ -182,6 +183,23 @@ interface ReminderSettings {
   date: string;
 }
 
+interface GoalFormData {
+  id?: string;
+  title: string;
+  description: string;
+  category: string;
+  dueDate: string;
+  milestones: Milestone[];
+  reminderSettings: {
+    enabled: boolean;
+    frequency: 'daily' | 'weekly' | 'custom';
+    time: string;
+    days: string[];
+    customDate?: string;
+  };
+  simpleReminder: string;
+}
+
 // Main component
 const GoalFormModal: React.FC<GoalFormModalProps> = ({
   isOpen,
@@ -195,11 +213,11 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
   // const router = useRouter();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<ModalTab>('main');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
+  const [title, setTitle] = useState(initialData?.title || '');
+  const [description, setDescription] = useState(initialData?.description || '');
+  const [selectedDate, setSelectedDate] = useState<string | undefined>(initialData?.deadline);
   const [selectedTag, setSelectedTag] = useState('');
-  const [reminder, setReminder] = useState('');
+  const [reminder, setReminder] = useState<string | undefined>(initialData?.reminderDate);
   const [location, setLocation] = useState('');
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -215,11 +233,11 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
   
   // Enhanced reminder settings
   const [reminderSettings, setReminderSettings] = useState<ReminderSettings>({
-    enabled: false,
-    interval: "once",
-    count: 1,
-    time: "09:00",
-    date: new Date().toISOString().split('T')[0]
+    enabled: initialData?.reminderSettings ? JSON.parse(initialData.reminderSettings).enabled || false : false,
+    interval: initialData?.reminderSettings ? JSON.parse(initialData.reminderSettings).interval || 'daily' : 'daily',
+    count: initialData?.reminderSettings ? JSON.parse(initialData.reminderSettings).count || 7 : 7,
+    time: initialData?.reminderSettings ? JSON.parse(initialData.reminderSettings).time || '09:00' : '09:00',
+    date: initialData?.reminderSettings ? JSON.parse(initialData.reminderSettings).date || format(new Date(), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')
   });
   
   // Drag to close functionality
@@ -320,7 +338,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
   // Schedule milestone notifications
   const scheduleMilestoneNotifications = async (goalId: string, goalTitle: string) => {
     if (milestones.length === 0) return;
-
+    
     try {
       console.log('📍 Scheduling milestone notifications for goal:', goalId);
       
@@ -329,7 +347,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
         const milestoneDate = new Date(milestone.date);
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Reset time to start of day
-        
+      
         if (milestoneDate >= today) {
           // Create milestone reminder at 9 AM in user's local timezone
           const reminderDateTime = new Date(milestone.date);
@@ -357,222 +375,125 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
     } catch (error) {
       console.error('❌ Error scheduling milestone notifications:', error);
       toast.error('Failed to schedule milestone notifications');
-    }
+      }
   };
 
-  const scheduleReminders = async (goalId: string) => {
-    try {
-      // Check if notifications are enabled
-      const permissionGranted = Notification.permission === 'granted';
-      
-      if (!reminderSettings.enabled) {
-        return;
-      }
-      
-      // Calculate reminder dates based on settings
-      const reminderDates: string[] = [];
-      
-      if (reminderSettings.interval === "once") {
-        // Single reminder - ensure proper local timezone handling
-        const reminderDateTime = new Date(`${reminderSettings.date}T${reminderSettings.time}`);
-        
-        // Validate the date is in the future
-        if (reminderDateTime > new Date()) {
-          reminderDates.push(reminderDateTime.toISOString());
-        } else {
-          console.warn('Reminder time is in the past, skipping:', reminderDateTime.toLocaleString());
-        }
-      } else {
-        // Multiple reminders based on interval
-        for (let i = 0; i < reminderSettings.count; i++) {
-          const nextDate = new Date(`${reminderSettings.date}T${reminderSettings.time}`);
-          
-          switch (reminderSettings.interval) {
-            case "daily":
-              nextDate.setDate(nextDate.getDate() + i);
-              break;
-            case "weekly":
-              nextDate.setDate(nextDate.getDate() + (i * 7));
-              break;
-            case "biweekly":
-              nextDate.setDate(nextDate.getDate() + (i * 14));
-              break;
-            case "monthly":
-              nextDate.setMonth(nextDate.getMonth() + i);
-              break;
-          }
-          
-          // Only add future dates
-          if (nextDate > new Date()) {
-            reminderDates.push(nextDate.toISOString());
-          }
-        }
-      }
-      
-      if (reminderDates.length === 0) {
-        toast.warning('No future reminder dates to schedule');
-        return;
-      }
-      
-      console.log('📅 Scheduling reminders for dates:', reminderDates.map(date => new Date(date).toLocaleString()));
-      
-      // Create reminders using the reminderService
-      const reminderPromises = reminderDates.map(sendDate => 
-        reminderService.createReminder({
-          goalId,
-          userId: user?.id,
-          title: `Reminder: ${title}`,
-          description: description || 'Time to work on your goal!',
-          sendDate,
-          dueDate: selectedDate ? new Date(selectedDate).toISOString() : undefined
-        })
-      );
-      
-      await Promise.all(reminderPromises);
-      
-      // Use the new PWA Notification Manager for automatic background reminders
-      if (permissionGranted && typeof window !== 'undefined' && window.PWANotificationManager) {
-        console.log('🚀 Scheduling automatic background reminders with PWA Manager...');
-        
-        // Schedule reminders using the new PWA system
-        const pwaPromises = reminderDates.map(sendDate => 
-          window.PWANotificationManager.scheduleReminder({
-            goalId,
-            title: `Reminder: ${title}`,
-            description: description || 'Time to work on your goal!',
-            sendDate,
-            alarm: true
-          })
-        );
-        
-        const pwaResults = await Promise.allSettled(pwaPromises);
-        const successfulSchedules = pwaResults.filter(result => result.status === 'fulfilled' && result.value === true);
-        
-        if (successfulSchedules.length === reminderDates.length) {
-          // All reminders scheduled successfully
-          const nextReminderTime = new Date(reminderDates[0]).toLocaleString();
-          toast.success(
-            <div className="flex flex-col gap-1">
-              <span className="font-medium">Automatic Background Reminders Set! 🚀</span>
-              <span className="text-sm text-gray-600">
-                Next reminder: {nextReminderTime}
-              </span>
-            </div>
-          );
-        } else {
-          // Some reminders failed - show warning but still successful
-          console.warn('Some PWA reminders failed to schedule, but database reminders are set');
-          toast.warning(
-            <div className="flex flex-col gap-1">
-              <span className="font-medium">Reminders Set with Enhanced Reliability ⏰</span>
-              <span className="text-sm text-gray-600">
-                Database + PWA system active for maximum reliability
-              </span>
-            </div>
-          );
-        }
-      } else if (permissionGranted) {
-        // PWA Manager not ready yet - show info message
-        const nextReminderTime = new Date(reminderDates[0]).toLocaleString();
-        toast.info(
-          <div className="flex flex-col gap-1">
-            <span className="font-medium">Reminders Scheduled ⏰</span>
-            <span className="text-sm text-gray-600">
-              Next reminder: {nextReminderTime}
-            </span>
-          </div>
-        );
-      } else {
-        // No permission - only database reminders
-        const nextReminderTime = new Date(reminderDates[0]).toLocaleString();
-        
-        toast.warning(
-          <div className="flex flex-col gap-1">
-            <span className="font-medium">Reminders Created (No Notifications) ⏰</span>
-            <span className="text-sm text-gray-600">
-              Next reminder: {nextReminderTime} - enable notifications for alerts
-            </span>
-          </div>
-        );
-      }
-      
-    } catch (error) {
-      console.error('Error scheduling reminders:', error);
-      toast.error('Failed to schedule reminders');
-    }
-  };
-
-  const handleSave = async () => {
-    // Clear previous validation errors
-    setValidationError('');
-    
-    // Validate form
-    if (!title.trim()) {
-      setValidationError("Please enter a task title");
-      return;
-    }
-    
+  const handleSubmit = async (data: GoalFormData) => {
     try {
       setIsSubmitting(true);
-      
-      // Prepare data for API
-      const goalData: CreateGoalRequest = {
-        title,
-        description: description || undefined,
-        category: category.toLowerCase() as 'finance' | 'schedule' | 'career' | 'audio_books',
-        deadline: selectedDate || undefined,
-        tags: selectedTag || undefined,
-        reminderDate: reminder || undefined,
-        location: location || undefined,
-        reminderSettings: reminderSettings.enabled ? JSON.stringify(reminderSettings) : undefined,
-        milestones: milestones.length > 0 ? JSON.stringify(milestones) : undefined
-      };
-      
-      // Ensure the category is one of the allowed values
-      if (!['schedule', 'finance', 'career', 'audio_books'].includes(goalData.category)) {
-        throw new Error(`Invalid category: ${goalData.category}. Must be one of: schedule, finance, career, audio_books`);
-      }
-      
-      let result;
-      
-      if (mode === 'edit' && initialData?.id) {
-        // Update existing goal
-        result = await updateGoal(initialData.id, goalData);
+      console.log('🔄 GOAL FORM: Form submitted with data:', data);
+
+      if (data.id) {
+        console.log('🔄 GOAL FORM: Updating existing goal with ID:', data.id);
         
-        // Schedule reminders if enabled
-        if (reminderSettings.enabled) {
-          await scheduleReminders(initialData.id);
+        await updateGoal(data.id, {
+          title: data.title,
+          description: data.description,
+          category: data.category as any,
+          deadline: data.dueDate,
+          milestones: JSON.stringify(data.milestones),
+          reminderSettings: JSON.stringify(data.reminderSettings)
+        });
+        
+        console.log('✅ GOAL FORM: Goal updated successfully');
+
+        // 🚀 SIMPLIFIED REMINDER FLOW - Let Appwrite Functions handle everything
+        console.log('🔍 GOAL FORM: Checking if reminders should be scheduled...');
+        
+        const hasAdvancedReminders = data.reminderSettings.enabled;
+        const hasSimpleReminder = data.simpleReminder && data.simpleReminder.trim() !== '';
+        
+        if (hasAdvancedReminders || hasSimpleReminder) {
+          console.log('🎯 GOAL FORM: Scheduling reminders via server-side function');
+          
+          // Only use server-side scheduling - no client conflicts
+          await scheduleReminders(
+            data.id,
+            data.reminderSettings,
+            data.simpleReminder,
+            user
+          );
+          
+          console.log('✅ GOAL FORM: Server-side reminders scheduled successfully');
+          toast.success('Goal updated and reminders scheduled! 🚀');
+        } else {
+          console.log('ℹ️ GOAL FORM: No reminders to schedule');
+          toast.success('Goal updated successfully!');
         }
-        
-        // Schedule milestone notifications
-        await scheduleMilestoneNotifications(initialData.id, title);
-        
-        toast.success('Goal updated successfully');
+
+        // Create goal object for callback
+        const updatedGoal: Goal = {
+          id: data.id,
+          title: data.title,
+          description: data.description,
+          category: data.category as any,
+          deadline: data.dueDate,
+          milestones: JSON.stringify(data.milestones),
+          reminderSettings: JSON.stringify(data.reminderSettings),
+          userId: user?.id || '',
+          createdAt: initialData?.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          isCompleted: false
+        };
+
+        onSave?.(updatedGoal);
       } else {
-        // Create new goal
-        result = await createGoal(goalData, user?.id || initialData?.userId || 'system');
+        console.log('🔄 GOAL FORM: Creating new goal');
         
-        // Schedule reminders if enabled and we have a goal ID
-        if (reminderSettings.enabled && result?.id) {
-          await scheduleReminders(result.id);
+        const newGoal = await createGoal({
+          title: data.title,
+          description: data.description,
+          category: data.category as any,
+          deadline: data.dueDate,
+          milestones: JSON.stringify(data.milestones),
+          reminderSettings: JSON.stringify(data.reminderSettings)
+        }, user?.id || '');
+        
+        console.log('✅ GOAL FORM: Goal created successfully with ID:', newGoal.id);
+
+        // 🚀 SIMPLIFIED REMINDER FLOW - Server-side only
+        const hasAdvancedReminders = data.reminderSettings.enabled;
+        const hasSimpleReminder = data.simpleReminder && data.simpleReminder.trim() !== '';
+        
+        if (hasAdvancedReminders || hasSimpleReminder) {
+          console.log('🎯 GOAL FORM: Scheduling reminders for new goal');
+          
+          await scheduleReminders(
+            newGoal.id,
+            data.reminderSettings,
+            data.simpleReminder,
+            user
+          );
+          
+          console.log('✅ GOAL FORM: New goal reminders scheduled successfully');
+          toast.success('Goal created and reminders scheduled! 🚀');
+        } else {
+          console.log('ℹ️ GOAL FORM: No reminders for new goal');
+          toast.success('Goal created successfully!');
         }
-        
-        // Schedule milestone notifications
-        if (result?.id) {
-          await scheduleMilestoneNotifications(result.id, title);
-        }
-        
-        toast.success('Goal created successfully');
+
+        // Create goal object for callback
+        const createdGoal: Goal = {
+          id: newGoal.id,
+          title: data.title,
+          description: data.description,
+          category: data.category as any,
+          deadline: data.dueDate,
+          milestones: JSON.stringify(data.milestones),
+          reminderSettings: JSON.stringify(data.reminderSettings),
+          userId: user?.id || '',
+          createdAt: newGoal.createdAt || new Date().toISOString(),
+          updatedAt: newGoal.updatedAt || new Date().toISOString(),
+          isCompleted: false
+        };
+
+        onSave?.(createdGoal);
       }
-      
-      // Close modal and notify parent component
+
       onClose();
-      if (onSave && result) {
-        onSave(result);
-      }
     } catch (error) {
-      console.error('Error saving goal:', error);
-      toast.error(`Failed to save goal: ${error instanceof Error ? error.message : 'Please try again.'}`);
+      console.error('❌ GOAL FORM: Error saving goal:', error);
+      toast.error('Failed to save goal. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -715,7 +636,22 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       {/* Add Task button - fixed at bottom */}
       <div className="mt-auto p-5 border-t">
         <button 
-          onClick={handleSave} 
+          onClick={() => handleSubmit({
+            id: initialData?.id,
+            title,
+            description,
+            category,
+            dueDate: selectedDate || '',
+            milestones,
+            reminderSettings: {
+              enabled: reminderSettings.enabled,
+              frequency: 'daily',
+              time: reminderSettings.time,
+              days: [],
+              customDate: reminderSettings.date
+            },
+            simpleReminder: reminder || ''
+          })} 
           disabled={isSubmitting}
           className="w-full py-4 text-white bg-blue-500 rounded-full font-medium hover:bg-blue-600 transition-colors disabled:bg-blue-300 flex items-center justify-center"
         >
@@ -964,64 +900,45 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                   <button
                     key={interval}
                     onClick={() => setReminderSettings(prev => ({...prev, interval}))}
-                    className={`flex items-center justify-between p-3 rounded-lg border ${
+                    className={`p-2 rounded-lg border ${
                       reminderSettings.interval === interval 
-                        ? 'border-blue-500 bg-blue-50' 
-                        : 'border-gray-200'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                        : 'border-gray-200 hover:bg-gray-50'
                     }`}
                   >
-                    <span className="capitalize">{interval}</span>
-                    {reminderSettings.interval === interval && (
-                      <Check size={16} className="text-blue-500" />
-                    )}
+                    {interval.charAt(0).toUpperCase() + interval.slice(1)}
                   </button>
                 ))}
               </div>
             </div>
             
-            {/* Number of Reminders */}
-            {reminderSettings.interval !== "once" && (
+            {/* Number of Reminders (for recurring) */}
+            {reminderSettings.interval !== 'once' && (
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center">
-                  <BellIcon className="mr-2" size={16} />
+                  <Hash className="mr-2" size={16} />
                   Number of Reminders
                 </label>
-                <div className="flex items-center border rounded-lg overflow-hidden">
-                  <button
-                    onClick={() => setReminderSettings(prev => ({
-                      ...prev, 
-                      count: Math.max(1, prev.count - 1)
-                    }))}
-                    className="p-3 bg-gray-100 hover:bg-gray-200"
-                  >
-                    -
-                  </button>
+                <div className="flex items-center gap-2">
                   <input
                     type="number"
                     min="1"
-                    max="10"
+                    max="30"
+                    className="flex-1 p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={reminderSettings.count}
-                    onChange={(e) => setReminderSettings(prev => ({
-                      ...prev,
-                      count: Math.min(10, Math.max(1, parseInt(e.target.value) || 1))
-                    }))}
-                    className="flex-1 p-3 text-center border-none focus:outline-none"
+                    onChange={(e) => {
+                      const count = Math.min(30, Math.max(1, parseInt(e.target.value) || 1));
+                      setReminderSettings(prev => ({...prev, count}));
+                    }}
                   />
-                  <button
-                    onClick={() => setReminderSettings(prev => ({
-                      ...prev, 
-                      count: Math.min(10, prev.count + 1)
-                    }))}
-                    className="p-3 bg-gray-100 hover:bg-gray-200"
-                  >
-                    +
-                  </button>
+                  <div className="text-sm text-gray-500">
+                    {reminderSettings.interval === 'daily' ? 'days' :
+                     reminderSettings.interval === 'weekly' ? 'weeks' :
+                     reminderSettings.interval === 'biweekly' ? 'bi-weeks' :
+                     'months'}
                 </div>
-                <p className="text-xs text-gray-500">
-                  {reminderSettings.count > 1 
-                    ? `You'll receive ${reminderSettings.count} reminders`
-                    : "You'll receive 1 reminder"}
-                </p>
+                </div>
+                <p className="text-xs text-gray-500">How many times should this reminder repeat?</p>
               </div>
             )}
             
@@ -1151,8 +1068,8 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
         <div className="mt-auto p-5 border-t">
           <button 
             onClick={() => {
-              // Fix - use the actual date:
-setReminder(new Date(reminderSettings.date).toISOString());
+              // Set the reminder date from the reminder settings
+              setReminder(new Date(`${reminderSettings.date}T${reminderSettings.time}`).toISOString());
               setActiveTab('main');
             }}
             className="w-full py-3 bg-blue-500 text-white font-medium rounded-full hover:bg-blue-600"
@@ -1521,7 +1438,7 @@ setReminder(new Date(reminderSettings.date).toISOString());
       {isOpen && (
         <>
           {/* Background overlay */}
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1532,12 +1449,12 @@ setReminder(new Date(reminderSettings.date).toISOString());
           
           {/* Modal container */}
           <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center">
-            <motion.div 
-              ref={modalRef}
+          <motion.div 
+            ref={modalRef}
               variants={slideUpVariants}
-              initial="hidden"
-              animate="visible"
-              exit="hidden"
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
               className="bg-white rounded-t-2xl max-h-[85vh] w-full flex flex-col shadow-2xl overflow-y-auto"
               style={{
                 transform: `translateY(${dragY}px)`,
@@ -1547,9 +1464,9 @@ setReminder(new Date(reminderSettings.date).toISOString());
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
               onMouseDown={handleMouseDown}
-            >
-              {renderContent()}
-            </motion.div>
+          >
+            {renderContent()}
+          </motion.div>
           </div>
         </>
       )}

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, BellOff } from 'lucide-react';
 import { toast } from 'sonner';
-import { requestNotificationPermission } from '@/app/sw-register';
+import { requestNotificationPermission } from '@/components/PWANotificationManager';
 
 export const NotificationToggle: React.FC = () => {
   const [isEnabled, setIsEnabled] = useState(false);

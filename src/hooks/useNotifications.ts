@@ -7,7 +7,7 @@ import {
   scheduleReminderNotification,
   cancelReminderNotification,
   playNotificationSound
-} from '@/app/sw-register';
+} from '@/components/PWANotificationManager';
 import { CreateReminderRequest, reminderService } from '../services/appwrite/reminderService';
 
 export interface NotificationState {

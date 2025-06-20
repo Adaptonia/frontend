@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { isPWASupported } from '../lib/pwa';
-import { registerServiceWorker } from '../lib/pwa';
 import { requestNotificationPermission } from '../lib/pwa';
 import { subscribeToPushNotifications } from '../lib/pwa';
 import { unsubscribeFromPushNotifications } from '../lib/pwa';
@@ -49,11 +48,11 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     };
 
-    // Register service worker
-    const initServiceWorker = async () => {
-      if (isPWASupported()) {
-        const registration = await registerServiceWorker();
-        if (registration) {
+    // Get service worker registration from PWANotificationManager
+    const getServiceWorkerRegistration = async () => {
+      if (isPWASupported() && 'serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
           setServiceWorkerRegistration(registration);
           
           // Check if notification permission is granted
@@ -62,6 +61,8 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const subscription = await registration.pushManager.getSubscription();
             setIsNotificationsEnabled(!!subscription);
           }
+        } catch (error) {
+          console.error('Error getting service worker registration:', error);
         }
       }
     };
@@ -84,8 +85,8 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Check if app is already installed
     checkIfInstalled();
     
-    // Initialize service worker
-    initServiceWorker();
+    // Get service worker registration (managed by PWANotificationManager)
+    getServiceWorkerRegistration();
 
     // Clean up
     return () => {
@@ -124,11 +125,14 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return false;
       }
       
-      // Make sure we have a service worker registration
+      // Get service worker registration (managed by PWANotificationManager)
       if (!serviceWorkerRegistration) {
-        const registration = await registerServiceWorker();
-        if (!registration) return false;
-        setServiceWorkerRegistration(registration);
+        if ('serviceWorker' in navigator) {
+          const registration = await navigator.serviceWorker.ready;
+          setServiceWorkerRegistration(registration);
+        } else {
+          return false;
+        }
       }
       
       // Subscribe to push notifications

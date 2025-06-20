@@ -2,7 +2,7 @@
 
 import { ID, Query } from 'appwrite';
 import { databases, DATABASE_ID, REMINDERS_COLLECTION_ID } from './client';
-import { scheduleReminderNotification } from '@/app/sw-register';
+import { scheduleReminderNotification } from '@/components/PWANotificationManager';
 
 // Interface for creating a reminder
 export interface CreateReminderRequest {
@@ -54,23 +54,36 @@ class ReminderService {
    */
   async createReminder(reminderData: CreateReminderRequest): Promise<Reminder> {
     try {
+      console.log('🔧 REMINDER SERVICE: createReminder called with data:', reminderData);
+      
       validateConfig();
+      console.log('✅ REMINDER SERVICE: Config validation passed');
+      console.log('🗃️ REMINDER SERVICE: Using database config:', {
+        DATABASE_ID,
+        REMINDERS_COLLECTION_ID
+      });
+      
+      const documentData = {
+        ...reminderData,
+        userId: reminderData.userId || 'system',
+        status: 'pending',
+        retryCount: 0,
+        isCompleted: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      console.log('💾 REMINDER SERVICE: Creating document in Appwrite with data:', documentData);
       
       // First create the reminder in the database
       const response = await databases.createDocument(
         DATABASE_ID,
         REMINDERS_COLLECTION_ID,
         ID.unique(),
-        {
-          ...reminderData,
-          userId: reminderData.userId || 'system',
-          status: 'pending',
-          retryCount: 0,
-          isCompleted: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
+        documentData
       );
+      
+      console.log('✅ REMINDER SERVICE: Document created successfully in Appwrite:', response);
 
       const reminder: Reminder = {
         id: response.$id,
@@ -87,26 +100,20 @@ class ReminderService {
         updatedAt: response.updatedAt
       };
 
-      // Then schedule the notification using service worker
-      if (typeof window !== 'undefined') {
-        try {
-          await scheduleReminderNotification({
-            goalId: reminder.goalId,
-            title: reminder.title,
-            description: reminder.description,
-            sendDate: reminder.sendDate
-          });
-        } catch (error: unknown) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to schedule notification';
-          console.error('Failed to schedule notification:', errorMessage);
-          // Don't throw here - we still created the reminder in the database
-        }
-      }
+      console.log('🎯 REMINDER SERVICE: Reminder object created:', reminder);
+      
+      // 🎯 SIMPLIFIED APPROACH: Store in database only
+      // Appwrite Functions will handle FCM delivery at scheduled time
+      console.log('📡 REMINDER SERVICE: Reminder stored in database');
+      console.log('🚀 REMINDER SERVICE: Appwrite Functions will handle FCM delivery');
+      console.log('⏰ REMINDER SERVICE: Scheduled for:', reminder.sendDate);
 
+      console.log('✅ REMINDER SERVICE: createReminder completed successfully');
       return reminder;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create reminder';
-      console.error('Reminder creation error:', errorMessage);
+      console.error('❌ REMINDER SERVICE: Reminder creation error:', errorMessage);
+      console.error('❌ REMINDER SERVICE: Full error details:', error);
       throw error;
     }
   }

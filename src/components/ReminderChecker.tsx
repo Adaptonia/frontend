@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 // import { reminderService } from '@/services/appwrite/reminderService';
-import { scheduleReminderNotification, requestNotificationPermission } from '@/app/sw-register';
+import { scheduleReminderNotification, requestNotificationPermission } from '@/components/PWANotificationManager';
 import { Reminder, reminderService } from '../services/appwrite/reminderService';
 
 export function ReminderChecker() {
