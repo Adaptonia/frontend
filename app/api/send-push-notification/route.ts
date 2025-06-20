@@ -39,12 +39,12 @@ export async function POST(request: NextRequest) {
     if (fcmTokens.length === 1) {
       // Single device - use send()
       // Use both notification AND data fields for maximum compatibility
-      const message: Message = {
+    const message: Message = {
         token: fcmTokens[0],
-        notification: {
-          title,
-          body,
-        },
+      notification: {
+        title,
+        body,
+      },
         data: {
           title, // Also include in data for service worker
           body,  // Also include in data for service worker
@@ -52,9 +52,9 @@ export async function POST(request: NextRequest) {
           timestamp: Date.now().toString(),
           clickAction: '/dashboard'
         },
-        webpush: {
-          notification: {
-            icon: '/icons/icon-192x192.png',
+      webpush: {
+        notification: {
+          icon: '/icons/icon-192x192.png',
             badge: '/icons/icon-72x72.png',
             requireInteraction: true,
             vibrate: [200, 100, 200],
