@@ -232,12 +232,30 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
   } | null>(null);
   
   // Enhanced reminder settings
-  const [reminderSettings, setReminderSettings] = useState<ReminderSettings>({
-    enabled: initialData?.reminderSettings ? JSON.parse(initialData.reminderSettings).enabled || false : false,
-    interval: initialData?.reminderSettings ? JSON.parse(initialData.reminderSettings).interval || 'daily' : 'daily',
-    count: initialData?.reminderSettings ? JSON.parse(initialData.reminderSettings).count || 7 : 7,
-    time: initialData?.reminderSettings ? JSON.parse(initialData.reminderSettings).time || '09:00' : '09:00',
-    date: initialData?.reminderSettings ? JSON.parse(initialData.reminderSettings).date || format(new Date(), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')
+  const [reminderSettings, setReminderSettings] = useState<ReminderSettings>(() => {
+    try {
+      if (initialData?.reminderSettings) {
+        const parsed = JSON.parse(initialData.reminderSettings);
+        return {
+          enabled: parsed.enabled || false,
+          interval: parsed.interval || 'daily',
+          count: parsed.count || 7,
+          time: parsed.time || '09:00',
+          date: parsed.date || format(new Date(), 'yyyy-MM-dd')
+        };
+      }
+    } catch (error) {
+      console.error('Error parsing initial reminder settings:', error);
+    }
+    
+    // Default settings
+    return {
+      enabled: false,
+      interval: 'daily',
+      count: 7,
+      time: '09:00',
+      date: format(new Date(), 'yyyy-MM-dd')
+    };
   });
   
   // Drag to close functionality
@@ -277,9 +295,23 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       if (initialData.reminderSettings) {
         try {
           const parsedSettings = JSON.parse(initialData.reminderSettings as string);
-          setReminderSettings(parsedSettings);
+          setReminderSettings({
+            enabled: parsedSettings.enabled || false,
+            interval: parsedSettings.interval || 'daily',
+            count: parsedSettings.count || 7,
+            time: parsedSettings.time || '09:00',
+            date: parsedSettings.date || format(new Date(), 'yyyy-MM-dd')
+          });
         } catch (e) {
           console.error("Failed to parse reminder settings", e);
+          // Reset to safe defaults
+          setReminderSettings({
+            enabled: false,
+            interval: 'daily',
+            count: 7,
+            time: '09:00',
+            date: format(new Date(), 'yyyy-MM-dd')
+          });
         }
       }
     } else if (isOpen && !initialData) {
@@ -949,7 +981,21 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                 <div className="flex items-center">
                   <Calendar size={14} className="mr-2" />
                   <span>
-                    {format(new Date(reminderSettings.date), 'EEEE, MMMM d, yyyy')}
+                    {(() => {
+                      try {
+                        if (!reminderSettings.date) {
+                          return 'No date selected';
+                        }
+                        const date = new Date(reminderSettings.date);
+                        if (isNaN(date.getTime())) {
+                          return 'Invalid date';
+                        }
+                        return format(date, 'EEEE, MMMM d, yyyy');
+                      } catch (error) {
+                        console.error('Date formatting error:', error);
+                        return 'Invalid date';
+                      }
+                    })()}
                   </span>
                 </div>
                 <div className="flex items-center">
@@ -1056,7 +1102,15 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                 <span className="font-medium">Next week</span>
               </div>
               <span className="text-gray-400">
-                {format(new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000), 'EEE, MMM d')}
+                {(() => {
+                  try {
+                    const nextWeekDate = new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000);
+                    return format(nextWeekDate, 'EEE, MMM d');
+                  } catch (error) {
+                    console.error('Next week date formatting error:', error);
+                    return 'Next week';
+                  }
+                })()}
               </span>
             </button>
           </div>
@@ -1068,8 +1122,27 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
         <div className="mt-auto p-5 border-t">
           <button 
             onClick={() => {
-              // Set the reminder date from the reminder settings
-              setReminder(new Date(`${reminderSettings.date}T${reminderSettings.time}`).toISOString());
+              try {
+                // Set the reminder date from the reminder settings
+                if (reminderSettings.date && reminderSettings.time) {
+                  const reminderDateTime = new Date(`${reminderSettings.date}T${reminderSettings.time}`);
+                  if (!isNaN(reminderDateTime.getTime())) {
+                    setReminder(reminderDateTime.toISOString());
+                  } else {
+                    console.error('Invalid reminder date/time combination');
+                    toast.error('Invalid reminder date/time');
+                    return;
+                  }
+                } else {
+                  console.error('Missing reminder date or time');
+                  toast.error('Please set both date and time for reminder');
+                  return;
+                }
+              } catch (error) {
+                console.error('Error setting reminder:', error);
+                toast.error('Failed to set reminder');
+                return;
+              }
               setActiveTab('main');
             }}
             className="w-full py-3 bg-blue-500 text-white font-medium rounded-full hover:bg-blue-600"
