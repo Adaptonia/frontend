@@ -5,6 +5,16 @@ import { DATABASE_ID, REMINDERS_COLLECTION_ID } from '@/src/services/appwrite';
 
 export async function GET(request: NextRequest) {
   try {
+    // Skip cron if critical environment variables are missing
+    if (!process.env.CRON_SECRET || !process.env.NEXTAUTH_URL || !DATABASE_ID || !REMINDERS_COLLECTION_ID) {
+      console.log('⚠️ Vercel Cron: Skipping - missing required environment variables');
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Cron job skipped - missing required environment variables',
+        processedCount: 0
+      });
+    }
+
     // Verify cron secret to prevent unauthorized access
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
