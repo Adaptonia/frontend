@@ -1030,15 +1030,19 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                 tomorrow.setDate(tomorrow.getDate() + 1);
                 tomorrow.setHours(9, 0, 0, 0);
                 
+                // Log for debugging
+                console.log('🕒 Setting tomorrow reminder for local time:', tomorrow.toLocaleString());
+                console.log('🌍 UTC time will be:', tomorrow.toISOString());
+                
                 setReminderSettings({
                   enabled: true,
                   interval: "once",
                   count: 1,
                   time: "09:00",
-                  date: tomorrow.toISOString().split('T')[0]
+                  date: format(tomorrow, 'yyyy-MM-dd')
                 });
                 
-                toast.success("Reminder set for tomorrow at 9:00 AM");
+                toast.success(`Reminder set for tomorrow at ${tomorrow.toLocaleTimeString()}`);
               }}
               className="flex items-center justify-between w-full p-4 rounded-lg border border-gray-200 hover:bg-gray-50"
             >
@@ -1056,15 +1060,19 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                 const today = new Date();
                 today.setHours(18, 0, 0, 0);
                 
+                // Log for debugging
+                console.log('🕒 Setting evening reminder for local time:', today.toLocaleString());
+                console.log('🌍 UTC time will be:', today.toISOString());
+                
                 setReminderSettings({
                   enabled: true,
                   interval: "once",
                   count: 1,
                   time: "18:00",
-                  date: today.toISOString().split('T')[0]
+                  date: format(today, 'yyyy-MM-dd')
                 });
                 
-                toast.success("Reminder set for today at 6:00 PM");
+                toast.success(`Reminder set for today at ${today.toLocaleTimeString()}`);
               }}
               className="flex items-center justify-between w-full p-4 rounded-lg border border-gray-200 hover:bg-gray-50"
             >
@@ -1125,9 +1133,23 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
               try {
                 // Set the reminder date from the reminder settings
                 if (reminderSettings.date && reminderSettings.time) {
-                  const reminderDateTime = new Date(`${reminderSettings.date}T${reminderSettings.time}`);
-                  if (!isNaN(reminderDateTime.getTime())) {
-                    setReminder(reminderDateTime.toISOString());
+                  // Create date in local time zone
+                  const [hours, minutes] = reminderSettings.time.split(':');
+                  const reminderDate = new Date(reminderSettings.date);
+                  reminderDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+                  // Log for debugging
+                  console.log('🕒 Setting reminder for local time:', reminderDate.toLocaleString());
+                  console.log('🌍 UTC time will be:', reminderDate.toISOString());
+
+                  if (!isNaN(reminderDate.getTime())) {
+                    // Store in ISO format (will be converted to UTC)
+                    setReminder(reminderDate.toISOString());
+                    
+                    // Show toast with local time
+                    toast.success(`Reminder set for ${reminderDate.toLocaleTimeString()}`, {
+                      description: `${reminderDate.toLocaleDateString()}`
+                    });
                   } else {
                     console.error('Invalid reminder date/time combination');
                     toast.error('Invalid reminder date/time');

@@ -76,20 +76,55 @@ export const scheduleReminders = async (
       console.log('📅 Processing simple reminder:', simpleReminder);
       const reminderDate = new Date(simpleReminder);
       
+      // Log timezone information
+      console.log('🌍 Timezone debug:');
+      console.log('- Local time:', reminderDate.toLocaleString());
+      console.log('- UTC time:', reminderDate.toUTCString());
+      console.log('- ISO string:', reminderDate.toISOString());
+      console.log('- Timezone offset (minutes):', reminderDate.getTimezoneOffset());
+      
       if (isNaN(reminderDate.getTime())) {
         console.error('❌ Invalid simple reminder date:', simpleReminder);
       } else if (reminderDate > new Date()) {
+        // Store the date in UTC
         reminderDates.push(reminderDate);
-        console.log('✅ Valid simple reminder added:', reminderDate.toISOString());
+        console.log('✅ Valid simple reminder added:', {
+          local: reminderDate.toLocaleString(),
+          utc: reminderDate.toUTCString(),
+          iso: reminderDate.toISOString()
+        });
       } else {
-        console.warn('⚠️ Simple reminder date is in the past:', reminderDate.toISOString());
+        console.warn('⚠️ Simple reminder date is in the past:', {
+          local: reminderDate.toLocaleString(),
+          utc: reminderDate.toUTCString(),
+          iso: reminderDate.toISOString()
+        });
       }
     }
 
     // Process advanced reminders
-    if (hasAdvancedReminders && reminderSettings.time) {
+    if (hasAdvancedReminders && reminderSettings.time && reminderSettings.date) {
       console.log('📅 Processing advanced reminders:', reminderSettings);
-      // Add your advanced reminder logic here
+      
+      // Create date in local time zone
+      const [hours, minutes] = reminderSettings.time.split(':');
+      const reminderDate = new Date(reminderSettings.date);
+      reminderDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      
+      // Log timezone information
+      console.log('🌍 Advanced reminder timezone debug:');
+      console.log('- Local time:', reminderDate.toLocaleString());
+      console.log('- UTC time:', reminderDate.toUTCString());
+      console.log('- ISO string:', reminderDate.toISOString());
+      
+      if (reminderDate > new Date()) {
+        reminderDates.push(reminderDate);
+        console.log('✅ Valid advanced reminder added:', {
+          local: reminderDate.toLocaleString(),
+          utc: reminderDate.toUTCString(),
+          iso: reminderDate.toISOString()
+        });
+      }
     }
 
     if (reminderDates.length === 0) {
@@ -99,7 +134,11 @@ export const scheduleReminders = async (
 
     console.log('📊 REMINDER DATES TO SCHEDULE:', {
       totalDates: reminderDates.length,
-      dates: reminderDates.map(d => d.toISOString())
+      dates: reminderDates.map(d => ({
+        local: d.toLocaleString(),
+        utc: d.toUTCString(),
+        iso: d.toISOString()
+      }))
     });
 
     // 🎯 ONLY CREATE DATABASE RECORDS - Let Appwrite Functions handle delivery
@@ -107,7 +146,11 @@ export const scheduleReminders = async (
 
     for (const reminderDate of reminderDates) {
       try {
-        console.log('💾 Creating server-side reminder for:', reminderDate.toISOString());
+        console.log('💾 Creating server-side reminder for:', {
+          local: reminderDate.toLocaleString(),
+          utc: reminderDate.toUTCString(),
+          iso: reminderDate.toISOString()
+        });
         
         await reminderService.createReminder({
           goalId,
