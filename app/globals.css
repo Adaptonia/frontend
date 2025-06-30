@@ -146,6 +146,8 @@ body {
   touch-action: manipulation;
   background-color: var(--background);
   color: var(--foreground);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 
 /* Enable scrolling for content areas */
@@ -168,20 +170,33 @@ main,
   display: none; /* Chrome, Safari, Opera */
 }
 
-/* Prevent text selection for app-like feel */
+/* Default to allowing user selection, which is a safer default */
 * {
-  -webkit-tap-highlight-color: transparent;
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
-/* Allow text selection in specific elements */
+/* Selectively disable selection on non-interactive elements */
+body, 
+div,
+span,
+h1, h2, h3, h4, h5, h6,
+p {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Ensure buttons, links, and inputs are always interactive */
+button,
+a,
 input,
 textarea,
-[contenteditable="true"] {
-  -webkit-user-select: text;
-  user-select: text;
+[role="button"],
+[contenteditable="true"],
+select {
+  user-select: auto;
+  -webkit-user-select: auto;
+  touch-action: manipulation;
 }
 
 /* Full-screen container class */
