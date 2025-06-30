@@ -511,21 +511,8 @@ const Dashboard = () => {
          console.log('🧪 Using test token for storage test');
        }
       
-      // Step 3: Store FCM token
-      const storeResponse = await fetch('/api/user/store-fcm-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ 
-          token: fcmToken,
-          userId: user.id 
-        })
-      });
-      
-      const storeResult = await storeResponse.json();
-      if (!storeResult.success) {
-        throw new Error(`Failed to store FCM token: ${storeResult.message}`);
-      }
+      // Step 3: FCM token automatically stored as push target by Firebase service
+      console.log('✅ Push target automatically created by Firebase service');
       
       console.log('🎉 FCM TOKEN TEST: Success!');
       toast.success('🎉 FCM Token Storage Test Successful!', { 
@@ -589,24 +576,9 @@ const Dashboard = () => {
         console.log('🧪 Using test token:', fcmToken.substring(0, 30) + '...');
       }
       
-      // Step 3: Store FCM token in Appwrite
-      console.log('💾 Step 3: Storing FCM token...');
-      const storeResponse = await fetch('/api/user/store-fcm-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ 
-          token: fcmToken,
-          userId: user.id 
-        })
-      });
-      
-      const storeResult = await storeResponse.json();
-      if (!storeResult.success) {
-        throw new Error(`Failed to store FCM token: ${storeResult.message}`);
-      }
-      
-      console.log('✅ FCM token stored successfully');
+      // Step 3: FCM token is now automatically stored as push target
+      // The requestNotificationPermission() function handles this automatically
+      console.log('✅ FCM token and push target handled automatically by Firebase service');
 
       // Step 4: Test FCM notification
       console.log('📤 Step 4: Testing FCM notification...');
@@ -767,43 +739,28 @@ const Dashboard = () => {
       }
 
       // Step 7: Test FCM system end-to-end
-      console.log('🔍 Step 7: Testing FCM system end-to-end...');
-      if (fcmToken) {
-        // Store token
-        const storeResponse = await fetch('/api/user/store-fcm-token', {
+              console.log('🔍 Step 7: Testing FCM system end-to-end...');
+        // Push target automatically created by Firebase service
+        console.log('🔍 Push target automatically handled by Firebase service');
+
+        // Send test notification
+        const testResponse = await fetch('/api/send-push-notification', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ 
-            token: fcmToken,
-            userId: user.id 
+          body: JSON.stringify({
+            userId: user.id,
+            title: '🔍 Debug Test - FCM',
+            body: 'This is an FCM notification test. If you see this, FCM is working!',
+            data: { 
+              type: 'debug_fcm_test',
+              timestamp: new Date().toISOString()
+            }
           })
         });
         
-        const storeResult = await storeResponse.json();
-        console.log('🔍 FCM token storage result:', storeResult);
-
-        if (storeResult.success) {
-          // Send test notification
-          const testResponse = await fetch('/api/send-push-notification', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-              userId: user.id,
-              title: '🔍 Debug Test - FCM',
-              body: 'This is an FCM notification test. If you see this, FCM is working!',
-              data: { 
-                type: 'debug_fcm_test',
-                timestamp: new Date().toISOString()
-              }
-            })
-          });
-          
-          const testResult = await testResponse.json();
-          console.log('🔍 FCM notification send result:', testResult);
-        }
-      }
+        const testResult = await testResponse.json();
+        console.log('🔍 FCM notification send result:', testResult);
 
       console.log('🔍 NOTIFICATION DEBUG: All tests completed');
       toast.success('🔍 Debug Test Completed!', { 

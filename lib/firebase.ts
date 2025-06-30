@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
+import { account } from '@/lib/appwrite/config';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -39,23 +40,47 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
       return null;
     }
 
+    // Debug VAPID key
+    const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    console.log('🔑 VAPID Key loaded:', vapidKey ? `${vapidKey.substring(0, 20)}...` : 'NOT FOUND');
+    
+    if (!vapidKey) {
+      console.error('❌ VAPID key is missing! Check NEXT_PUBLIC_VAPID_PUBLIC_KEY environment variable');
+      return null;
+    }
+
     // Get FCM token
     const currentToken = await getToken(messaging, {
-      vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
+      vapidKey: vapidKey
     });
 
     if (currentToken) {
       console.log('FCM Token:', currentToken);
       
-      // Store token in backend
+      // Get current user ID
       try {
-        await fetch('/api/user/store-fcm-token', {
+        const user = await account.get();
+        console.log('👤 Current user ID:', user.$id);
+        
+        // Store token in backend
+        const response = await fetch('/api/user/store-fcm-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: currentToken })
+          body: JSON.stringify({ 
+            token: currentToken,
+            userId: user.$id 
+          }),
+          credentials: 'include'
         });
+        
+        const result = await response.json();
+        if (result.success) {
+          console.log('✅ FCM token stored successfully');
+        } else {
+          console.error('❌ Failed to store FCM token:', result.message);
+        }
       } catch (error) {
-        console.error('Failed to store FCM token:', error);
+        console.error('❌ Failed to get user or store FCM token:', error);
       }
       
       return currentToken;

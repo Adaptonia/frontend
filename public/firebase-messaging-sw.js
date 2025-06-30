@@ -2,53 +2,104 @@
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
-// Initialize Firebase with config from environment variables
-firebase.initializeApp({
-  apiKey: self.FIREBASE_CONFIG.apiKey,
-  authDomain: self.FIREBASE_CONFIG.authDomain,
-  projectId: self.FIREBASE_CONFIG.projectId,
-  storageBucket: self.FIREBASE_CONFIG.storageBucket,
-  messagingSenderId: self.FIREBASE_CONFIG.messagingSenderId,
-  appId: self.FIREBASE_CONFIG.appId
+// Initialize Firebase with config fetched from API
+let messaging;
+
+// Fetch Firebase config and initialize
+self.addEventListener('install', async (event) => {
+  console.log('🔥 FCM Service Worker: Installing...');
+  
+  event.waitUntil(
+    (async () => {
+      try {
+        // Fetch Firebase config from API
+        const response = await fetch('/api/firebase-config');
+        const config = await response.json();
+        
+        console.log('🔥 FCM Service Worker: Firebase config loaded');
+        
+        // Initialize Firebase
+        firebase.initializeApp(config);
+        messaging = firebase.messaging();
+        
+        console.log('🔥 FCM Service Worker: Firebase initialized');
+      } catch (error) {
+        console.error('🔥 FCM Service Worker: Failed to initialize Firebase:', error);
+      }
+      
+      self.skipWaiting();
+    })()
+  );
 });
 
-const messaging = firebase.messaging();
+// Service worker activation
+self.addEventListener('activate', (event) => {
+  console.log('🔥 FCM Service Worker: Activated');
+  event.waitUntil(self.clients.claim());
+});
 
 // Handle background messages
-messaging.onBackgroundMessage((payload) => {
-  console.log('Received background message:', payload);
-
-  // Extract notification data
-  const notificationTitle = payload.notification?.title || 'New Notification';
-  const notificationBody = payload.notification?.body || 'You have a new notification';
-  const notificationData = payload.data || {};
-
-  const notificationOptions = {
-    body: notificationBody,
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-72x72.png',
-    data: {
-      ...notificationData,
-      url: self.registration.scope,
-      timestamp: Date.now()
-    },
-    tag: `adaptonia-${Date.now()}`,
-    requireInteraction: true,
-    vibrate: [200, 100, 200],
-    actions: [
-      {
-        action: 'open',
-        title: 'Open'
-      },
-      {
-        action: 'close',
-        title: 'Close'
-      }
-    ]
-  };
-
-  return self.registration.showNotification(notificationTitle, notificationOptions);
+self.addEventListener('message', async (event) => {
+  console.log('🔥 FCM Service Worker: Received message:', event.data);
+  
+  if (event.data && event.data.type === 'ACTIVATE_WORKER') {
+    console.log('🔥 FCM Service Worker: Activation requested');
+    self.clients.claim();
+  }
+  
+  // Initialize Firebase if not already done
+  if (!messaging) {
+    try {
+      const response = await fetch('/api/firebase-config');
+      const config = await response.json();
+      firebase.initializeApp(config);
+      messaging = firebase.messaging();
+      console.log('🔥 FCM Service Worker: Firebase initialized on demand');
+    } catch (error) {
+      console.error('🔥 FCM Service Worker: Failed to initialize Firebase on demand:', error);
+    }
+  }
 });
+
+// Set up background message handler after Firebase is initialized
+setTimeout(() => {
+  if (messaging) {
+    messaging.onBackgroundMessage((payload) => {
+      console.log('Received background message:', payload);
+
+      // Extract notification data
+      const notificationTitle = payload.notification?.title || 'New Notification';
+      const notificationBody = payload.notification?.body || 'You have a new notification';
+      const notificationData = payload.data || {};
+
+      const notificationOptions = {
+        body: notificationBody,
+        icon: '/icons/icon-192x192.png',
+        badge: '/icons/icon-72x72.png',
+        data: {
+          ...notificationData,
+          url: self.registration.scope,
+          timestamp: Date.now()
+        },
+        tag: `adaptonia-${Date.now()}`,
+        requireInteraction: true,
+        vibrate: [200, 100, 200],
+        actions: [
+          {
+            action: 'open',
+            title: 'Open'
+          },
+          {
+            action: 'close',
+            title: 'Close'
+          }
+        ]
+      };
+
+      return self.registration.showNotification(notificationTitle, notificationOptions);
+    });
+  }
+}, 1000);
 
 // Handle notification clicks
 self.addEventListener('notificationclick', (event) => {
@@ -94,26 +145,4 @@ self.addEventListener('notificationclose', (event) => {
   });
 });
 
-// Service worker activation
-self.addEventListener('activate', (event) => {
-  console.log('🔥 FCM Service Worker: Activated');
-  event.waitUntil(self.clients.claim());
-});
-
-// Service worker installation
-self.addEventListener('install', (event) => {
-  console.log('🔥 FCM Service Worker: Installed');
-  self.skipWaiting();
-});
-
-// Handle messages from the main thread
-self.addEventListener('message', (event) => {
-  console.log('🔥 FCM Service Worker: Received message:', event.data);
-  
-  if (event.data && event.data.type === 'ACTIVATE_WORKER') {
-    console.log('🔥 FCM Service Worker: Activation requested');
-    self.clients.claim();
-  }
-});
-
-console.log('🔥 Firebase messaging service worker setup complete'); 
+console.log('🔥 Firebase messaging service worker setup complete');

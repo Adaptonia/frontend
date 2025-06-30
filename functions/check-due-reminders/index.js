@@ -1,23 +1,23 @@
-const { Client, Databases, Query, Functions } = require('node-appwrite');
+const sdk = require('node-appwrite');
 
-module.exports = async function (req, context) {
+module.exports = async function ({ res, log, error: logError }) {
   try {
-    console.log('🔍 Starting due reminders check...');
+    log('🔍 Starting due reminders check...');
     
     // Initialize Appwrite client
-    const client = new Client()
+    const client = new sdk.Client()
       .setEndpoint(process.env.APPWRITE_ENDPOINT)
       .setProject(process.env.APPWRITE_PROJECT_ID)
       .setKey(process.env.APPWRITE_API_KEY);
 
-    const databases = new Databases(client);
-    const functions = new Functions(client);
+    const databases = new sdk.Databases(client);
+    const messaging = new sdk.Messaging(client);
 
     // Get current time in UTC
     const now = new Date();
     const utcNow = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
     
-    console.log('⏰ Current time check:', {
+    log('⏰ Current time check:', {
       localTime: now.toLocaleString(),
       utcTime: now.toUTCString(),
       isoString: now.toISOString(),
@@ -29,18 +29,18 @@ module.exports = async function (req, context) {
       process.env.APPWRITE_DATABASE_ID,
       process.env.APPWRITE_REMINDERS_COLLECTION_ID,
       [
-        Query.equal('status', 'pending'),
-        Query.lessThanEqual('sendDate', utcNow),
-        Query.limit(50) // Process max 50 reminders per run
+        sdk.Query.equal('status', 'pending'),
+        sdk.Query.lessThanEqual('sendDate', utcNow),
+        sdk.Query.limit(50) // Process max 50 reminders per run
       ]
     );
 
-    console.log(`📋 Found ${dueReminders.documents.length} due reminders`);
+    log(`📋 Found ${dueReminders.documents.length} due reminders`);
 
     // Log each due reminder's time for debugging
     dueReminders.documents.forEach(reminder => {
       const reminderDate = new Date(reminder.sendDate);
-      console.log(`📅 Due reminder ${reminder.$id}:`, {
+      log(`📅 Due reminder ${reminder.$id}:`, {
         title: reminder.title,
         scheduledLocal: reminderDate.toLocaleString(),
         scheduledUTC: reminderDate.toUTCString(),
@@ -50,18 +50,16 @@ module.exports = async function (req, context) {
     });
 
     if (dueReminders.documents.length === 0) {
-      return {
-        json: {
-          success: true,
-          message: 'No due reminders found',
-          processedCount: 0,
-          currentTime: {
-            local: now.toLocaleString(),
-            utc: now.toUTCString(),
-            iso: now.toISOString()
-          }
+      return res.json({
+        success: true,
+        message: 'No due reminders found',
+        processedCount: 0,
+        currentTime: {
+          local: now.toLocaleString(),
+          utc: now.toUTCString(),
+          iso: now.toISOString()
         }
-      };
+      });
     }
 
     const results = {
@@ -74,77 +72,79 @@ module.exports = async function (req, context) {
     // Process each due reminder
     for (const reminder of dueReminders.documents) {
       try {
-        console.log(`📤 Processing reminder: ${reminder.title} for user: ${reminder.userId}`, {
+        log(`📤 Processing reminder: ${reminder.title} for user: ${reminder.userId}`, {
           scheduledFor: reminder.sendDate,
           currentTime: utcNow
         });
         
-        // Send FCM notification via existing function
-        const notificationResponse = await functions.createExecution(
-          process.env.APPWRITE_SEND_PUSH_NOTIFICATION_FUNCTION_ID,
-          JSON.stringify({
-            userId: reminder.userId,
-            title: reminder.title,
-            body: reminder.description || 'Time for your goal!',
-            data: {
-              goalId: reminder.goalId,
-              type: 'reminder',
-              reminderId: reminder.$id
-            }
-          })
-        );
-
-        console.log(`📤 FCM notification sent for reminder: ${reminder.$id}`);
-
-        // Update reminder status to 'sent'
-        await databases.updateDocument(
-          process.env.APPWRITE_DATABASE_ID,
-          process.env.APPWRITE_REMINDERS_COLLECTION_ID,
-          reminder.$id,
-          {
-            status: 'sent',
-            updatedAt: new Date().toISOString()
+        // Create push notification using Appwrite's Messaging API
+        log('📤 Sending push notification via Appwrite Messaging API...');
+        
+        // Generate a short, valid messageId (max 36 chars)
+        const messageId = `rem-${reminder.$id.slice(-8)}-${Date.now().toString().slice(-6)}`;
+        log(`📤 Generated messageId: ${messageId} (length: ${messageId.length})`);
+        
+        const notificationResponse = await messaging.createPush(
+          messageId, // messageId - unique for each reminder (max 36 chars)
+          reminder.title, // title
+          reminder.description || 'Time to work on your goal!', // body
+          [], // topics (empty - we'll use users instead)
+          [reminder.userId], // users array - target specific user by their ID
+          [], // targets (empty - we're using users which auto-finds their push targets)
+          { // data
+            goalId: reminder.goalId,
+            type: 'reminder',
+            reminderId: reminder.$id
           }
         );
 
+        log(`📤 Push notification created with message ID: ${notificationResponse.$id}`);
+
+        // Update reminder status to 'sent'
+        const updateData = {
+          status: 'sent'
+        };
+        
+        // Add optional fields only if they might be supported
+        try {
+          await databases.updateDocument(
+            process.env.APPWRITE_DATABASE_ID,
+            process.env.APPWRITE_REMINDERS_COLLECTION_ID,
+            reminder.$id,
+            updateData
+          );
+        } catch (updateError) {
+          log(`⚠️ Could not update reminder ${reminder.$id}, but notification was sent: ${updateError.message}`);
+        }
+
         results.processed++;
         results.successful++;
-        console.log(`✅ Successfully processed reminder: ${reminder.$id}`);
+        log(`✅ Successfully processed reminder: ${reminder.$id}`);
 
       } catch (error) {
-        console.error(`❌ Failed to process reminder ${reminder.$id}:`, error.message);
+        logError(`❌ Failed to process reminder ${reminder.$id}:`, error.message);
         
         // Update retry count
         const newRetryCount = (reminder.retryCount || 0) + 1;
         const maxRetries = 3;
         
-        if (newRetryCount >= maxRetries) {
-          // Mark as failed after max retries
-          await databases.updateDocument(
-            process.env.APPWRITE_DATABASE_ID,
-            process.env.APPWRITE_REMINDERS_COLLECTION_ID,
-            reminder.$id,
-            {
-              status: 'failed',
-              retryCount: newRetryCount,
-              updatedAt: new Date().toISOString()
-            }
-          );
-          console.log(`💀 Marked reminder ${reminder.$id} as failed after ${maxRetries} retries`);
-        } else {
-          // Schedule retry (next retry in 5 minutes)
-          const nextRetry = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-          await databases.updateDocument(
-            process.env.APPWRITE_DATABASE_ID,
-            process.env.APPWRITE_REMINDERS_COLLECTION_ID,
-            reminder.$id,
-            {
-              retryCount: newRetryCount,
-              nextRetry: nextRetry,
-              updatedAt: new Date().toISOString()
-            }
-          );
-          console.log(`🔄 Scheduled retry ${newRetryCount}/${maxRetries} for reminder ${reminder.$id} at ${nextRetry}`);
+        // Try to update reminder with error handling for missing attributes
+        try {
+          if (newRetryCount >= maxRetries) {
+            // Mark as failed after max retries
+            await databases.updateDocument(
+              process.env.APPWRITE_DATABASE_ID,
+              process.env.APPWRITE_REMINDERS_COLLECTION_ID,
+              reminder.$id,
+              { status: 'failed' }
+            );
+            log(`💀 Marked reminder ${reminder.$id} as failed after ${maxRetries} retries`);
+          } else {
+            // Keep status as pending for retry (will be retried on next cron run)
+            log(`🔄 Will retry reminder ${reminder.$id} on next cron run (attempt ${newRetryCount}/${maxRetries})`);
+          }
+        } catch (updateError) {
+          log(`⚠️ Could not update reminder ${reminder.$id} status: ${updateError.message}`);
         }
         
         results.processed++;
@@ -156,36 +156,31 @@ module.exports = async function (req, context) {
       }
     }
 
-    console.log(`📊 Processing complete - Successful: ${results.successful}, Failed: ${results.failed}`);
+    log(`📊 Processing complete - Successful: ${results.successful}, Failed: ${results.failed}`);
 
-    return {
-      json: {
-        success: true,
-        message: `Processed ${results.processed} due reminders`,
-        results: results,
-        currentTime: {
-          local: now.toLocaleString(),
-          utc: now.toUTCString(),
-          iso: now.toISOString()
-        }
+    return res.json({
+      success: true,
+      message: `Processed ${results.processed} due reminders`,
+      results: results,
+      currentTime: {
+        local: now.toLocaleString(),
+        utc: now.toUTCString(),
+        iso: now.toISOString()
       }
-    };
+    });
 
   } catch (error) {
-    context.error('Error checking due reminders: ' + error.message);
-    console.error('❌ Due reminders check failed:', error);
+    logError('Error checking due reminders: ' + error.message);
+    logError('❌ Due reminders check failed:', error);
     
-    return {
-      json: {
-        success: false,
-        message: error.message,
-        currentTime: {
-          local: new Date().toLocaleString(),
-          utc: new Date().toUTCString(),
-          iso: new Date().toISOString()
-        }
-      },
-      status: 500
-    };
+    return res.json({
+      success: false,
+      message: error.message,
+      currentTime: {
+        local: new Date().toLocaleString(),
+        utc: new Date().toUTCString(),
+        iso: new Date().toISOString()
+      }
+    }, 500);
   }
-}; 
+};

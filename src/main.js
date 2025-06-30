@@ -14,10 +14,9 @@ module.exports = async function (req, context) {
     context.log('🚀 Function started - checking payload...');
     context.log('🔍 req.payload:', req.payload);
     
-    context.log(`📋 Extracted fields: userId=${userId}, title=${title}, body=${body}`);
-
     const { userId, title, body, data } = req.payload ?? {};
     
+    context.log(`📋 Extracted fields: userId=${userId}, title=${title}, body=${body}`);
 
     if (!userId || !title || !body) {
       context.log('❗ Missing required fields');
@@ -50,7 +49,7 @@ module.exports = async function (req, context) {
     );
 
     context.log(`📱 Found ${tokens.documents.length} FCM tokens`);
-
+    
     if (!tokens.documents.length) {
       context.log(`⚠️ No FCM tokens found for user: ${userId}`);
       return {
@@ -80,13 +79,11 @@ module.exports = async function (req, context) {
     context.log('✅ Notification sent - Success: ' + response.successCount + ', Failed: ' + response.failureCount);
 
     return {
-
       json: {
         success: true,
         message: 'Notification sent successfully',
         response
       }
-
     };
   } catch (error) {
     context.error('Error sending notification: ' + error.message);
