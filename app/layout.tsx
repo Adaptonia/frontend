@@ -54,13 +54,14 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body
-        className={`${poppins.variable} font-sans antialiased h-full overscroll-none full-screen`}
+        className={`${poppins.variable} font-sans antialiased h-full`}
       >
         <Providers>
           <ThemeProvider>
             <PWANotificationManager>
-              {children}
-              {/* Mobile Zoom Fix - prevents and resets mobile zoom on input focus */}
+              <main className="scrollable-content">
+                {children}
+              </main>
               <MobileZoomFix />
             </PWANotificationManager>
             {/* Test Reminder Component - for debugging (remove in production) */}
