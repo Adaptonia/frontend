@@ -19,7 +19,21 @@ export const pushNotificationService = {
       console.log('Database ID:', DATABASE_ID);
       console.log('Collection ID:', PUSH_TOKENS_COLLECTION_ID);
       console.log('User ID:', userId);
-      console.log('Token:', token);
+      console.log('Token (first 20 chars):', token?.substring(0, 20) + '...');
+
+      // Validate required values
+      if (!DATABASE_ID) {
+        throw new Error('DATABASE_ID is not set. Check your environment variables.');
+      }
+      if (!PUSH_TOKENS_COLLECTION_ID) {
+        throw new Error('PUSH_TOKENS_COLLECTION_ID is not set. Check your environment variables.');
+      }
+      if (!userId) {
+        throw new Error('User ID is required');
+      }
+      if (!token) {
+        throw new Error('FCM token is required');
+      }
 
       // Check if token already exists for this user
       console.log('Checking for existing tokens...');

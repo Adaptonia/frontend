@@ -11,7 +11,6 @@ module.exports = async function ({ res, log, error: logError }) {
       .setKey(process.env.APPWRITE_API_KEY);
 
     const databases = new sdk.Databases(client);
-    const messaging = new sdk.Messaging(client);
 
     // Get current time in UTC
     const now = new Date();
@@ -77,28 +76,53 @@ module.exports = async function ({ res, log, error: logError }) {
           currentTime: utcNow
         });
         
-        // Create push notification using Appwrite's Messaging API
-        log('📤 Sending push notification via Appwrite Messaging API...');
+        // Get user's FCM tokens first
+        log('📤 Getting FCM tokens for user:', reminder.userId);
+        const userTokens = await databases.listDocuments(
+          process.env.APPWRITE_DATABASE_ID,
+          process.env.APPWRITE_PUSH_TOKENS_COLLECTION_ID,
+          [
+            sdk.Query.equal('userId', reminder.userId)
+          ]
+        );
+
+        if (userTokens.documents.length === 0) {
+          log(`⚠️ No FCM tokens found for user: ${reminder.userId}`);
+          // Skip this reminder - user has no push tokens
+          results.processed++;
+          results.failed++;
+          results.errors.push({
+            reminderId: reminder.$id,
+            error: 'No FCM tokens found for user'
+          });
+          continue;
+        }
+
+        log(`📱 Found ${userTokens.documents.length} FCM tokens for user`);
+
+        // Create push notification using Firebase send-push-notification function
+        log('📤 Sending push notification via Firebase...');
         
-        // Generate a short, valid messageId (max 36 chars)
-        const messageId = `rem-${reminder.$id.slice(-8)}-${Date.now().toString().slice(-6)}`;
-        log(`📤 Generated messageId: ${messageId} (length: ${messageId.length})`);
-        
-        const notificationResponse = await messaging.createPush(
-          messageId, // messageId - unique for each reminder (max 36 chars)
-          reminder.title, // title
-          reminder.description || 'Time to work on your goal!', // body
-          [], // topics (empty - we'll use users instead)
-          [reminder.userId], // users array - target specific user by their ID
-          [], // targets (empty - we're using users which auto-finds their push targets)
-          { // data
+        // Use the existing send-push-notification function
+        const notificationPayload = {
+          userId: reminder.userId,
+          title: reminder.title,
+          body: reminder.description || 'Time to work on your goal!',
+          data: {
             goalId: reminder.goalId,
             type: 'reminder',
             reminderId: reminder.$id
           }
+        };
+
+        const functions = new sdk.Functions(client);
+        const notificationResponse = await functions.createExecution(
+          process.env.APPWRITE_SEND_PUSH_NOTIFICATION_FUNCTION_ID,
+          JSON.stringify(notificationPayload),
+          false
         );
 
-        log(`📤 Push notification created with message ID: ${notificationResponse.$id}`);
+        log(`📤 Push notification sent - Response:`, notificationResponse.responseBody);
 
         // Update reminder status to 'sent'
         const updateData = {

@@ -59,15 +59,24 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
       
       // Get current user ID and store token directly using push notification service
       try {
+        console.log('🔍 Getting current user...');
         const user = await account.get();
         console.log('👤 Current user ID:', user.$id);
         
+        console.log('🔍 Importing push notification service...');
         // Import and use the push notification service directly
         const { pushNotificationService } = await import('@/lib/appwrite/push-notifications');
+        console.log('🔍 Push notification service imported successfully');
+        
+        console.log('🔍 Calling storePushToken...');
         await pushNotificationService.storePushToken(user.$id, currentToken);
         console.log('✅ FCM token stored successfully in Appwrite');
       } catch (error) {
         console.error('❌ Failed to get user or store FCM token:', error);
+        console.error('Error details:', error);
+        if (error instanceof Error) {
+          console.error('Error stack:', error.stack);
+        }
       }
       
       return currentToken;
