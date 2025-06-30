@@ -80,42 +80,50 @@ export default function PWANotificationManager({ children }: PWANotificationMana
       startHeartbeatSystem();
       startVisibilityMonitoring();
 
-      // Only attempt Firebase notifications on non-iOS devices
-      if (!isIOS) {
-        // Request Firebase notification permission
-        const fcmToken = await requestFirebasePermission();
-        if (fcmToken) {
-          console.log('✅ PWA Manager: Firebase notification permission granted');
-          setNotificationPermission('granted');
-          setIsServiceWorkerReady(true);
-          
-          // Store FCM token in Appwrite
+      // Request standard notification permission (Firebase handled by service worker)
+      const permission = await requestNotificationPermission();
+      setNotificationPermission(permission);
+      
+      if (permission === 'granted') {
+        console.log('✅ PWA Manager: Notification permission granted');
+        setIsServiceWorkerReady(true);
+        
+        // Only attempt Firebase token generation on non-iOS devices
+        if (!isIOS) {
           try {
-            const user = await account.get();
-            await pushNotificationService.storePushToken(user.$id, fcmToken);
-            console.log('✅ PWA Manager: FCM token stored in Appwrite');
+            // Let the service worker handle Firebase token generation and storage
+            const fcmToken = await requestFirebasePermission();
+            if (fcmToken) {
+              // Store FCM token in Appwrite
+              try {
+                const user = await account.get();
+                await pushNotificationService.storePushToken(user.$id, fcmToken);
+                console.log('✅ PWA Manager: FCM token stored in Appwrite');
+              } catch (error) {
+                console.error('❌ PWA Manager: Failed to store FCM token:', error);
+              }
+            }
           } catch (error) {
-            console.error('❌ PWA Manager: Failed to store FCM token:', error);
+            console.warn('⚠️ PWA Manager: Firebase setup handled by service worker:', error);
           }
-        } else {
-          console.warn('⚠️ PWA Manager: Firebase notification permission denied');
-          setNotificationPermission('denied');
         }
       } else {
-        // For iOS, mark as ready but without push notifications
-        console.log('📱 PWA Manager: iOS detected - service worker ready, notifications limited');
-        setIsServiceWorkerReady(true);
-        setNotificationPermission('denied'); // iOS doesn't support push notifications properly
+        console.warn('⚠️ PWA Manager: Notification permission denied');
+        setIsServiceWorkerReady(true); // Still mark as ready for other PWA features
       }
 
-      // Set up foreground message listener
-      onMessageListener().then((payload: any) => {
-        console.log('📱 PWA Manager: Received foreground message:', payload);
-        toast(payload.notification.title, {
-          description: payload.notification.body,
-          duration: 5000
-        });
-      }).catch(err => console.error('❌ PWA Manager: Failed to receive message:', err));
+      // Set up foreground message listener (if Firebase functions are available)
+      try {
+        onMessageListener().then((payload: any) => {
+          console.log('📱 PWA Manager: Received foreground message:', payload);
+          toast(payload.notification.title, {
+            description: payload.notification.body,
+            duration: 5000
+          });
+        }).catch(err => console.log('📱 PWA Manager: Foreground messages handled by service worker'));
+      } catch (error) {
+        console.log('📱 PWA Manager: Foreground messages will be handled by service worker');
+      }
 
     } catch (error) {
       console.error('❌ PWA Manager: Initialization failed:', error)
@@ -126,34 +134,26 @@ export default function PWANotificationManager({ children }: PWANotificationMana
   // Register service worker with automatic retry
   const registerServiceWorkerWithRetry = async (retries = 0): Promise<ServiceWorkerRegistration | null> => {
     try {
-      console.log(`🔄 PWA Manager: Registering service workers (attempt ${retries + 1})`);
+      console.log(`🔄 PWA Manager: Registering unified service worker (attempt ${retries + 1})`);
       
-      // First register Firebase messaging service worker
-      const fcmRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-        scope: '/firebase-cloud-messaging-push-scope'
-      });
-      console.log('✅ PWA Manager: Firebase messaging service worker registered');
-      
-      // Wait for FCM service worker to be ready and activate
-      await navigator.serviceWorker.ready;
-      if (fcmRegistration.active) {
-        await fcmRegistration.active.postMessage({ type: 'ACTIVATE_WORKER' });
-      }
-      
-      // Then register main service worker
+      // Register the main service worker (now includes Firebase functionality)
       const mainRegistration = await navigator.serviceWorker.register('/service-worker.js', {
         scope: '/',
         updateViaCache: 'none'
-        // Removed type: 'module' for better iOS compatibility
       });
-      console.log('✅ PWA Manager: Main service worker registered');
+      console.log('✅ PWA Manager: Unified service worker registered');
       
-      // Wait for main service worker to be ready and activate
+      // Wait for service worker to be ready and activate
       await navigator.serviceWorker.ready;
 
-      // Ensure the service worker is activated
+      // Ensure the service worker is activated and Firebase is initialized
       if (mainRegistration.waiting) {
         mainRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      }
+      
+      // Send activation message to initialize Firebase
+      if (mainRegistration.active) {
+        mainRegistration.active.postMessage({ type: 'ACTIVATE_WORKER' });
       }
       
       // Wait for the service worker to be activated
@@ -165,7 +165,7 @@ export default function PWANotificationManager({ children }: PWANotificationMana
         }
       });
 
-      console.log('✅ PWA Manager: Service workers activated');
+      console.log('✅ PWA Manager: Unified service worker activated with Firebase support');
       return mainRegistration;
 
     } catch (error) {

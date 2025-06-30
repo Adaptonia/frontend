@@ -1,6 +1,6 @@
 import { ID, Query } from 'appwrite';
 import { databases } from './config';
-import { DATABASE_ID, PUSH_TOKENS_COLLECTION_ID } from '@/src/services/appwrite';
+import { DATABASE_ID, PUSH_TOKENS_COLLECTION_ID } from '@/src/services/appwrite/client';
 
 
 

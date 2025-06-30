@@ -1,5 +1,74 @@
 // Enhanced Service Worker for Adaptonia PWA
 // Handles caching, notification events, badge counting, and AUTOMATIC background reminder scheduling
+// Now also handles Firebase Cloud Messaging for push notifications
+
+// Import Firebase scripts for FCM functionality
+importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
+
+// Initialize Firebase messaging
+let messaging;
+
+// Initialize Firebase with config fetched from API
+async function initializeFirebase() {
+  try {
+    if (!messaging) {
+      // Fetch Firebase config from API
+      const response = await fetch('/api/firebase-config');
+      const config = await response.json();
+      
+      console.log('🔥 Service Worker: Firebase config loaded');
+      
+      // Initialize Firebase
+      firebase.initializeApp(config);
+      messaging = firebase.messaging();
+      
+      console.log('🔥 Service Worker: Firebase initialized');
+      
+      // Set up background message handler
+      messaging.onBackgroundMessage((payload) => {
+        console.log('🔥 Service Worker: Received Firebase background message:', payload);
+
+        // Extract notification data
+        const notificationTitle = payload.notification?.title || 'New Notification';
+        const notificationBody = payload.notification?.body || 'You have a new notification';
+        const notificationData = payload.data || {};
+
+        const notificationOptions = {
+          body: notificationBody,
+          icon: '/icons/icon-192x192.png',
+          badge: '/icons/icon-72x72.png',
+          data: {
+            ...notificationData,
+            url: self.registration.scope,
+            timestamp: Date.now(),
+            source: 'firebase' // Mark as Firebase notification
+          },
+          tag: `firebase-${Date.now()}`,
+          requireInteraction: true,
+          vibrate: [200, 100, 200],
+          actions: [
+            {
+              action: 'open',
+              title: 'Open'
+            },
+            {
+              action: 'close',
+              title: 'Close'
+            }
+          ]
+        };
+
+        // Update badge count for Firebase notifications
+        updateBadgeCount(notificationBadgeCount + 1);
+
+        return self.registration.showNotification(notificationTitle, notificationOptions);
+      });
+    }
+  } catch (error) {
+    console.error('🔥 Service Worker: Failed to initialize Firebase:', error);
+  }
+}
 
 const CACHE_NAME = 'adaptonia-cache-v5';
 const urlsToCache = [
@@ -105,16 +174,26 @@ const AUTO_CHECK_CONFIG = {
   STORAGE_CHECK_INTERVAL: 15000 // Check storage every 15 seconds
 };
 
-// Install event - cache static assets
+// Install event - cache static assets and initialize Firebase
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing v5 with AUTOMATIC background triggers');
+  console.log('Service Worker: Installing v5 with AUTOMATIC background triggers + Firebase');
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('Service Worker: Caching Files');
-      return cache.addAll(urlsToCache).catch((error) => {
-        console.error('Service Worker: Cache installation failed:', error);
-      });
-    })
+    (async () => {
+      try {
+        // Cache static assets
+        const cache = await caches.open(CACHE_NAME);
+        console.log('Service Worker: Caching Files');
+        await cache.addAll(urlsToCache).catch((error) => {
+          console.error('Service Worker: Cache installation failed:', error);
+        });
+        
+        // Initialize Firebase
+        await initializeFirebase();
+        
+      } catch (error) {
+        console.error('Service Worker: Installation failed:', error);
+      }
+    })()
   );
   // Skip waiting to activate immediately
   self.skipWaiting();
@@ -141,6 +220,9 @@ self.addEventListener('activate', (event) => {
           hasClients: !!(await self.clients.matchAll()).length,
           isControlling: !!self.clients.controller
         });
+      
+      // Initialize Firebase if not already initialized
+      await initializeFirebase();
       
       // Initialize automatic checking system
       await initializeAutomaticChecking();
@@ -341,6 +423,10 @@ function setupFallbackTriggers() {
       console.log('🚀 Service Worker: Received activation message');
       self.skipWaiting();
       self.clients.claim();
+      // Initialize Firebase if not already done
+      initializeFirebase().catch(error => {
+        console.error('🔥 Service Worker: Failed to initialize Firebase on activation:', error);
+      });
       return;
     }
     
@@ -455,10 +541,10 @@ async function checkAndProcessDueReminders() {
       const reminderTimeUTC = reminderTime.getTime();
       const nowUTC = now.getTime();
       
-      // Log the times for debugging
-      console.log(`Service Worker: Comparing times for reminder ${reminder.title}:`);
-      console.log(`- Current time (UTC): ${new Date(nowUTC).toISOString()}`);
-      console.log(`- Reminder time (UTC): ${new Date(reminderTimeUTC).toISOString()}`);
+      // // Log the times for debugging
+      // console.log(`Service Worker: Comparing times for reminder ${reminder.title}:`);
+      // console.log(`- Current time (UTC): ${new Date(nowUTC).toISOString()}`);
+      // console.log(`- Reminder time (UTC): ${new Date(reminderTimeUTC).toISOString()}`);
       
       // Check if reminder is due with a 5-minute window
       // This includes 2.5 minutes before and 2.5 minutes after the scheduled time

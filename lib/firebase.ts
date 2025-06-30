@@ -57,28 +57,15 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
     if (currentToken) {
       console.log('FCM Token:', currentToken);
       
-      // Get current user ID
+      // Get current user ID and store token directly using push notification service
       try {
         const user = await account.get();
         console.log('👤 Current user ID:', user.$id);
         
-        // Store token in backend
-        const response = await fetch('/api/user/store-fcm-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            token: currentToken,
-            userId: user.$id 
-          }),
-          credentials: 'include'
-        });
-        
-        const result = await response.json();
-        if (result.success) {
-          console.log('✅ FCM token stored successfully');
-        } else {
-          console.error('❌ Failed to store FCM token:', result.message);
-        }
+        // Import and use the push notification service directly
+        const { pushNotificationService } = await import('@/lib/appwrite/push-notifications');
+        await pushNotificationService.storePushToken(user.$id, currentToken);
+        console.log('✅ FCM token stored successfully in Appwrite');
       } catch (error) {
         console.error('❌ Failed to get user or store FCM token:', error);
       }
@@ -108,21 +95,24 @@ export const onMessageListener = () =>
     });
   });
 
-// Service Worker registration for FCM
+// Service Worker registration for FCM (now uses unified service worker)
 export const registerServiceWorker = async () => {
   if ('serviceWorker' in navigator) {
     try {
-      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-        scope: '/firebase-cloud-messaging-push-scope'
-      });
+      // Use the unified service worker that includes Firebase functionality
+      const registration = await navigator.serviceWorker.getRegistration('/');
       
-      console.log('Firebase Service Worker registered with scope:', registration.scope);
-      
-      // Wait for the service worker to be ready
-      await navigator.serviceWorker.ready;
-      console.log('Firebase Service Worker is ready');
-      
-      return registration;
+      if (registration) {
+        console.log('Using existing unified service worker for Firebase');
+        // Send activation message to ensure Firebase is initialized
+        if (registration.active) {
+          registration.active.postMessage({ type: 'ACTIVATE_WORKER' });
+        }
+        return registration;
+      } else {
+        console.warn('No unified service worker found - should be registered by PWANotificationManager');
+        return null;
+      }
     } catch (error) {
       console.error('Service Worker registration failed:', error);
       return null;

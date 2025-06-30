@@ -681,15 +681,15 @@ const Dashboard = () => {
           console.log('🔍 Existing service worker registration:', registration);
           
           if (!registration) {
-            console.log('🔍 No existing registration, registering Firebase service worker...');
-            registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-              scope: '/firebase-cloud-messaging-push-scope'
-            });
-            console.log('🔍 Firebase service worker registered:', registration);
-            
-            // Wait for it to activate
-            await navigator.serviceWorker.ready;
-            console.log('🔍 Service worker ready');
+            console.log('🔍 No existing registration found - unified service worker should be registered by PWANotificationManager');
+            // Don't register a separate service worker here
+            registration = null;
+          } else {
+            console.log('🔍 Using existing unified service worker for Firebase testing');
+            // Ensure Firebase is initialized in the unified service worker
+            if (registration.active) {
+              registration.active.postMessage({ type: 'ACTIVATE_WORKER' });
+            }
           }
           
           if (registration) {
