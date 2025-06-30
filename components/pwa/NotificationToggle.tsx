@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, BellOff } from 'lucide-react';
 import { toast } from 'sonner';
-import { requestNotificationPermission } from '@/components/PWANotificationManager';
 
 export const NotificationToggle: React.FC = () => {
   const [isEnabled, setIsEnabled] = useState(false);
@@ -31,10 +30,10 @@ export const NotificationToggle: React.FC = () => {
     
     try {
       if (!isEnabled) {
-        // Request notification permission
-        const permissionGranted = await requestNotificationPermission();
+        // Request notification permission directly from the browser's Notification API
+        const permission = await Notification.requestPermission();
         
-        if (permissionGranted) {
+        if (permission === 'granted') {
           setIsEnabled(true);
           toast.success('Notifications enabled');
           

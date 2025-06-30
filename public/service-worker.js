@@ -225,9 +225,12 @@ function startNotificationChecking() {
   console.log('✅ Service Worker: Notification checking system started');
 }
 
-async function checkForDueNotifications() {
+async function checkForDueNotifications(retryCount = 0) {
+  const maxRetries = 3;
+  const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 10000); // Exponential backoff up to 10s
+
   try {
-    console.log('🔍 Service Worker: Checking for due notifications...');
+    console.log(`🔍 Service Worker: Checking for due notifications... (attempt ${retryCount + 1}/${maxRetries + 1})`);
     console.log('🔍 Service Worker: Function called at:', new Date().toISOString());
     
     // Get user ID from clients
@@ -247,7 +250,7 @@ async function checkForDueNotifications() {
           channel.port1.onmessage = (event) => {
             resolve(event.data);
           };
-          setTimeout(() => reject(new Error('Timeout')), 2000);
+          setTimeout(() => reject(new Error('Timeout')), 5000);
           client.postMessage({ type: 'GET_USER_ID' }, [channel.port2]);
         });
         
@@ -267,8 +270,8 @@ async function checkForDueNotifications() {
     
     console.log('👤 Service Worker: Checking notifications for user:', userId);
     
-    // Check for due notifications from server
-    const response = await fetch('/api/notifications/due', {
+    // Check for pending reminders from server (using original working endpoint)
+    const response = await fetch('/api/reminders/pending', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -277,37 +280,60 @@ async function checkForDueNotifications() {
     });
     
     if (!response.ok) {
-      console.error('❌ Service Worker: Failed to fetch due notifications:', response.status);
-      return;
+      console.error(`❌ Service Worker: Failed to fetch pending reminders (status: ${response.status})`);
+      // Throw an error to trigger the retry logic
+      throw new Error(`Server responded with status ${response.status}`);
     }
     
     const data = await response.json();
-    const dueNotifications = data.notifications || [];
+    const serverReminders = data.reminders || [];
     
-    console.log(`📋 Service Worker: Found ${dueNotifications.length} due notifications`);
+    console.log(`📋 Service Worker: Found ${serverReminders.length} server reminders`);
     
-    // Show each due notification
-    for (const notification of dueNotifications) {
-      await showDueNotification(notification);
+    // Filter for reminders that are actually due now (within 2 minutes tolerance)
+    const now = new Date();
+    const dueReminders = serverReminders.filter(reminder => {
+      const reminderTime = new Date(reminder.sendDate);
+      const timeDiff = reminderTime.getTime() - now.getTime();
+      const twoMinutes = 2 * 60 * 1000; // 2 minutes in milliseconds
+      
+      // Show if due within 2 minutes (early) or overdue
+      return timeDiff <= twoMinutes;
+    });
+    
+    console.log(`🎯 Service Worker: Found ${dueReminders.length} due reminders to show`);
+    
+    // Show each due reminder
+    for (const reminder of dueReminders) {
+      await showDueNotification(reminder);
     }
     
   } catch (error) {
-    console.error('❌ Service Worker: Failed to check for due notifications:', error);
+    console.error('❌ Service Worker: Failed to check for due notifications:', error.message);
+    
+    // If we have retries left, schedule another attempt
+    if (retryCount < maxRetries) {
+      console.log(`🔄 Service Worker: Retrying in ${retryDelay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      return checkForDueNotifications(retryCount + 1);
+    } else {
+      console.error('💀 Service Worker: Max retries reached. Giving up for this cycle.');
+    }
   }
 }
 
-async function showDueNotification(notification) {
+async function showDueNotification(reminder) {
   try {
-    console.log('📱 Service Worker: Showing notification:', notification.title);
+    console.log('📱 Service Worker: Showing notification for reminder:', reminder.title);
     
     const notificationOptions = {
-      body: notification.description || 'Time for your goal!',
+      body: reminder.description || 'Time for your goal!',
       icon: '/icons/icon-192x192.png',
       badge: '/icons/icon-72x72.png',
       vibrate: [200, 100, 200],
       data: {
-        goalId: notification.goalId,
-        reminderId: notification.id,
+        goalId: reminder.goalId,
+        reminderId: reminder.id,
         url: '/dashboard',
         timestamp: Date.now(),
         source: 'server'
@@ -317,12 +343,12 @@ async function showDueNotification(notification) {
         { action: 'complete', title: 'Mark Complete' },
         { action: 'snooze', title: 'Snooze 5 min' }
       ],
-      tag: `reminder-${notification.goalId}`,
+      tag: `reminder-${reminder.goalId}`,
       requireInteraction: true
     };
     
     updateBadgeCount(notificationBadgeCount + 1);
-    await self.registration.showNotification(notification.title, notificationOptions);
+    await self.registration.showNotification(reminder.title, notificationOptions);
     
     // Send sound message to clients
     const clients = await self.clients.matchAll();
@@ -330,14 +356,14 @@ async function showDueNotification(notification) {
       try {
         client.postMessage({
           type: 'PLAY_NOTIFICATION_SOUND',
-          data: { goalId: notification.goalId }
+          data: { goalId: reminder.goalId }
         });
       } catch (error) {
         console.error('Service Worker: Failed to send sound message:', error);
       }
     });
     
-    console.log('✅ Service Worker: Notification shown successfully');
+    console.log('✅ Service Worker: Notification shown successfully for reminder:', reminder.id);
     
   } catch (error) {
     console.error('❌ Service Worker: Failed to show notification:', error);
