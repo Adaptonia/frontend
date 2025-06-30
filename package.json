@@ -1,16 +1,60 @@
 {
-  "name": "send-push-notification",
-  "version": "1.0.0",
-  "description": "Appwrite function to send push notifications via Firebase FCM",
-  "main": "src/main.js",
+  "name": "adaptonia_frontend",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "start": "node src/main.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "node-appwrite": "^13.0.0",
-    "firebase-admin": "^12.0.0"
+    "@hookform/resolvers": "^5.0.1",
+    "@onesignal/node-onesignal": "^5.1.0-beta1",
+    "@radix-ui/react-avatar": "^1.1.7",
+    "@radix-ui/react-dialog": "^1.1.13",
+    "@radix-ui/react-label": "^2.1.6",
+    "@radix-ui/react-select": "^2.2.2",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-switch": "^1.2.4",
+    "@types/lodash": "^4.17.16",
+    "appwrite": "^18.0.0",
+    "axios": "^1.8.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "critters": "^0.0.23",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^12.9.2",
+    "jwt-decode": "^4.0.0",
+    "lodash": "^4.17.21",
+    "lucide-react": "^0.511.0",
+    "next": "15.3.1",
+    "next-auth": "^4.24.11",
+    "next-pwa": "^5.6.0",
+    "next-themes": "^0.4.6",
+    "onesignal-node": "^3.4.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hook-form": "^7.56.2",
+    "react-icons": "^5.5.0",
+    "react-onesignal": "^3.2.3",
+    "shadcn": "^2.4.1",
+    "socket.io-client": "^4.8.1",
+    "sonner": "^2.0.3",
+    "tailwind-merge": "^3.2.0",
+    "tw-animate-css": "^1.2.6",
+    "zod": "^3.24.4"
   },
-  "engines": {
-    "node": ">=18.0.0"
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
+    "eslint": "^9",
+    "eslint-config-next": "15.3.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }
