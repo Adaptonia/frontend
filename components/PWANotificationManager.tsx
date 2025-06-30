@@ -60,12 +60,10 @@ export default function PWANotificationManager({ children }: PWANotificationMana
       const isIOS = typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       
       if (isIOS) {
-        console.log('📱 PWA Manager: iOS device detected - using iOS notification system');
-        toast.warning('Push notifications are not supported on iOS. Please use in-app reminders.');
-        return;
+        console.log('📱 PWA Manager: iOS device detected - will register service worker but limit notifications');
       }
 
-      // First register service workers
+      // ALWAYS register service workers (needed for PWA functionality, not just notifications)
       const registration = await registerServiceWorkerWithRetry();
       if (!registration) {
         console.error('❌ PWA Manager: Failed to register service workers');
@@ -82,24 +80,32 @@ export default function PWANotificationManager({ children }: PWANotificationMana
       startHeartbeatSystem();
       startVisibilityMonitoring();
 
-      // Request Firebase notification permission
-      const fcmToken = await requestFirebasePermission();
-      if (fcmToken) {
-        console.log('✅ PWA Manager: Firebase notification permission granted');
-        setNotificationPermission('granted');
-        setIsServiceWorkerReady(true);
-        
-        // Store FCM token in Appwrite
-        try {
-          const user = await account.get();
-          await pushNotificationService.storePushToken(user.$id, fcmToken);
-          console.log('✅ PWA Manager: FCM token stored in Appwrite');
-        } catch (error) {
-          console.error('❌ PWA Manager: Failed to store FCM token:', error);
+      // Only attempt Firebase notifications on non-iOS devices
+      if (!isIOS) {
+        // Request Firebase notification permission
+        const fcmToken = await requestFirebasePermission();
+        if (fcmToken) {
+          console.log('✅ PWA Manager: Firebase notification permission granted');
+          setNotificationPermission('granted');
+          setIsServiceWorkerReady(true);
+          
+          // Store FCM token in Appwrite
+          try {
+            const user = await account.get();
+            await pushNotificationService.storePushToken(user.$id, fcmToken);
+            console.log('✅ PWA Manager: FCM token stored in Appwrite');
+          } catch (error) {
+            console.error('❌ PWA Manager: Failed to store FCM token:', error);
+          }
+        } else {
+          console.warn('⚠️ PWA Manager: Firebase notification permission denied');
+          setNotificationPermission('denied');
         }
       } else {
-        console.warn('⚠️ PWA Manager: Firebase notification permission denied');
-        setNotificationPermission('denied');
+        // For iOS, mark as ready but without push notifications
+        console.log('📱 PWA Manager: iOS detected - service worker ready, notifications limited');
+        setIsServiceWorkerReady(true);
+        setNotificationPermission('denied'); // iOS doesn't support push notifications properly
       }
 
       // Set up foreground message listener
@@ -137,8 +143,8 @@ export default function PWANotificationManager({ children }: PWANotificationMana
       // Then register main service worker
       const mainRegistration = await navigator.serviceWorker.register('/service-worker.js', {
         scope: '/',
-        updateViaCache: 'none',
-        type: 'module'
+        updateViaCache: 'none'
+        // Removed type: 'module' for better iOS compatibility
       });
       console.log('✅ PWA Manager: Main service worker registered');
       
