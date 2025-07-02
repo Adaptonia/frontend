@@ -90,15 +90,17 @@ export function ReminderChecker() {
   };
 
   useEffect(() => {
-    // Follow Salein's pattern: check once on load, then set an interval.
-    checkAndSendReminders();
-
-    // Check every minute, just like Salein
-    const interval = setInterval(checkAndSendReminders, 60 * 1000);
-
-    return () => {
-      clearInterval(interval);
-    };
+    // 🚫 CLIENT-SIDE REMINDER CHECKING DISABLED
+    // We now use Vercel Cron Jobs for server-side email reminders
+    // This runs automatically every 5 minutes via /api/cron/email-reminders
+    // See vercel.json and VERCEL_CRON_SETUP.md for configuration
+    
+    console.log("📌 Client-side reminder checking is disabled - using Vercel cron jobs instead");
+    
+    // Uncomment the lines below to re-enable client-side checking if needed:
+    // checkAndSendReminders();
+    // const interval = setInterval(checkAndSendReminders, 60 * 1000);
+    // return () => { clearInterval(interval); };
   }, []);
 
   return null; // This is an invisible component
