@@ -4,7 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { ThemeProvider } from "@/context/ThemeContext";
 import MobileZoomFix from "@/components/MobileZoomFix";
-// import { TestReminder } from "@/src/components/TestReminder";
+import { ReminderChecker } from "@/components/ReminderChecker";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -60,6 +60,8 @@ export default function RootLayout({
               {children}
               {/* Mobile Zoom Fix - prevents and resets mobile zoom on input focus */}
               <MobileZoomFix />
+              {/* Email Reminder Checker - automatically sends due goal reminders */}
+              <ReminderChecker />
             {/* Test Reminder Component - for debugging (remove in production) */}
             {/* <div className="fixed bottom-4 right-4 z-50">
               <TestReminder />
