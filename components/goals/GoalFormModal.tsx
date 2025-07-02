@@ -7,14 +7,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { ActionButtonProps, CreateGoalRequest, GoalFormModalProps, ModalTab, PremiumFeatureModalProps, Milestone, Goal } from '@/lib/types';
 import MilestoneComponent from './MilestoneComponent';
-import { reminderService } from '@/src/services/appwrite/reminderService';
+import { reminderService } from '@/services/appwrite/reminderService';
 import { useRouter } from 'next/navigation';
-import { createGoal } from '@/src/services/appwrite/database';
-import { updateGoal } from '@/src/services/appwrite';
+import { createGoal } from '@/services/appwrite/database';
+import { updateGoal } from '@/services/appwrite';
 import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
-import { requestNotificationPermission, scheduleReminderNotificationWithAlarm } from '@/components/PWANotificationManager';
-import { scheduleServerPushNotification } from '@/lib/push-notifications';
 import { scheduleReminders } from '@/lib/utils/dateUtils';
 
 // Helper function to format dates nicely
@@ -196,6 +194,10 @@ interface GoalFormData {
     time: string;
     days: string[];
     customDate?: string;
+    // Additional properties for scheduleReminders function
+    date?: string;
+    interval?: ReminderInterval;
+    count?: number;
   };
   simpleReminder: string;
 }
@@ -250,7 +252,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
     
     // Default settings
     return {
-      enabled: false,
+    enabled: false,
       interval: 'daily',
       count: 7,
       time: '09:00',
@@ -367,53 +369,23 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
   }, []);
 
   // Schedule reminders based on the settings
-  // Schedule milestone notifications
-  const scheduleMilestoneNotifications = async (goalId: string, goalTitle: string) => {
-    if (milestones.length === 0) return;
-    
-    try {
-      console.log('📍 Scheduling milestone notifications for goal:', goalId);
-      
-      for (const milestone of milestones) {
-        // Only schedule notifications for future milestones
-        const milestoneDate = new Date(milestone.date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); // Reset time to start of day
-      
-        if (milestoneDate >= today) {
-          // Create milestone reminder at 9 AM in user's local timezone
-          const reminderDateTime = new Date(milestone.date);
-          reminderDateTime.setHours(9, 0, 0, 0); // 9:00 AM local time
-          
-          const reminderData = {
-            goalId: `${goalId}-milestone-${milestone.id}`,
-            userId: user?.id || 'system',
-            title: `Milestone Due: ${milestone.title}`,
-            description: `Time to work on "${milestone.title}" for your goal "${goalTitle}". ${milestone.description || ''}`,
-            sendDate: reminderDateTime.toISOString(), // Proper ISO string in user's timezone
-            dueDate: milestoneDate.toISOString() // Milestone due date as ISO string
-          };
-
-          await reminderService.createReminder(reminderData);
-          console.log(`✅ Milestone notification scheduled: ${milestone.title} at ${reminderDateTime.toLocaleString()}`);
-        }
-      }
-
-      if (milestones.filter(m => new Date(m.date) >= new Date()).length > 0) {
-        toast.success('Milestone notifications scheduled', {
-          description: `You'll be reminded at 9 AM on milestone dates`
-        });
-      }
-    } catch (error) {
-      console.error('❌ Error scheduling milestone notifications:', error);
-      toast.error('Failed to schedule milestone notifications');
-      }
-  };
+  // Milestone notification scheduling removed - using Resend for email notifications
 
   const handleSubmit = async (data: GoalFormData) => {
     try {
       setIsSubmitting(true);
       console.log('🔄 GOAL FORM: Form submitted with data:', data);
+      console.log('📅 GOAL FORM: Reminder settings:', data.reminderSettings);
+      console.log('👤 GOAL FORM: User:', user);
+
+      // Prepare a compact version of reminder settings for storage
+      const compactReminderSettings = data.reminderSettings.enabled ? {
+        e: data.reminderSettings.enabled,
+        i: data.reminderSettings.interval,
+        c: data.reminderSettings.count,
+        t: data.reminderSettings.time,
+        d: data.reminderSettings.date
+      } : { e: false };
 
       if (data.id) {
         console.log('🔄 GOAL FORM: Updating existing goal with ID:', data.id);
@@ -424,7 +396,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           category: data.category as any,
           deadline: data.dueDate,
           milestones: JSON.stringify(data.milestones),
-          reminderSettings: JSON.stringify(data.reminderSettings)
+          reminderSettings: JSON.stringify(compactReminderSettings)
         });
         
         console.log('✅ GOAL FORM: Goal updated successfully');
@@ -435,19 +407,31 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
         const hasAdvancedReminders = data.reminderSettings.enabled;
         const hasSimpleReminder = data.simpleReminder && data.simpleReminder.trim() !== '';
         
+        console.log('📊 GOAL FORM: Reminder flags:', {
+          hasAdvancedReminders,
+          hasSimpleReminder,
+          reminderSettings: data.reminderSettings,
+          simpleReminder: data.simpleReminder
+        });
+        
         if (hasAdvancedReminders || hasSimpleReminder) {
           console.log('🎯 GOAL FORM: Scheduling reminders via server-side function');
           
-          // Only use server-side scheduling - no client conflicts
-          await scheduleReminders(
-            data.id,
-            data.reminderSettings,
-            data.simpleReminder,
-            user
-          );
-          
-          console.log('✅ GOAL FORM: Server-side reminders scheduled successfully');
-          toast.success('Goal updated and reminders scheduled! 🚀');
+          try {
+            // Only use server-side scheduling - no client conflicts
+            await scheduleReminders(
+              data.id,
+              data.reminderSettings,
+              data.simpleReminder,
+              user
+            );
+            
+            console.log('✅ GOAL FORM: Server-side reminders scheduled successfully');
+            toast.success('Goal updated and reminders scheduled! 🚀');
+          } catch (error) {
+            console.error('❌ GOAL FORM: Failed to schedule reminders:', error);
+            toast.error('Goal updated but failed to schedule reminders');
+          }
         } else {
           console.log('ℹ️ GOAL FORM: No reminders to schedule');
           toast.success('Goal updated successfully!');
@@ -461,7 +445,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           category: data.category as any,
           deadline: data.dueDate,
           milestones: JSON.stringify(data.milestones),
-          reminderSettings: JSON.stringify(data.reminderSettings),
+          reminderSettings: JSON.stringify(compactReminderSettings),
           userId: user?.id || '',
           createdAt: initialData?.createdAt || new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -472,14 +456,16 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       } else {
         console.log('🔄 GOAL FORM: Creating new goal');
         
-        const newGoal = await createGoal({
+        const goalData: CreateGoalRequest = {
           title: data.title,
           description: data.description,
           category: data.category as any,
           deadline: data.dueDate,
           milestones: JSON.stringify(data.milestones),
-          reminderSettings: JSON.stringify(data.reminderSettings)
-        }, user?.id || '');
+          reminderSettings: JSON.stringify(compactReminderSettings)
+        };
+        
+        const newGoal = await createGoal(goalData, user?.id || '');
         
         console.log('✅ GOAL FORM: Goal created successfully with ID:', newGoal.id);
 
@@ -490,15 +476,20 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
         if (hasAdvancedReminders || hasSimpleReminder) {
           console.log('🎯 GOAL FORM: Scheduling reminders for new goal');
           
-          await scheduleReminders(
-            newGoal.id,
-            data.reminderSettings,
-            data.simpleReminder,
-            user
-          );
-          
-          console.log('✅ GOAL FORM: New goal reminders scheduled successfully');
-          toast.success('Goal created and reminders scheduled! 🚀');
+          try {
+            await scheduleReminders(
+              newGoal.id,
+              data.reminderSettings,
+              data.simpleReminder,
+              user
+            );
+            
+            console.log('✅ GOAL FORM: New goal reminders scheduled successfully');
+            toast.success('Goal created and reminders scheduled! 🚀');
+          } catch (error) {
+            console.error('❌ GOAL FORM: Failed to schedule reminders:', error);
+            toast.error('Goal created but failed to schedule reminders');
+          }
         } else {
           console.log('ℹ️ GOAL FORM: No reminders for new goal');
           toast.success('Goal created successfully!');
@@ -512,7 +503,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           category: data.category as any,
           deadline: data.dueDate,
           milestones: JSON.stringify(data.milestones),
-          reminderSettings: JSON.stringify(data.reminderSettings),
+          reminderSettings: JSON.stringify(compactReminderSettings),
           userId: user?.id || '',
           createdAt: newGoal.createdAt || new Date().toISOString(),
           updatedAt: newGoal.updatedAt || new Date().toISOString(),
@@ -668,22 +659,35 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       {/* Add Task button - fixed at bottom */}
       <div className="mt-auto p-5 border-t">
         <button 
-          onClick={() => handleSubmit({
-            id: initialData?.id,
-            title,
-            description,
-            category,
-            dueDate: selectedDate || '',
-            milestones,
-            reminderSettings: {
-              enabled: reminderSettings.enabled,
-              frequency: 'daily',
-              time: reminderSettings.time,
-              days: [],
-              customDate: reminderSettings.date
-            },
-            simpleReminder: reminder || ''
-          })} 
+          onClick={() => {
+            console.log('🔥 BUTTON CLICKED: Starting goal submission');
+            console.log('🔥 REMINDER SETTINGS STATE:', reminderSettings);
+            console.log('🔥 USER:', user);
+            
+            const formData = {
+              id: initialData?.id,
+              title,
+              description,
+              category,
+              dueDate: selectedDate || '',
+              milestones,
+              reminderSettings: {
+                enabled: reminderSettings.enabled,
+                frequency: 'daily' as const,
+                time: reminderSettings.time,
+                days: [],
+                customDate: reminderSettings.date,
+                // Add the correct structure for scheduleReminders function
+                date: reminderSettings.date,
+                interval: reminderSettings.interval,
+                count: reminderSettings.count
+              } as any, // Temporary fix for TypeScript
+              simpleReminder: reminder || ''
+            };
+            
+            console.log('🔥 FORM DATA PREPARED:', formData);
+            handleSubmit(formData);
+          }} 
           disabled={isSubmitting}
           className="w-full py-4 text-white bg-blue-500 rounded-full font-medium hover:bg-blue-600 transition-colors disabled:bg-blue-300 flex items-center justify-center"
         >
@@ -1131,7 +1135,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           <button 
             onClick={() => {
               try {
-                // Set the reminder date from the reminder settings
+              // Set the reminder date from the reminder settings
                 if (reminderSettings.date && reminderSettings.time) {
                   // Create date in local time zone
                   const [hours, minutes] = reminderSettings.time.split(':');

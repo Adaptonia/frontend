@@ -1,7 +1,7 @@
 'use client'
 
 import InputField from "@/components/reuseable/InputField";
-import { loginWithGoogle, registerUser } from "@/src/services/appwrite";
+import { loginWithGoogle, registerUser } from "@/services/appwrite";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";

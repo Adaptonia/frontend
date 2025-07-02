@@ -1,6 +1,6 @@
 'use client';
 
-import { getCurrentUser, logoutUser } from '../src/services/appwrite';
+import { getCurrentUser, logoutUser } from '../services/appwrite';
 import { AuthContextType, User } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useState, createContext, useEffect, useContext, useCallback } from "react";

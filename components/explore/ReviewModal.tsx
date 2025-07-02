@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Star, Send, Trash2 } from 'lucide-react';
 import { GoalPackWithStats } from '@/lib/types';
-import { createGoalPackReview, updateGoalPackReview, deleteGoalPackReview } from '@/src/services/appwrite/goalPackService';
+import { createGoalPackReview, updateGoalPackReview, deleteGoalPackReview } from '@/services/appwrite/goalPackService';
 import { toast } from 'sonner';
 
 interface ReviewModalProps {

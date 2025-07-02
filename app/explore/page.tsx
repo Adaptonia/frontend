@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Star, ShoppingCart, Eye, Users, Calendar, BarChart3, BookOpen, User, Heart, MessageCircle, TrendingUp, Award, Clock } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { getGoalPacksWithStats } from '@/src/services/appwrite/goalPackService';
+import { getGoalPacksWithStats } from '@/services/appwrite/goalPackService';
 import { GoalPackWithStats } from '@/lib/types';
 import { toast } from 'sonner';
 import BottomNav from '@/components/dashboard/BottomNav';

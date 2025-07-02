@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
-import { getCurrentUser } from '@/src/services/appwrite/auth'
+import { getCurrentUser } from '@/services/appwrite/auth'
 import { toast } from 'sonner'
 
 export default function OAuthCallback() {

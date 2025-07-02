@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getBadgeCount } from '@/components/PWANotificationManager';
+// Notification badge functionality simplified - no longer using PWA notifications
 
 interface NotificationBadgeProps {
   className?: string;
@@ -16,27 +16,27 @@ export const NotificationBadge: React.FC<NotificationBadgeProps> = ({
 }) => {
   const [badgeCount, setBadgeCount] = useState(0);
 
-  useEffect(() => {
-    // Get initial badge count
-    setBadgeCount(getBadgeCount());
+  // useEffect(() => {
+  //   // Get initial badge count
+  //   setBadgeCount(getBadgeCount());
 
-    // Listen for badge count updates from service worker
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'BADGE_COUNT_UPDATED') {
-        setBadgeCount(event.data.count || 0);
-      }
-    };
+  //   // Listen for badge count updates from service worker
+  //   const handleMessage = (event: MessageEvent) => {
+  //     if (event.data?.type === 'BADGE_COUNT_UPDATED') {
+  //       setBadgeCount(event.data.count || 0);
+  //     }
+  //   };
 
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('message', handleMessage);
-    }
+  //   if ('serviceWorker' in navigator) {
+  //     navigator.serviceWorker.addEventListener('message', handleMessage);
+  //   }
 
-    return () => {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.removeEventListener('message', handleMessage);
-      }
-    };
-  }, []);
+  //   return () => {
+  //     if ('serviceWorker' in navigator) {
+  //       navigator.serviceWorker.removeEventListener('message', handleMessage);
+  //     }
+  //   };
+  // }, []);
 
   // Don't render if count is 0
   if (badgeCount <= 0) {
@@ -82,27 +82,27 @@ export const NotificationBadge: React.FC<NotificationBadgeProps> = ({
 export const useNotificationBadge = () => {
   const [badgeCount, setBadgeCount] = useState(0);
 
-  useEffect(() => {
-    // Get initial badge count
-    setBadgeCount(getBadgeCount());
+  // useEffect(() => {
+  //   // Get initial badge count
+  //   setBadgeCount(getBadgeCount());
 
-    // Listen for badge count updates from service worker
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'BADGE_COUNT_UPDATED') {
-        setBadgeCount(event.data.count || 0);
-      }
-    };
+  //   // Listen for badge count updates from service worker
+  //   const handleMessage = (event: MessageEvent) => {
+  //     if (event.data?.type === 'BADGE_COUNT_UPDATED') {
+  //       setBadgeCount(event.data.count || 0);
+  //     }
+  //   };
 
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('message', handleMessage);
-    }
+  //   if ('serviceWorker' in navigator) {
+  //     navigator.serviceWorker.addEventListener('message', handleMessage);
+  //   }
 
-    return () => {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.removeEventListener('message', handleMessage);
-      }
-    };
-  }, []);
+  //   return () => {
+  //     if ('serviceWorker' in navigator) {
+  //       navigator.serviceWorker.removeEventListener('message', handleMessage);
+  //     }
+  //   };
+  // }, []);
 
   return badgeCount;
 };

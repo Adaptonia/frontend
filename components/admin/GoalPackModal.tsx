@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { GoalPackModalProps, CreateGoalPackRequest, Milestone, ModalTab } from '@/lib/types';
 import MilestoneComponent from '../goals/MilestoneComponent';
-import { createGoalPack, updateGoalPack } from '@/src/services/appwrite/goalPackService';
+import { createGoalPack, updateGoalPack } from '@/services/appwrite/goalPackService';
 import { useAuth } from '@/context/AuthContext';
 
 // Action button component

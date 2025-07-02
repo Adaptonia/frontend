@@ -1,6 +1,6 @@
 'use client';
 
-import { useMobileZoomFix } from '@/src/hooks/useMobileZoomFix';
+import { useMobileZoomFix } from '@/hooks/useMobileZoomFix';
 
 const MobileZoomFix = () => {
   useMobileZoomFix();

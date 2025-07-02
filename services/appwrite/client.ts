@@ -23,4 +23,4 @@ export const GOAL_PACKS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_GOAL_PA
 export const LIBRARY_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_LIBRARY_COLLECTION_ID || 'library';
 export const GOAL_PACK_REVIEWS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_GOAL_PACK_REVIEWS_COLLECTION_ID || 'goal_pack_reviews';
 export const GOAL_PACK_PURCHASES_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_GOAL_PACK_PURCHASES_COLLECTION_ID || 'goal_pack_purchases';
-export const PUSH_TOKENS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_PUSH_TOKENS_COLLECTION_ID || 'push_tokens';
+// Removed PUSH_TOKENS_COLLECTION_ID - using Resend for email notifications

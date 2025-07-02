@@ -5,7 +5,7 @@ import { X, Loader2, BookOpen, Video, Headphones, FileText, GraduationCap, File,
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { LibraryModalProps, LibraryItemType, CreateLibraryItemRequest } from '@/lib/types';
-import { createLibraryItem, updateLibraryItem } from '@/src/services/appwrite/libraryService';
+import { createLibraryItem, updateLibraryItem } from '@/services/appwrite/libraryService';
 import { useAuth } from '@/context/AuthContext';
 
 const LibraryModal: React.FC<LibraryModalProps> = ({

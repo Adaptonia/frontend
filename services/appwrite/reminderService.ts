@@ -2,7 +2,6 @@
 
 import { ID, Query } from 'appwrite';
 import { databases, DATABASE_ID, REMINDERS_COLLECTION_ID } from './client';
-import { scheduleReminderNotification } from '@/components/PWANotificationManager';
 
 // Interface for creating a reminder
 export interface CreateReminderRequest {
@@ -55,6 +54,14 @@ class ReminderService {
   async createReminder(reminderData: CreateReminderRequest): Promise<Reminder> {
     try {
       console.log('🔧 REMINDER SERVICE: createReminder called with data:', reminderData);
+      console.log('🔑 REMINDER SERVICE: Environment variables:', {
+        DATABASE_ID: process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID,
+        REMINDERS_COLLECTION_ID: process.env.NEXT_PUBLIC_APPWRITE_REMINDERS_COLLECTION_ID
+      });
+      console.log('🔑 REMINDER SERVICE: Using IDs:', {
+        DATABASE_ID,
+        REMINDERS_COLLECTION_ID
+      });
       
       validateConfig();
       console.log('✅ REMINDER SERVICE: Config validation passed');
@@ -103,9 +110,9 @@ class ReminderService {
       console.log('🎯 REMINDER SERVICE: Reminder object created:', reminder);
       
       // 🎯 SIMPLIFIED APPROACH: Store in database only
-      // Appwrite Functions will handle FCM delivery at scheduled time
+      // Email notifications will be handled via Resend instead of push notifications
       console.log('📡 REMINDER SERVICE: Reminder stored in database');
-      console.log('🚀 REMINDER SERVICE: Appwrite Functions will handle FCM delivery');
+      console.log('📧 REMINDER SERVICE: Email notifications will be handled via Resend');
       console.log('⏰ REMINDER SERVICE: Scheduled for:', reminder.sendDate);
 
       console.log('✅ REMINDER SERVICE: createReminder completed successfully');
@@ -271,21 +278,19 @@ class ReminderService {
   }
 
   /**
-   * Update retry count with next retry time
+   * Mark a reminder as completed
    */
-  async updateRetryCount(reminderId: string, retryCount: number): Promise<Reminder> {
+  async markReminderCompleted(reminderId: string): Promise<Reminder> {
     try {
       validateConfig();
-      
-      const nextRetry = new Date(Date.now() + CONFIG.retryDelay).toISOString();
       
       const response = await databases.updateDocument(
         DATABASE_ID,
         REMINDERS_COLLECTION_ID,
         reminderId,
         {
-          retryCount,
-          nextRetry,
+          isCompleted: true,
+          status: 'sent',
           updatedAt: new Date().toISOString()
         }
       );
@@ -306,43 +311,68 @@ class ReminderService {
         nextRetry: response.nextRetry
       };
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update retry count';
-      console.error('Retry count update error:', errorMessage);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to mark reminder as completed';
+      console.error('Reminder completion error:', errorMessage);
       throw error;
     }
   }
 
   /**
-   * Delete all reminders for a goal
+   * Handle retry logic for failed reminders
    */
-  async deleteRemindersByGoalId(goalId: string): Promise<void> {
+  async handleReminderRetry(reminderId: string): Promise<Reminder> {
     try {
       validateConfig();
       
-      // First get all reminders for this goal
-      const reminders = await this.getRemindersByGoalId(goalId);
-      
-      // Then delete them one by one
-      const deletePromises = reminders.map(reminder => 
-        databases.deleteDocument(
-          DATABASE_ID,
-          REMINDERS_COLLECTION_ID,
-          reminder.id
-        )
+      // First get the current reminder
+      const reminder = await databases.getDocument(
+        DATABASE_ID,
+        REMINDERS_COLLECTION_ID,
+        reminderId
       );
       
-      await Promise.all(deletePromises);
+      const retryCount = reminder.retryCount + 1;
+      const nextRetry = new Date(Date.now() + CONFIG.retryDelay).toISOString();
+      
+      // Update with retry information
+      const response = await databases.updateDocument(
+        DATABASE_ID,
+        REMINDERS_COLLECTION_ID,
+        reminderId,
+        {
+          retryCount,
+          nextRetry,
+          status: retryCount >= CONFIG.maxRetries ? 'failed' : 'pending',
+          updatedAt: new Date().toISOString()
+        }
+      );
+
+      return {
+        id: response.$id,
+        goalId: response.goalId,
+        userId: response.userId,
+        title: response.title,
+        description: response.description,
+        sendDate: response.sendDate,
+        dueDate: response.dueDate,
+        status: response.status,
+        retryCount: response.retryCount,
+        isCompleted: response.isCompleted,
+        createdAt: response.createdAt,
+        updatedAt: response.updatedAt,
+        nextRetry: response.nextRetry
+      };
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete reminders';
-      console.error('Reminders deletion error:', errorMessage);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to handle reminder retry';
+      console.error('Reminder retry error:', errorMessage);
       throw error;
     }
   }
 
   /**
-   * Delete a single reminder by ID
+   * Delete a reminder
    */
-  async deleteReminder(reminderId: string): Promise<void> {
+  async deleteReminder(reminderId: string): Promise<boolean> {
     try {
       validateConfig();
       
@@ -351,27 +381,14 @@ class ReminderService {
         REMINDERS_COLLECTION_ID,
         reminderId
       );
+      
+      return true;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to delete reminder';
       console.error('Reminder deletion error:', errorMessage);
-      throw error;
+      return false;
     }
-  }
-
-  /**
-   * Mark reminder as sent
-   */
-  async markReminderAsSent(reminderId: string): Promise<Reminder> {
-    return this.updateReminderStatus(reminderId, 'sent');
-  }
-
-  /**
-   * Mark reminder as failed
-   */
-  async markReminderAsFailed(reminderId: string): Promise<Reminder> {
-    return this.updateReminderStatus(reminderId, 'failed');
   }
 }
 
-// Export a singleton instance
 export const reminderService = new ReminderService(); 

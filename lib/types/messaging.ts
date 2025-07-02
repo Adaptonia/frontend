@@ -74,6 +74,15 @@ export interface Contact {
   unreadCount?: number;
 }
 
+// Message reaction types
+export interface MessageReaction {
+  $id: string;
+  messageId: string;
+  userId: string;
+  emoji: string;
+  createdAt: string;
+}
+
 // Direct message types
 export interface DirectMessage {
   $id: string;

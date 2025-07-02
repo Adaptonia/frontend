@@ -4,7 +4,7 @@ import { ArrowLeft, Camera, Save, Loader2, GraduationCap, Briefcase, User } from
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { EditProfileType, UserType } from "@/lib/types";
-import { updateUserProfile, hasCompletedUserTypeSelection, updateUserType } from "@/src/services/appwrite/userService";
+import { updateUserProfile, hasCompletedUserTypeSelection, updateUserType } from "@/services/appwrite/userService";
 import { toast } from "sonner";
 import Image from "next/image";
 import UserTypeSelectionModal from "./UserTypeSelectionModal";

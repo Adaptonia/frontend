@@ -2,7 +2,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getCurrentUser } from "@/src/services/appwrite/auth";
+import { getCurrentUser } from "@/services/appwrite/auth";
 
 export const useRequireAuth = () => {
     const { user, loading, setUser } = useAuth();

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Target, Trash2, Type, List, Check } from 'lucide-react';
 import { Milestone, MilestoneComponentProps } from '@/lib/types';
 import { format } from 'date-fns';
-import { reminderService } from '@/src/services/appwrite/reminderService';
+import { reminderService } from '@/services/appwrite/reminderService';
 import { toast } from 'sonner';
 
 const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
@@ -109,41 +109,7 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
     );
     onMilestonesChange(updatedMilestones);
     
-    // Update notification if date or title changed
-    if (updates.date || updates.title) {
-      const updatedMilestone = updatedMilestones.find(m => m.id === id);
-      if (updatedMilestone) {
-        try {
-          // Cancel existing notification
-          const milestoneGoalId = `goal-milestone-${id}`;
-          const existingReminders = await reminderService.getRemindersByGoalId(milestoneGoalId);
-          
-          for (const reminder of existingReminders) {
-            await reminderService.deleteReminder(reminder.id);
-          }
-          
-          // Schedule new notification if date is in the future
-          const milestoneDate = new Date(updatedMilestone.date);
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          
-          if (milestoneDate >= today) {
-            await reminderService.createReminder({
-              goalId: milestoneGoalId,
-              userId: 'system',
-              title: `Milestone Due: ${updatedMilestone.title}`,
-              description: `Time to work on your milestone. ${updatedMilestone.description || ''}`,
-              sendDate: updatedMilestone.date + 'T09:00:00.000Z',
-              dueDate: updatedMilestone.date
-            });
-            
-            console.log('✅ Milestone notification updated');
-          }
-        } catch (error) {
-          console.error('❌ Error updating milestone notification:', error);
-        }
-      }
-    }
+    // Milestone notifications removed - using Resend for email notifications
   };
 
   const toggleExpanded = (id: string) => {
@@ -176,16 +142,8 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
       const updatedMilestones = milestones.filter(milestone => milestone.id !== id);
       onMilestonesChange(updatedMilestones);
 
-      // Cancel notification for this milestone
-      const milestoneGoalId = `goal-milestone-${id}`;
-      const existingReminders = await reminderService.getRemindersByGoalId(milestoneGoalId);
-      
-      for (const reminder of existingReminders) {
-        await reminderService.deleteReminder(reminder.id);
-      }
-
       toast.success('Milestone deleted', {
-        description: 'Milestone and its notifications removed'
+        description: 'Milestone removed successfully'
       });
 
       console.log('✅ Milestone deleted:', id);

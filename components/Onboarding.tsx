@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { useTheme } from "@/src/context/ThemeContext";
+import { useTheme } from "@/context/ThemeContext";
 
 export default function AdaptoniaOnboarding() {
   const [currentScreen, setCurrentScreen] = useState(0);

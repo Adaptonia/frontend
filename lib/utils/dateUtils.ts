@@ -41,10 +41,7 @@ export const formatTime = (date: string | Date): string => {
   }
 }
 
-/**
- * SIMPLIFIED REMINDER SCHEDULING - Server-side only
- * This eliminates client/server conflicts by using only Appwrite Functions
- */
+// Schedule reminders based on settings
 export const scheduleReminders = async (
   goalId: string,
   reminderSettings: any,
@@ -52,125 +49,129 @@ export const scheduleReminders = async (
   user: any
 ) => {
   try {
-    console.log('🚀 SIMPLIFIED REMINDER FLOW START: scheduleReminders called for goalId:', goalId);
-    console.log('📋 Settings:', { reminderSettings, simpleReminder, user: user?.email });
-
-    if (!user?.id) {
-      console.error('❌ REMINDER FLOW: No user found');
-      return;
-    }
-
-    // Check if we have any reminders to schedule
-    const hasAdvancedReminders = reminderSettings?.enabled;
-    const hasSimpleReminder = simpleReminder && simpleReminder.trim() !== '';
-
-    if (!hasAdvancedReminders && !hasSimpleReminder) {
-      console.log('❌ SIMPLIFIED REMINDER FLOW: No reminders to schedule');
-      return;
-    }
-
-    const reminderDates: Date[] = [];
-
-    // Process simple reminder
-    if (hasSimpleReminder) {
-      console.log('📅 Processing simple reminder:', simpleReminder);
-      const reminderDate = new Date(simpleReminder);
-      
-      // Log timezone information
-      console.log('🌍 Timezone debug:');
-      console.log('- Local time:', reminderDate.toLocaleString());
-      console.log('- UTC time:', reminderDate.toUTCString());
-      console.log('- ISO string:', reminderDate.toISOString());
-      console.log('- Timezone offset (minutes):', reminderDate.getTimezoneOffset());
-      
-      if (isNaN(reminderDate.getTime())) {
-        console.error('❌ Invalid simple reminder date:', simpleReminder);
-      } else if (reminderDate > new Date()) {
-        // Store the date in UTC
-        reminderDates.push(reminderDate);
-        console.log('✅ Valid simple reminder added:', {
-          local: reminderDate.toLocaleString(),
-          utc: reminderDate.toUTCString(),
-          iso: reminderDate.toISOString()
-        });
-      } else {
-        console.warn('⚠️ Simple reminder date is in the past:', {
-          local: reminderDate.toLocaleString(),
-          utc: reminderDate.toUTCString(),
-          iso: reminderDate.toISOString()
-        });
-      }
-    }
-
-    // Process advanced reminders
-    if (hasAdvancedReminders && reminderSettings.time && reminderSettings.date) {
-      console.log('📅 Processing advanced reminders:', reminderSettings);
-      
-      // Create date in local time zone
-      const [hours, minutes] = reminderSettings.time.split(':');
-      const reminderDate = new Date(reminderSettings.date);
-      reminderDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-      
-      // Log timezone information
-      console.log('🌍 Advanced reminder timezone debug:');
-      console.log('- Local time:', reminderDate.toLocaleString());
-      console.log('- UTC time:', reminderDate.toUTCString());
-      console.log('- ISO string:', reminderDate.toISOString());
-      
-      if (reminderDate > new Date()) {
-        reminderDates.push(reminderDate);
-        console.log('✅ Valid advanced reminder added:', {
-          local: reminderDate.toLocaleString(),
-          utc: reminderDate.toUTCString(),
-          iso: reminderDate.toISOString()
-        });
-      }
-    }
-
-    if (reminderDates.length === 0) {
-      console.log('❌ SIMPLIFIED REMINDER FLOW: No valid future reminder dates');
-      return;
-    }
-
-    console.log('📊 REMINDER DATES TO SCHEDULE:', {
-      totalDates: reminderDates.length,
-      dates: reminderDates.map(d => ({
-        local: d.toLocaleString(),
-        utc: d.toUTCString(),
-        iso: d.toISOString()
-      }))
+    console.log('🔄 SCHEDULE REMINDERS: Starting for goal:', goalId);
+    console.log('📋 SCHEDULE REMINDERS: Full input:', {
+      goalId,
+      reminderSettings,
+      simpleReminder,
+      userId: user?.id
     });
-
-    // 🎯 ONLY CREATE DATABASE RECORDS - Let Appwrite Functions handle delivery
-    const { reminderService } = await import('@/src/services/appwrite/reminderService');
-
-    for (const reminderDate of reminderDates) {
-      try {
-        console.log('💾 Creating server-side reminder for:', {
-          local: reminderDate.toLocaleString(),
-          utc: reminderDate.toUTCString(),
-          iso: reminderDate.toISOString()
-        });
-        
-        await reminderService.createReminder({
-          goalId,
-          userId: user.id,
-          title: `Goal Reminder`,
-          description: `Time to work on your goal!`,
-          sendDate: reminderDate.toISOString()
-        });
-        
-        console.log('✅ Server-side reminder created successfully');
-      } catch (error) {
-        console.error('❌ Failed to create server reminder:', error);
-      }
+    
+    // Import the reminder service
+    const { reminderService } = await import('@/services/appwrite/reminderService');
+    
+    if (!user?.id) {
+      console.error('❌ SCHEDULE REMINDERS: No user ID provided');
+      throw new Error('User ID is required for scheduling reminders');
     }
 
-    console.log('🎯 SIMPLIFIED REMINDER FLOW COMPLETE: All reminders stored in database');
-    console.log('📡 Appwrite Functions will handle FCM delivery at scheduled times');
+    // Handle advanced reminder settings
+    if (reminderSettings?.enabled) {
+      console.log('🎯 SCHEDULE REMINDERS: Processing advanced settings');
+      
+      const { date, time, interval, count } = reminderSettings;
+      console.log('⏰ SCHEDULE REMINDERS: Parsed settings:', { date, time, interval, count });
+      
+      if (!date || !time) {
+        console.error('❌ SCHEDULE REMINDERS: Missing date or time');
+        throw new Error('Date and time are required for reminders');
+      }
 
+      // Create base reminder date/time
+      const [hours, minutes] = time.split(':').map(Number);
+      const baseDate = new Date(date);
+      baseDate.setHours(hours, minutes, 0, 0);
+      
+      console.log('📅 SCHEDULE REMINDERS: Base date/time:', baseDate.toISOString());
+
+      // Generate reminders based on interval
+      const reminders = [];
+      
+      for (let i = 0; i < count; i++) {
+        const reminderDate = new Date(baseDate);
+        
+        // Calculate the date for this reminder based on interval
+        switch (interval) {
+          case 'daily':
+            reminderDate.setDate(baseDate.getDate() + i);
+            break;
+          case 'weekly':
+            reminderDate.setDate(baseDate.getDate() + (i * 7));
+            break;
+          case 'biweekly':
+            reminderDate.setDate(baseDate.getDate() + (i * 14));
+            break;
+          case 'monthly':
+            reminderDate.setMonth(baseDate.getMonth() + i);
+            break;
+          case 'once':
+          default:
+            if (i > 0) continue;
+            break;
+        }
+
+        // Only schedule future reminders
+        if (reminderDate > new Date()) {
+          console.log(`📍 SCHEDULE REMINDERS: Adding reminder ${i + 1}/${count} for:`, reminderDate.toISOString());
+          reminders.push({
+            goalId: goalId,
+            userId: user.id,
+            title: `Goal Reminder`,
+            description: `Time to work on your goal!`,
+            sendDate: reminderDate.toISOString()
+          });
+        } else {
+          console.log(`⚠️ SCHEDULE REMINDERS: Skipping past date for reminder ${i + 1}:`, reminderDate.toISOString());
+        }
+      }
+
+      console.log('📋 SCHEDULE REMINDERS: Generated reminders:', reminders);
+
+      // Create reminders in the database
+      for (const reminderData of reminders) {
+        try {
+          console.log('💾 SCHEDULE REMINDERS: Creating reminder:', reminderData);
+          const createdReminder = await reminderService.createReminder(reminderData);
+          console.log('✅ Reminder created:', createdReminder.id);
+        } catch (error) {
+          console.error('❌ Failed to create reminder:', error);
+        }
+      }
+    } else {
+      console.log('ℹ️ SCHEDULE REMINDERS: Advanced reminders not enabled');
+    }
+
+    // Handle simple reminder
+    if (simpleReminder && simpleReminder.trim()) {
+      try {
+        console.log('🔄 SCHEDULE REMINDERS: Processing simple reminder:', simpleReminder);
+        const reminderDate = new Date(simpleReminder);
+        
+        if (reminderDate > new Date()) {
+          const simpleReminderData = {
+            goalId: goalId,
+            userId: user.id,
+            title: `Goal Reminder`,
+            description: `Simple reminder for your goal.`,
+            sendDate: reminderDate.toISOString()
+          };
+
+          console.log('💾 SCHEDULE REMINDERS: Creating simple reminder:', simpleReminderData);
+          const createdReminder = await reminderService.createReminder(simpleReminderData);
+          console.log('✅ Simple reminder created:', createdReminder.id);
+        } else {
+          console.log('⚠️ SCHEDULE REMINDERS: Simple reminder date is in the past:', reminderDate.toISOString());
+        }
+      } catch (error) {
+        console.error('❌ Failed to create simple reminder:', error);
+      }
+    } else {
+      console.log('ℹ️ SCHEDULE REMINDERS: No simple reminder provided');
+    }
+
+    return true;
   } catch (error) {
-    console.error('❌ SIMPLIFIED REMINDER FLOW ERROR:', error);
+    console.error('❌ Error scheduling reminders:', error);
     throw error;
   }
 }; 

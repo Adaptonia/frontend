@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { GoalPack, Milestone, ModalTab } from '@/lib/types';
 import MilestoneComponent from './MilestoneComponent';
-import { createGoal } from '@/src/services/appwrite/database';
+import { createGoal } from '@/services/appwrite/database';
 import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
 

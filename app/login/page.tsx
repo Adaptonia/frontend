@@ -1,7 +1,7 @@
 'use client'
 import InputField from '@/components/reuseable/InputField'
 import { useAuth } from '@/context/AuthContext'
-import { loginUser, loginWithGoogle } from '../../src/services/appwrite'
+import { loginUser, loginWithGoogle } from '../../services/appwrite'
 import Image from 'next/image'
 import Link from 'next/link'
 import React, { useState } from 'react'

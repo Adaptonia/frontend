@@ -4,7 +4,7 @@ import {
   sendDirectMessage, 
   markMessageAsRead, 
 } from '@/src/services/appwrite/messaging';
-import { getCurrentUser } from '@/src/services/appwrite/auth';
+import { getCurrentUser } from '@/services/appwrite/auth';
 
 export interface Message {
   id: string;
