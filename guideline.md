@@ -13,7 +13,7 @@ This document outlines the guidelines for using Appwrite as our backend service 
 - **Database**: Storing and querying application data
 - **Storage**: File uploads and management
 - **Functions**: Custom server-side logic when necessary
-- **Realtime**: For live updates and notifications
+- **Realtime**: For live updates and notificati
 
 ## Implementation Guidelines
 - Create dedicated service modules for each Appwrite service integration
