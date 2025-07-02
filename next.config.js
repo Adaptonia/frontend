@@ -1,10 +1,4 @@
 /** @type {import('next').NextConfig} */
-const withPWA = require('next-pwa')({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development'
-});
 
 const nextConfig = {
   eslint: {
@@ -17,20 +11,7 @@ const nextConfig = {
     // your project has type errors.
     ignoreBuildErrors: true,
   },
-  // Add OneSignal worker to service worker destination
-  async headers() {
-    return [
-      {
-        source: '/OneSignalSDKWorker.js',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=0, must-revalidate',
-          },
-        ],
-      },
-    ];
-  },
+  // Clean configuration - notification system removed, using Resend for emails
 }
 
-module.exports = withPWA(nextConfig)
+module.exports = nextConfig

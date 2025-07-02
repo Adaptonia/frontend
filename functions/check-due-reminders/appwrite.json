@@ -1,0 +1,1825 @@
+{
+    "projectId": "682b1633003712630789",
+    "projectName": "adaptonia",
+    "settings": {
+        "services": {
+            "account": true,
+            "avatars": true,
+            "databases": true,
+            "locale": true,
+            "health": true,
+            "storage": true,
+            "teams": true,
+            "users": true,
+            "sites": true,
+            "functions": true,
+            "graphql": true,
+            "messaging": true
+        },
+        "auth": {
+            "methods": {
+                "jwt": true,
+                "phone": true,
+                "invites": true,
+                "anonymous": true,
+                "email-otp": true,
+                "magic-url": true,
+                "email-password": true
+            },
+            "security": {
+                "duration": 31536000,
+                "limit": 0,
+                "sessionsLimit": 10,
+                "passwordHistory": 0,
+                "passwordDictionary": false,
+                "personalDataCheck": false,
+                "sessionAlerts": false,
+                "mockNumbers": []
+            }
+        }
+    },
+    "functions": [
+        {
+            "$id": "685b1e830036ebc33555",
+            "execute": [
+                "any"
+            ],
+            "name": "check-due-remindrs",
+            "enabled": true,
+            "logging": true,
+            "runtime": "node-22",
+            "scopes": [
+                "users.read",
+                "databases.read",
+                "databases.write",
+                "collections.read",
+                "collections.write",
+                "attributes.read",
+                "attributes.write",
+                "indexes.read",
+                "indexes.write",
+                "documents.read",
+                "documents.write",
+                "functions.read",
+                "functions.write",
+                "execution.read",
+                "execution.write",
+                "sites.read",
+                "sites.write",
+                "log.read",
+                "log.write"
+            ],
+            "events": [],
+            "schedule": "* * * * *",
+            "timeout": 15,
+            "entrypoint": "src/main.js",
+            "commands": "npm install",
+            "specification": "s-0.5vcpu-512mb",
+            "path": "functions/check-due-remindrs"
+        },
+        {
+            "$id": "send-push-notification",
+            "execute": [
+                "any"
+            ],
+            "name": "Send Push Notification",
+            "enabled": true,
+            "logging": true,
+            "runtime": "node-18.0",
+            "scopes": [],
+            "events": [],
+            "schedule": "",
+            "timeout": 15,
+            "entrypoint": "",
+            "commands": "",
+            "specification": "s-1vcpu-512mb",
+            "path": "functions/Send Push Notification"
+        }
+    ],
+    "databases": [
+        {
+            "$id": "682b16d40036fd19f920",
+            "name": "adaptonia",
+            "enabled": true
+        }
+    ],
+    "collections": [
+        {
+            "$id": "682b16e7003b6a8eba84",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "user",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "email",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "name",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "profilePicture",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "role",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "elements": [
+                        "admin",
+                        "user",
+                        "moderator"
+                    ],
+                    "format": "enum",
+                    "default": null
+                },
+                {
+                    "key": "userType",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "elements": [
+                        "student",
+                        "non-student",
+                        "null"
+                    ],
+                    "format": "enum",
+                    "default": null
+                },
+                {
+                    "key": "schoolName",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "hasCompletedUserTypeSelection",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "index_userId",
+                    "type": "key",
+                    "status": "available",
+                    "attributes": [
+                        "userId",
+                        "email"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "682b17780019b92102ae",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "goal",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "title",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "description",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null
+                },
+                {
+                    "key": "category",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "elements": [
+                        "schedule",
+                        "finance",
+                        "career",
+                        "audio_books"
+                    ],
+                    "format": "enum",
+                    "default": null
+                },
+                {
+                    "key": "location",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "deadline",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "tags",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "reminderDate",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "isCompleted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "reminderSettings",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "milestones",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 10000,
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "682b2ffa0012db7e075f",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "channel",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "name",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "description",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null
+                },
+                {
+                    "key": "type",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "elements": [
+                        "public",
+                        "private"
+                    ],
+                    "format": "enum",
+                    "default": null
+                },
+                {
+                    "key": "creatorId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "isActive",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "memberCount",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308,
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "682b30d00002199ce829",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "channel-member",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "channelId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "role",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "elements": [
+                        "admin",
+                        "member"
+                    ],
+                    "format": "enum",
+                    "default": null
+                },
+                {
+                    "key": "joinedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "isActive",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "lastReadMessageId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "lastActiveAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "682b312f002ceeb30d64",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "channel-messages",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "channelId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "senderId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "content",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "replyToId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "updateAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "isDeleted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "readby",
+                    "type": "string",
+                    "required": false,
+                    "array": true,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "messageType",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "elements": [
+                        "text",
+                        "image",
+                        "file",
+                        "voice"
+                    ],
+                    "format": "enum",
+                    "default": null
+                },
+                {
+                    "key": "attachments",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 200,
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "682b328c00001e2a66c3",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "channel-invites",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "channelId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "createdBy",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "expiresAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "isActive",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "682b331d002519de241a",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "contact",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "contactId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "isBlocked",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "682b33d300095c92ba7f",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "direct-message",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "senderId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "recipientId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "content",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null
+                },
+                {
+                    "key": "replyToId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "isRead",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "isDeleted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "6833639f0016aa738124",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "reminders",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "goalId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "description",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null
+                },
+                {
+                    "key": "sendDate",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "elements": [
+                        "pending",
+                        "sent",
+                        "failed"
+                    ],
+                    "format": "enum",
+                    "default": null
+                },
+                {
+                    "key": "dueDate",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "amount",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308,
+                    "default": null
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "isCompleted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "isSent",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "alarm",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "retryCount",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308,
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "6836b3260005a4a60098",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "push-subscriptions",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "subscription",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "68383af90012431328d2",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "read-status",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "channelId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "lastReadMessageId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "unreadCount",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308,
+                    "default": null
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "68492488000cbf7eff9e",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "goals pack",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "description",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null
+                },
+                {
+                    "key": "category",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "elements": [
+                        "finance",
+                        "schedule",
+                        "career",
+                        "audio_books"
+                    ],
+                    "format": "enum",
+                    "default": null
+                },
+                {
+                    "key": "targetUserType",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "elements": [
+                        "student",
+                        "non-student",
+                        "all"
+                    ],
+                    "format": "enum",
+                    "default": null
+                },
+                {
+                    "key": "milestones",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 10000,
+                    "default": null
+                },
+                {
+                    "key": "tags",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "isActive",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "createdBy",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "684ab4010028522808e1",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "library-collection",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null
+                },
+                {
+                    "key": "description",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 10000,
+                    "default": null
+                },
+                {
+                    "key": "type",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "author",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "url",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 200,
+                    "default": null
+                },
+                {
+                    "key": "tags",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "category",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "elements": [
+                        "finance",
+                        "schedule",
+                        "career",
+                        "audio_books",
+                        "general"
+                    ],
+                    "format": "enum",
+                    "default": null
+                },
+                {
+                    "key": "isFavorite",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "isCompleted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "rating",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308,
+                    "default": null
+                },
+                {
+                    "key": "notes",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null
+                },
+                {
+                    "key": "dateAdded",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "dateCompleted",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "684ac256001cf028a261",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "goal-pack-reviews",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "ide",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "goalPackId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "userName",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "userProfilePicture",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "rating",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308,
+                    "default": null
+                },
+                {
+                    "key": "reviewText",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 10000,
+                    "default": null
+                },
+                {
+                    "key": "isHelpful",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "684ac420001c927915ab",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "goal-pack-purchases",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "goalPackId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "purchasePrice",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308,
+                    "default": null
+                },
+                {
+                    "key": "purchaseDate",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "684b5c83003498584a2b",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "PUSH-TOKENS",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "token",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 200,
+                    "default": null
+                },
+                {
+                    "key": "platform",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "6857266d00335d949b1c",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "reminderss",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "goalId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null
+                },
+                {
+                    "key": "body",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null
+                },
+                {
+                    "key": "sendAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "elements": [
+                        "pending",
+                        "sent",
+                        "failed",
+                        "cancelled"
+                    ],
+                    "format": "enum",
+                    "default": null
+                },
+                {
+                    "key": "recurring",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "elements": [
+                        "none",
+                        "daily",
+                        "weekly",
+                        "monthly"
+                    ],
+                    "format": "enum",
+                    "default": null
+                },
+                {
+                    "key": "retryCount",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807,
+                    "default": null
+                },
+                {
+                    "key": "data",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null
+                },
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 200,
+                    "default": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "status_sendAt_idx",
+                    "type": "key",
+                    "status": "available",
+                    "attributes": [
+                        "status"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "userId_idx",
+                    "type": "key",
+                    "status": "available",
+                    "attributes": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "68572816003ad795179a",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "fcm_tokens",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "token",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null
+                },
+                {
+                    "key": "deviceInfo",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null
+                },
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 200,
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "685728ba000b427b124e",
+            "$permissions": [],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "notification_logs",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "reminderId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 200,
+                    "default": null
+                },
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 200,
+                    "default": null
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "elements": [
+                        "failed",
+                        "success"
+                    ],
+                    "format": "enum",
+                    "default": null
+                },
+                {
+                    "key": "fcmMessageId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 200,
+                    "default": null
+                },
+                {
+                    "key": "error",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 200,
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "685a50d500377e3bbf32",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "onesignal-collection",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "playerId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "platform",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 200,
+                    "default": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "index_1",
+                    "type": "key",
+                    "status": "available",
+                    "attributes": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "685b2b2d003738ec62b3",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "682b16d40036fd19f920",
+            "name": "onesignal_players",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null
+                },
+                {
+                    "key": "playerId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null
+                },
+                {
+                    "key": "platform",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "index_1",
+                    "type": "key",
+                    "status": "available",
+                    "attributes": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        }
+    ]
+}
