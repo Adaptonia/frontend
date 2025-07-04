@@ -96,7 +96,7 @@ export function ReminderChecker() {
     // See vercel.json and VERCEL_CRON_SETUP.md for configuration
     
     console.log("📌 Client-side reminder checking is disabled - using Vercel cron jobs instead");
-    
+
     // Uncomment the lines below to re-enable client-side checking if needed:
     // checkAndSendReminders();
     // const interval = setInterval(checkAndSendReminders, 60 * 1000);

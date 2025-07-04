@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       process.env.APPWRITE_REMINDERS_COLLECTION_ID!,
       [
         Query.equal('status', 'pending'),
-        Query.lessThanEqual('sendDate', now),
+        Query.lessThanEqual('sendAt', now),
         Query.limit(25) // Process max 25 reminders per run
       ]
     );
@@ -72,14 +72,13 @@ export async function GET(request: NextRequest) {
         const { error: emailError } = await resend.emails.send({
           from: "Adaptonia <reminders@olonts.site>",
           to: [user.email],
-          subject: `🎯 Reminder: ${reminder.title}`,
+          subject: `🎯 You have a new reminder!`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
               <h2>Hi ${user.name || 'there'},</h2>
               <p>This is your scheduled reminder:</p>
               <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
-                <h3 style="color: #0056b3;">${reminder.title}</h3>
-                ${reminder.description ? `<p>${reminder.description}</p>` : ''}
+                <p>${reminder.body || 'No content provided.'}</p> 
               </div>
               <p>Keep up the great work!</p>
             </div>
