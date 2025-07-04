@@ -49,17 +49,26 @@ vercel deploy --prod
 
 ## ⏰ Cron Schedule
 
-- **Frequency**: Every 5 minutes (`*/5 * * * *`)
+- **Frequency**: Once daily at 9 AM (`0 9 * * *`) - **FREE Hobby Plan Compatible**
 - **Path**: `/api/cron/email-reminders`
 - **Timezone**: UTC
 
+### **Schedule Options:**
+- **Hobby Plan (FREE)**: `0 9 * * *` (once daily at 9 AM UTC)
+- **Pro Plan ($20/month)**: `*/5 * * * *` (every 5 minutes for instant delivery)
+
 ## 🔍 How It Works
 
-1. **Every 5 minutes**, Vercel automatically calls `/api/cron/email-reminders`
+1. **Every day at 9 AM UTC**, Vercel automatically calls `/api/cron/email-reminders`
 2. **Checks database** for reminders where `sendDate <= now` and `status = 'pending'`
 3. **Sends emails** via Resend to users
 4. **Updates status** to `'sent'` in database
 5. **Handles retries** (up to 3 attempts for failed emails)
+
+### **📋 Daily Batch Processing:**
+- **Processes all due reminders** from the past 24 hours
+- **Maximum 25 reminders** per daily run (to prevent timeouts)
+- **Reliable delivery** once per day at a consistent time
 
 ## 📊 Monitoring
 
