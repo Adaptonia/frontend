@@ -60,7 +60,7 @@ vercel deploy --prod
 ## 🔍 How It Works
 
 1. **Every day at 9 AM UTC**, Vercel automatically calls `/api/cron/email-reminders`
-2. **Checks database** for reminders where `sendDate <= now` and `status = 'pending'`
+2. **Checks database** for reminders where `sendAt <= now` and `status = 'pending'`
 3. **Sends emails** via Resend to users
 4. **Updates status** to `'sent'` in database
 5. **Handles retries** (up to 3 attempts for failed emails)

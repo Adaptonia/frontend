@@ -21,7 +21,7 @@ export function ReminderChecker() {
           const allPendingReminders = await reminderService.getAllPendingReminders();
           console.log("✅ LOG 2.3: All pending reminders:", allPendingReminders.documents.map((r: any) => ({
             id: r.$id,
-            sendDate: r.sendDate,
+            sendAt: r.sendAt,
             status: r.status,
             userEmail: r.userEmail,
             title: r.title

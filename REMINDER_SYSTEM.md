@@ -52,7 +52,7 @@ interface Reminder {
   userId: string;
   title: string;
   description?: string;
-  sendDate: string;
+  sendAt: string;
   dueDate?: string;
   status: 'pending' | 'sent' | 'failed';
   retryCount: number;
@@ -84,7 +84,7 @@ function GoalComponent() {
       goalId: 'goal-123',
       title: 'Exercise Reminder',
       description: 'Time for your daily workout!',
-      sendDate: new Date(Date.now() + 60000).toISOString(), // 1 minute from now
+      sendAt: new Date(Date.now() + 60000).toISOString(), // 1 minute from now
       userId: 'user-123'
     });
 
@@ -113,7 +113,7 @@ const reminder = await reminderService.createReminder({
   goalId: 'goal-123',
   title: 'Study Session',
   description: 'Time to study for your exam',
-  sendDate: '2024-01-15T14:30:00.000Z',
+  sendAt: '2024-01-15T14:30:00.000Z',
   userId: 'user-123'
 });
 
@@ -185,7 +185,7 @@ Create a "reminders" collection in Appwrite with these attributes:
 - `userId` (string, required)
 - `title` (string, required)
 - `description` (string, optional)
-- `sendDate` (string, required)
+- `sendAt` (string, required)
 - `dueDate` (string, optional)
 - `status` (string, required, default: 'pending')
 - `retryCount` (integer, required, default: 0)

@@ -119,7 +119,7 @@ interface Reminder {
   userId: string;
   title: string;
   description?: string;
-  sendDate: string;        // When to send the reminder
+  sendAt: string;        // When to send the reminder
   dueDate?: string;        // Goal/milestone due date
   status: 'pending' | 'sent' | 'failed';
   retryCount: number;
@@ -182,7 +182,7 @@ await reminderService.createReminder({
   userId: user.id,
   title: `Reminder: ${goal.title}`,
   description: goal.description,
-  sendDate: reminderDate.toISOString(),
+  sendAt: reminderDate.toISOString(),
   dueDate: goal.dueDate
 });
 ```
@@ -208,7 +208,7 @@ await reminderService.createReminder({
 2. **Reminders not being processed**
    - Verify ReminderChecker component is included in layout
    - Check user authentication status
-   - Ensure reminder sendDate is in the past
+   - Ensure reminder sendAt is in the past
 
 3. **Build errors**
    - Install required dependencies: `npm install resend node-appwrite sonner`

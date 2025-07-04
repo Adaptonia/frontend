@@ -11,7 +11,7 @@ type ReminderData = {
   userName?: string;
   title: string;
   description?: string;
-  sendDate: string;
+  sendAt: string;
   status: 'pending' | 'sent' | 'failed';
   retryCount: number;
 };
@@ -62,7 +62,7 @@ export const getDueReminders = async () => {
     CONFIG.collectionId,
     [
       Query.equal('status', 'pending'),
-      Query.lessThanEqual('sendDate', now),
+      Query.lessThanEqual('sendAt', now),
       Query.lessThan('retryCount', CONFIG.maxRetries)
     ]
   );

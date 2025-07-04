@@ -331,7 +331,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                   userName: user.name || user.email,
                   title: 'Goal Reminder',
                   description: `Time to work on: ${data.title}`,
-                  sendDate: reminderDate.toISOString()
+                  sendAt: reminderDate.toISOString()
                 });
                 
                 console.log('✅ LOG 1: Reminder document created in Appwrite:', createdReminder);
@@ -403,7 +403,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                   userName: user.name || user.email,
                   title: 'Goal Reminder',
                   description: `Time to work on: ${data.title}`,
-                  sendDate: reminderDate.toISOString()
+                  sendAt: reminderDate.toISOString()
                 });
                 
                 console.log('✅ LOG 1: Reminder document created in Appwrite:', createdReminder);

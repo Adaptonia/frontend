@@ -802,7 +802,7 @@
                     "default": null
                 },
                 {
-                    "key": "sendDate",
+                    "key": "sendAt",
                     "type": "datetime",
                     "required": false,
                     "array": false,

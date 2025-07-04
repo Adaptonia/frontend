@@ -5,6 +5,29 @@ import { Resend } from 'resend';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function GET(request: NextRequest) {
+  // --- Environment Variable Validation ---
+  const requiredEnv = [
+    'RESEND_API_KEY',
+    'CRON_SECRET',
+    'APPWRITE_ENDPOINT',
+    'APPWRITE_PROJECT_ID',
+    'APPWRITE_API_KEY',
+    'APPWRITE_DATABASE_ID',
+    'APPWRITE_REMINDERS_COLLECTION_ID',
+    'APPWRITE_USERS_COLLECTION_ID'
+  ];
+
+  for (const key of requiredEnv) {
+    if (!process.env[key]) {
+      console.error(`❌ Missing required environment variable: ${key}`);
+      return NextResponse.json(
+        { success: false, error: `Server configuration error: Missing environment variable ${key}` },
+        { status: 500 }
+      );
+    }
+  }
+  // --- End Validation ---
+
   try {
     // Security: Verify cron secret (following Vercel docs)
     const authHeader = request.headers.get('authorization');
