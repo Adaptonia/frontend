@@ -74,7 +74,7 @@ export const loginUser = async (email: string, password: string): Promise<User> 
     
     // Now create a new session
     console.log('📥 Creating new session...');
-    const session = await account.createSession(email, password);
+    const session = await account.createEmailPasswordSession(email, password);
     console.log('✅ Session created successfully:', session.$id);
     
     // Get current account
