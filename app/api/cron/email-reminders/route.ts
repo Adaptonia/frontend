@@ -80,28 +80,23 @@ export async function GET(request: NextRequest) {
       try {
         console.log(`📧 Processing reminder: ${reminder.$id}`);
         
-        // Get user details for email
-        const user = await databases.getDocument(
-          process.env.APPWRITE_DATABASE_ID!,
-          process.env.APPWRITE_USERS_COLLECTION_ID!,
-          reminder.userId
-        );
-
-        if (!user.email) {
-          throw new Error('User has no email address');
+        // Use user details directly from the reminder document
+        if (!reminder.userEmail) {
+          throw new Error(`Reminder ${reminder.$id} is missing an email address.`);
         }
 
         // Send email via Resend
         const { error: emailError } = await resend.emails.send({
           from: "Adaptonia <reminders@olonts.site>",
-          to: [user.email],
-          subject: `🎯 You have a new reminder!`,
+          to: [reminder.userEmail],
+          subject: `🎯 Reminder: ${reminder.title || 'You have a reminder'}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-              <h2>Hi ${user.name || 'there'},</h2>
+              <h2>Hi ${reminder.userName || 'there'},</h2>
               <p>This is your scheduled reminder:</p>
               <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
-                <p>${reminder.body || 'No content provided.'}</p> 
+                <h3 style="color: #0056b3;">${reminder.title}</h3>
+                ${reminder.description ? `<p>${reminder.description}</p>` : ''}
               </div>
               <p>Keep up the great work!</p>
             </div>
@@ -122,7 +117,7 @@ export async function GET(request: NextRequest) {
 
         results.processed++;
         results.successful++;
-        console.log(`✅ Email sent successfully to ${user.email}`);
+        console.log(`✅ Email sent successfully to ${reminder.userEmail}`);
 
       } catch (error) {
         results.processed++;
