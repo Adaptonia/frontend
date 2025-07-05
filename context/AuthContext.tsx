@@ -73,11 +73,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Enhanced fetchUser function with proper error handling and offline support
+  // Enhanced fetchUser function with proper error handling and session persistence
   const fetchUser = useCallback(async () => {
     console.log("🔍 Checking for existing Appwrite session...");
     try {
-      // Get user from Appwrite
+      // Get user from Appwrite - this checks if the session is still valid
       const data = await getCurrentUser();
       console.log("✅ Found authenticated user:", data?.email);
       console.log("🔍 User data details:", {
@@ -89,30 +89,55 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (data) {
         // Cache user type info for offline access
         setUserTypeCache(data);
+        
+        // Also cache basic auth info
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('adaptonia_auth_cache', JSON.stringify({
+            id: data.id,
+            email: data.email,
+            name: data.name,
+            role: data.role,
+            lastValidated: Date.now()
+          }));
+        }
+        
         setUser(data);
+        console.log("✅ Session is valid and persistent for ~1 week");
       }
     } catch (error) {
-      console.log("ℹ️ No authenticated user found or network error (checking offline cache)");
+      console.log("ℹ️ No valid Appwrite session found");
       
-      // Try to use cached auth info for offline scenarios
-      const cachedAuth = localStorage.getItem('adaptonia_auth_cache');
-      if (cachedAuth) {
-        try {
-          const authData = JSON.parse(cachedAuth);
-          if (authData.id) {
-            const cachedUserType = getUserTypeFromCache(authData.id);
-            if (cachedUserType) {
-              console.log("🔄 Using cached user data for offline access");
-              setUser({
-                ...authData,
-                ...cachedUserType
-              });
-              return;
+      // Only use cache as a very last resort for offline scenarios (not for expired sessions)
+      // Check if we're actually offline vs just having an expired session
+      if (!navigator.onLine) {
+        console.log("📱 Device appears offline, checking cache...");
+        
+        const cachedAuth = localStorage.getItem('adaptonia_auth_cache');
+        if (cachedAuth) {
+          try {
+            const authData = JSON.parse(cachedAuth);
+            // Only use cache if it's less than 1 hour old (for offline scenarios)
+            const cacheAge = Date.now() - (authData.lastValidated || 0);
+            if (authData.id && cacheAge < 60 * 60 * 1000) {
+              const cachedUserType = getUserTypeFromCache(authData.id);
+              if (cachedUserType) {
+                console.log("🔄 Using cached user data for offline access");
+                setUser({
+                  ...authData,
+                  ...cachedUserType
+                });
+                return;
+              }
             }
+          } catch (cacheError) {
+            console.warn('Failed to parse cached auth data:', cacheError);
           }
-        } catch (cacheError) {
-          console.warn('Failed to parse cached auth data:', cacheError);
         }
+      } else {
+        console.log("🌐 Device is online - session expired or invalid, clearing cache");
+        // Clear stale cache when online and session is invalid
+        clearUserTypeCache();
+        localStorage.removeItem('adaptonia_auth_cache');
       }
       
       // Only log detailed error in development

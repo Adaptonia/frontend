@@ -13,7 +13,7 @@ const Page = () => {
     const [isLoading, setIsLoading] = useState(false)
     const [isGoogleLoading, setIsGoogleLoading] = useState(false)
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { user, setUser } = useAuth()
+    const { user } = useAuth()
     
    
     
@@ -23,11 +23,10 @@ const Page = () => {
 
         try {
             // Use Appwrite's login service directly
-            const user = await loginUser(email, password)
+            await loginUser(email, password)
             
-            // Update the auth context with the user data
-            setUser(user)
-            console.log('📝 Login Page: Updated auth context');
+            // Let AuthContext handle the user state properly
+            console.log('📝 Login Page: Login successful, refreshing auth context');
             
             // Show success message
             toast.success('Logged in successfully')

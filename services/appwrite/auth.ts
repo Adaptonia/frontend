@@ -59,23 +59,23 @@ export const loginUser = async (email: string, password: string): Promise<User> 
   try {
     console.log('🔐 Starting login process...');
     
-    // Check for existing sessions and delete them before login
+    // Check if we already have an active session
     try {
       console.log('🔍 Checking for existing session...');
-      // First try to get the current session
-      await account.get();
-      // If successful (no error thrown), we have an active session to delete
-      console.log('📤 Found existing session, deleting it...');
-      await account.deleteSession('current');
-    } catch (sessionError) {
-      console.error('❌ Error deleting session:', sessionError);
-      // No active session or error getting session, which is fine for login
+      const currentUser = await getCurrentUser();
+      if (currentUser) {
+        console.log('✅ Already logged in as:', currentUser.email);
+        return currentUser;
+      }
+    } catch (error) {
+      console.log('ℹ️ No existing session found, proceeding with login...');
     }
     
-    // Now create a new session
-    console.log('📥 Creating new session...');
+    // Create a new persistent session
+    console.log('📥 Creating new persistent session...');
     const session = await account.createEmailPasswordSession(email, password);
     console.log('✅ Session created successfully:', session.$id);
+    console.log('⏰ Session expires at:', session.expire);
     
     // Get current account
     console.log('🔍 Getting account details...');
@@ -121,7 +121,6 @@ export const loginUser = async (email: string, password: string): Promise<User> 
   } catch (error: unknown) {
     console.error('❌ Login error:', error);
     throw error;
-    
   }
 };
 
