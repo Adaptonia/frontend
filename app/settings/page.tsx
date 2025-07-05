@@ -144,7 +144,7 @@ export default function SettingsPage() {
       <EditProfile isOpen={isProfileOpen} onClose={closeProfileEditor} />
       
       {/* Toast notifications */}
-      <Toaster position="bottom-center" />
+      {/* <Toaster position="bottom-center" /> */}
     </div>
   );
 }

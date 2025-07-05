@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Calendar, User, BookOpen, BarChart3, Edit3, GraduationCap, Briefcase } from 'lucide-react'
 import Image from 'next/image'
-import { Toaster, toast } from 'sonner'
+import { toast } from 'sonner'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { useAuth } from '@/context/AuthContext'
 
@@ -690,7 +690,7 @@ const Dashboard = () => {
       />
       
       {/* Toast notifications */}
-      <Toaster position="bottom-center" />
+      
 
       {/* User Type Selection Modal */}
       <UserTypeSelectionModal
