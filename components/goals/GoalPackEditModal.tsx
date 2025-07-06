@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Calendar, Tag as TagIcon, Bell as BellIcon, Settings, Flag, Loader2, Edit3, Save, X } from 'lucide-react';
+import { Calendar, Tag as TagIcon, Bell as BellIcon, Settings, Flag, Loader2, Edit3, Save, X, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { GoalPack, Milestone, ModalTab } from '@/lib/types';
@@ -101,6 +101,11 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState('');
+  const [reminderSettings, setReminderSettings] = useState({
+    enabled: false,
+    date: '',
+    time: ''
+  });
   
   // Drag to close functionality
   const [dragY, setDragY] = useState(0);
@@ -258,6 +263,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
         deadline: selectedDate || undefined,
         tags: selectedTag || undefined,
         reminderDate: reminder || undefined,
+        reminderSettings: reminderSettings.enabled ? JSON.stringify(reminderSettings) : undefined,
         location: location || undefined,
         milestones: milestones.length > 0 ? JSON.stringify(milestones) : undefined,
         isCompleted: false
@@ -532,12 +538,176 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
     </div>
   );
 
+  // Add reminder tab functionality
+  const renderReminderTab = () => (
+    <div className="h-full flex flex-col">
+      <div className="flex items-center justify-between mb-4 px-5 pt-5">
+        <div className="flex items-center">
+          <button onClick={() => setActiveTab('main')} className="mr-3">
+            <X className="w-5 h-5" />
+          </button>
+          <h2 className="text-xl font-semibold">Reminder</h2>
+        </div>
+      </div>
+      
+      <div className="px-5 pb-5 flex-1">
+        {/* Enable/Disable Reminders Toggle */}
+        <div className="flex items-center justify-between mb-6 p-2 rounded-lg bg-gray-50">
+          <div className="flex items-center">
+            <div className="mr-3 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+              <BellIcon size={20} className="text-blue-500" />
+            </div>
+            <div>
+              <p className="font-medium">Enable Reminders</p>
+              <p className="text-xs text-gray-500">Get notified about this goal</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setReminderSettings(prev => ({...prev, enabled: !prev.enabled}))}
+            className={`w-12 h-6 rounded-full relative ${reminderSettings.enabled ? 'bg-blue-500' : 'bg-gray-300'}`}
+          >
+            <span 
+              className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${
+                reminderSettings.enabled ? 'right-0.5' : 'left-0.5'
+              }`}
+            />
+          </button>
+        </div>
+        
+        {reminderSettings.enabled && (
+          <div className="space-y-5 animate-in fade-in-50">
+            {/* Reminder Date */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <Calendar className="mr-2" size={16} />
+                Start Date
+              </label>
+              <input
+                type="date"
+                className="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={reminderSettings.date}
+                onChange={(e) => setReminderSettings(prev => ({...prev, date: e.target.value}))}
+              />
+              <p className="text-xs text-gray-500">When should the reminder start?</p>
+            </div>
+            
+            {/* Reminder Time */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <Clock className="mr-2" size={16} />
+                Reminder Time
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="time"
+                  className="flex-1 p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={reminderSettings.time}
+                  onChange={(e) => {
+                    setReminderSettings(prev => ({...prev, time: e.target.value}));
+                  }}
+                />
+                <div className="text-sm text-gray-500">
+                  {new Date(`2000-01-01T${reminderSettings.time}`).toLocaleTimeString([], {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                  })}
+                </div>
+              </div>
+            </div>
+            
+            {/* Preview Section */}
+            <div className="p-4 rounded-lg bg-gray-50 mt-6">
+              <h4 className="font-medium mb-2">Reminder Preview</h4>
+              <div className="text-sm text-gray-600 space-y-1">
+                <div className="flex items-center">
+                  <Calendar size={14} className="mr-2" />
+                  <span>
+                    {(() => {
+                      try {
+                        if (!reminderSettings.date) {
+                          return 'No date selected';
+                        }
+                        const date = new Date(reminderSettings.date);
+                        if (isNaN(date.getTime())) {
+                          return 'Invalid date';
+                        }
+                        return format(date, 'EEEE, MMMM d, yyyy');
+                      } catch (error) {
+                        console.error('Date formatting error:', error);
+                        return 'Invalid date';
+                      }
+                    })()}
+                  </span>
+                </div>
+                <div className="flex items-center">
+                  <Clock size={14} className="mr-2" />
+                  <span>
+                    {new Date(`2000-01-01T${reminderSettings.time}`).toLocaleTimeString([], {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true
+                    })}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Done button */}
+      {reminderSettings.enabled && (
+        <div className="mt-auto p-5 border-t">
+          <button 
+            onClick={() => {
+              try {
+                // Set the reminder date from the reminder settings
+                if (reminderSettings.date && reminderSettings.time) {
+                  // Create date in local time zone
+                  const [hours, minutes] = reminderSettings.time.split(':');
+                  const reminderDate = new Date(reminderSettings.date);
+                  reminderDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+                  if (!isNaN(reminderDate.getTime())) {
+                    // Store in ISO format (will be converted to UTC)
+                    setReminder(reminderDate.toISOString());
+                    
+                    toast.success(`Reminder set for ${reminderDate.toLocaleTimeString()}`, {
+                      description: `${reminderDate.toLocaleDateString()}`
+                    });
+                  } else {
+                    toast.error('Invalid reminder date/time');
+                    return;
+                  }
+                } else {
+                  toast.error('Please set both date and time for reminder');
+                  return;
+                }
+              } catch (error) {
+                console.error('Error setting reminder:', error);
+                toast.error('Failed to set reminder');
+                return;
+              }
+              setActiveTab('main');
+            }}
+            className="w-full py-3 bg-blue-500 text-white font-medium rounded-full hover:bg-blue-600"
+          >
+            Done
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
   const renderContent = () => {
     switch (activeTab) {
       case 'date':
         return renderDateTab();
       case 'tag':
         return renderTagTab();
+      case 'reminder':
+        return renderReminderTab();
       default:
         return renderMainTab();
     }
