@@ -175,11 +175,25 @@ export default function AdaptoniaOnboarding() {
                 {/* White circular button */}
                 <button
                   onClick={handleNext}
-                  className="w-16 h-16 rounded-full bg-white flex items-center justify-center relative z-10"
+                  className="w-16 h-16 rounded-full bg-white flex items-center justify-center relative z-10 shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out hover:scale-105 group"
                   aria-label="Next"
                 >
-                  {/* No arrow icon here */}
-              </button>
+                  {/* Right-pointing arrow icon */}
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#3B82F6"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="transition-transform duration-300 ease-in-out group-hover:translate-x-1"
+                  >
+                    <path d="M5 12h14" />
+                    <path d="M12 5l7 7-7 7" />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>

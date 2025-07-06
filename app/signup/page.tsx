@@ -3,6 +3,7 @@
 import InputField from "@/components/reuseable/InputField";
 import { loginWithGoogle, registerUser } from "@/services/appwrite";
 import { signIn } from "next-auth/react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
@@ -84,6 +85,7 @@ const Page = () => {
     <div className="flex flex-col min-h-screen bg-white p-6 scrollable">
       {/* Back Button */}
       <div className="mb-8">
+        <Link href="/home">
         <button className="p-1">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -99,28 +101,13 @@ const Page = () => {
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </button>
+        </Link>
       </div>
 
       {/* Logo */}
       <div className="flex justify-center mb-8">
-        <div className="bg-blue-500 rounded-full p-4 w-16 h-16 flex items-center justify-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="36"
-            height="36"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-          </svg>
-        </div>
+      <Image src="/blueLogo.png" alt="logo" width={50} height={50} />
+
       </div>
 
       {/* Sign Up Form */}
@@ -171,13 +158,13 @@ const Page = () => {
           </button>
         </form>
 
-        <div className="flex items-center my-8">
+        {/* <div className="flex items-center my-8">
           <div className="flex-grow h-px bg-gray-300"></div>
           <div className="px-4 text-gray-500">Or Register with</div>
           <div className="flex-grow h-px bg-gray-300"></div>
-        </div>
+        </div> */}
 
-        <div className="flex justify-between gap-4">
+        {/* <div className="flex justify-between gap-4">
           <button className="flex-1 border border-gray-300 py-3 rounded-lg flex items-center justify-center">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -231,7 +218,7 @@ const Page = () => {
             )
           }
           </button>
-        </div>
+        </div> */}
 
         <div className="text-center mt-8">
           <p>

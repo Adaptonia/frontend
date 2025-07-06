@@ -48,22 +48,22 @@ const Page = () => {
     }
 
     // Handle Google sign-in
-    const handleGoogleSignIn = async () => {
-        try {
-            setIsGoogleLoading(true);
-            toast.info('Redirecting to Google...');
+    // const handleGoogleSignIn = async () => {
+    //     try {
+    //         setIsGoogleLoading(true);
+    //         toast.info('Redirecting to Google...');
             
-            // This will redirect the user to Google's OAuth page
-            await loginWithGoogle();
+    //         // This will redirect the user to Google's OAuth page
+    //         await loginWithGoogle();
             
-            // The code below won't execute until the user returns from Google OAuth
-            // because the browser navigates away from this page
-        } catch (error) {
-            setIsGoogleLoading(false);
-            const errorMessage = error instanceof Error ? error.message : 'Google login failed';
-            toast.error(errorMessage);
-        }
-    };
+    //         // The code below won't execute until the user returns from Google OAuth
+    //         // because the browser navigates away from this page
+    //     } catch (error) {
+    //         setIsGoogleLoading(false);
+    //         const errorMessage = error instanceof Error ? error.message : 'Google login failed';
+    //         toast.error(errorMessage);
+    //     }
+    // };
     
     return (
       <div className="flex flex-col min-h-screen scrollable p-6">
@@ -128,15 +128,15 @@ const Page = () => {
             </p>
           </div>
 
-          <div className="flex items-center my-8">
+          {/* <div className="flex items-center my-8">
             <div className="flex-grow h-px bg-gray-300"></div>
             <div className="px-4 text-gray-500">Or Register with</div>
             <div className="flex-grow h-px bg-gray-300"></div>
-          </div>
+          </div> */}
 
           <div className="flex justify-between gap-4">
             {/* Facebook login - still disabled */}
-            <button disabled className="flex-1 border border-gray-300 py-3 rounded-lg flex items-center justify-center opacity-50 cursor-not-allowed">
+            {/* <button disabled className="flex-1 border border-gray-300 py-3 rounded-lg flex items-center justify-center opacity-50 cursor-not-allowed">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"
@@ -146,9 +146,9 @@ const Page = () => {
               >
                 <path d="M12.001 2.002c-5.522 0-9.999 4.477-9.999 9.999 0 4.99 3.656 9.126 8.437 9.879v-6.988h-2.54v-2.891h2.54V9.798c0-2.508 1.493-3.891 3.776-3.891 1.094 0 2.24.195 2.24.195v2.459h-1.264c-1.24 0-1.628.772-1.628 1.563v1.875h2.771l-.443 2.891h-2.328v6.988C18.344 21.129 22 16.992 22 12.001c0-5.522-4.477-9.999-9.999-9.999z" />
               </svg>
-            </button>
+            </button> */}
             {/* Apple login - still disabled */}
-            <button disabled className="flex-1 border border-gray-300 py-3 rounded-lg flex items-center justify-center opacity-50 cursor-not-allowed">
+            {/* <button disabled className="flex-1 border border-gray-300 py-3 rounded-lg flex items-center justify-center opacity-50 cursor-not-allowed">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"
@@ -157,9 +157,9 @@ const Page = () => {
               >
                 <path d="M16.365 12.778c-.002-1.198.396-2.315 1.195-3.187-.293-.752-.745-1.435-1.327-1.996-1.039-.996-2.28-1.598-3.631-1.598-1.331 0-2.148.564-2.873.564-.745 0-1.888-.534-2.762-.534-1.753.018-3.458 1.024-4.351 2.596-1.685 2.928-.432 7.256 1.189 9.628.809 1.158 1.756 2.448 2.995 2.407 1.211-.043 1.663-.771 3.131-.771 1.435 0 1.879.771 3.13.751 1.309-.02 2.122-1.161 2.926-2.32.504-.762.944-1.613 1.304-2.511-1.507-.592-2.54-2.015-2.517-3.695.019-1.104.396-2.139 1.12-2.978-.595-.556-1.389-.872-2.208-.872-1.003 0-1.978.472-2.608 1.288.63.317 1.19.823 1.593 1.478.422.663.653 1.436.663 2.223.009.79-.235 1.566-.7 2.22-.466.652-1.129 1.144-1.901 1.402.815.976 2.03 1.536 3.305 1.511 1.163-.011 2.267-.515 3.075-1.398.807-.884 1.244-2.053 1.219-3.268l-.038-.422zm-3.619-7.595c.546.005 1.084.14 1.562.393.477.252.89.615 1.197 1.057.307.443.497.953.553 1.485.053.505-.02 1.019-.211 1.489-.191.47-.491.892-.879 1.229.062-.175.119-.353.169-.533.142-.576.142-1.173 0-1.749-.142-.578-.435-1.104-.84-1.516-.422-.396-.962-.66-1.551-.757z" />
               </svg>
-            </button>
+            </button> */}
             {/* Google login - now active */}
-            <button 
+            {/* <button 
               onClick={handleGoogleSignIn}
               disabled={isGoogleLoading}
               className="flex-1 border border-gray-300 py-3 rounded-lg flex items-center justify-center hover:bg-gray-50 disabled:opacity-70">
@@ -188,7 +188,7 @@ const Page = () => {
                 />
               </svg>
               )}
-            </button>
+            </button> */}
           </div>
 
           <div className="text-center mt-8">
