@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       [
         Query.equal('status', 'pending'),
         Query.lessThanEqual('sendAt', now),
-        Query.limit(25) // Process max 25 reminders per run
+        Query.limit(3) // Reduced from 25 to 3 for 10-second timeout
       ]
     );
 
@@ -78,33 +78,21 @@ export async function GET(request: NextRequest) {
     // Process each reminder
     for (const reminder of dueReminders.documents) {
       try {
-        console.log(`📧 Processing reminder: ${reminder.$id}`);
-        
         // Use user details directly from the reminder document
         if (!reminder.userEmail) {
-          throw new Error(`Reminder ${reminder.$id} is missing an email address.`);
+          throw new Error(`Missing email for reminder ${reminder.$id}`);
         }
 
-        // Send email via Resend
+        // Send simple email via Resend
         const { error: emailError } = await resend.emails.send({
           from: "Adaptonia <reminders@olonts.site>",
           to: [reminder.userEmail],
-          subject: `🎯 Reminder: ${reminder.title || 'You have a reminder'}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-              <h2>Hi ${reminder.userName || 'there'},</h2>
-              <p>This is your scheduled reminder:</p>
-              <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
-                <h3 style="color: #0056b3;">${reminder.title}</h3>
-                ${reminder.description ? `<p>${reminder.description}</p>` : ''}
-              </div>
-              <p>Keep up the great work!</p>
-            </div>
-          `,
+          subject: `🎯 Goal Reminder`,
+          text: `Hi ${reminder.userName || 'there'},\n\nThis is your scheduled reminder: ${reminder.title || 'Time to work on your goal!'}\n\n${reminder.description || ''}\n\nKeep up the great work!\n\n- Adaptonia Team`
         });
 
         if (emailError) {
-          throw new Error(`Resend API Error: ${emailError.message}`);
+          throw new Error(`Email failed: ${emailError.message}`);
         }
 
         // Update reminder status to 'sent'
@@ -117,31 +105,20 @@ export async function GET(request: NextRequest) {
 
         results.processed++;
         results.successful++;
-        console.log(`✅ Email sent successfully to ${reminder.userEmail}`);
 
       } catch (error) {
         results.processed++;
         results.failed++;
         
-        // Update retry count
-        const newRetryCount = (reminder.retryCount || 0) + 1;
-        const newStatus = newRetryCount >= 3 ? 'failed' : 'pending';
-        
+        // Simple retry logic - just mark as failed after first failure
         await databases.updateDocument(
           process.env.APPWRITE_DATABASE_ID!,
           process.env.APPWRITE_REMINDERS_COLLECTION_ID!,
           reminder.$id,
-          {
-            retryCount: newRetryCount,
-            status: newStatus
-          }
+          { status: 'failed' }
         );
-
-        console.log(`❌ Failed to send reminder ${reminder.$id}:`, error);
       }
     }
-
-    console.log('📊 Email reminders processing complete:', results);
 
     return NextResponse.json({
       success: true,
