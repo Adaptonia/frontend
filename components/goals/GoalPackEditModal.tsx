@@ -409,76 +409,88 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    const weekend = new Date(today);
-    const daysUntilWeekend = 6 - today.getDay();
-    weekend.setDate(today.getDate() + daysUntilWeekend);
-    
-    const formatButtonDate = (date: Date) => {
-      return format(date, 'EEE, MMM d');
-    };
-    
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+
     return (
       <div className="h-full flex flex-col">
         <div className="flex items-center justify-between mb-4 px-5 pt-5">
-          <h2 className="text-xl font-semibold">Deadline</h2>
-          <button onClick={() => setActiveTab('main')} className="text-blue-500 font-medium">
-            Done
-          </button>
+          <div className="flex items-center">
+            <button onClick={() => setActiveTab('main')} className="mr-3">
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="text-xl font-semibold">Deadline</h2>
+          </div>
         </div>
         
         <div className="px-5 pb-5 flex-1">
+          {/* Quick select buttons */}
           <div className="space-y-3 mb-6">
             <button 
               onClick={() => {
-                const todayStr = format(today, 'yyyy-MM-dd');
-                setSelectedDate(todayStr);
+                setSelectedDate(today.toISOString());
                 setActiveTab('main');
               }}
-              className={`flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg ${selectedDate === format(today, 'yyyy-MM-dd') ? 'bg-gray-50' : ''}`}
+              className="flex items-center justify-between w-full p-4 rounded-lg border border-gray-200 hover:bg-gray-50"
             >
               <div className="flex items-center">
-                <div className="w-10 h-10 mr-3 rounded-md bg-yellow-100 flex items-center justify-center">
-                  <Calendar size={20} className="text-yellow-500" />
+                <div className="w-10 h-10 mr-3 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Calendar size={18} className="text-blue-500" />
                 </div>
                 <span className="font-medium">Today</span>
               </div>
-              <span className="text-gray-400">{formatButtonDate(today)}</span>
+              <span className="text-gray-400">{format(today, 'MMM d')}</span>
             </button>
             
             <button 
               onClick={() => {
-                const tomorrowStr = format(tomorrow, 'yyyy-MM-dd');
-                setSelectedDate(tomorrowStr);
+                setSelectedDate(tomorrow.toISOString());
                 setActiveTab('main');
               }}
-              className={`flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg ${selectedDate === format(tomorrow, 'yyyy-MM-dd') ? 'bg-gray-50' : ''}`}
+              className="flex items-center justify-between w-full p-4 rounded-lg border border-gray-200 hover:bg-gray-50"
             >
               <div className="flex items-center">
-                <div className="w-10 h-10 mr-3 rounded-md bg-orange-100 flex items-center justify-center">
-                  <Calendar size={20} className="text-orange-500" />
+                <div className="w-10 h-10 mr-3 rounded-full bg-orange-100 flex items-center justify-center">
+                  <Calendar size={18} className="text-orange-500" />
                 </div>
                 <span className="font-medium">Tomorrow</span>
               </div>
-              <span className="text-gray-400">{formatButtonDate(tomorrow)}</span>
+              <span className="text-gray-400">{format(tomorrow, 'MMM d')}</span>
             </button>
             
             <button 
               onClick={() => {
-                const weekendStr = format(weekend, 'yyyy-MM-dd');
-                setSelectedDate(weekendStr);
+                setSelectedDate(nextWeek.toISOString());
                 setActiveTab('main');
               }}
-              className={`flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg ${selectedDate === format(weekend, 'yyyy-MM-dd') ? 'bg-gray-50' : ''}`}
+              className="flex items-center justify-between w-full p-4 rounded-lg border border-gray-200 hover:bg-gray-50"
             >
               <div className="flex items-center">
-                <div className="w-10 h-10 mr-3 rounded-md bg-green-100 flex items-center justify-center">
-                  <Calendar size={20} className="text-green-500" />
+                <div className="w-10 h-10 mr-3 rounded-full bg-green-100 flex items-center justify-center">
+                  <Calendar size={18} className="text-green-500" />
                 </div>
-                <span className="font-medium">This Weekend</span>
+                <span className="font-medium">Next week</span>
               </div>
-              <span className="text-gray-400">{formatButtonDate(weekend)}</span>
+              <span className="text-gray-400">{format(nextWeek, 'MMM d')}</span>
             </button>
+          </div>
+
+          {/* Calendar */}
+          <div className="mt-6">
+            <h3 className="text-sm font-medium mb-4">Or pick a custom date</h3>
+            <input
+              type="date"
+              className="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={selectedDate ? selectedDate.split('T')[0] : ''}
+              onChange={(e) => {
+                const date = new Date(e.target.value);
+                if (!isNaN(date.getTime())) {
+                  setSelectedDate(date.toISOString());
+                  setActiveTab('main');
+                }
+              }}
+              min={format(today, 'yyyy-MM-dd')}
+            />
           </div>
         </div>
       </div>
