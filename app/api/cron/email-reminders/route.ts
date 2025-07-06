@@ -5,6 +5,7 @@ import { Resend } from 'resend';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function GET(request: NextRequest) {
+  // --- Environment Variable Validation ---
   const requiredEnv = [
     'RESEND_API_KEY',
     'CRON_SECRET',
@@ -25,31 +26,36 @@ export async function GET(request: NextRequest) {
       );
     }
   }
+  // --- End Validation ---
 
   try {
-    // ✅ Use query param instead of header for Vercel cron
-    const secret = request.nextUrl.searchParams.get('secret');
-    if (secret !== process.env.CRON_SECRET) {
+    // Security: Verify cron secret (following Vercel docs)
+    const authHeader = request.headers.get('authorization');
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     console.log('🔍 Cron job: Starting email reminders check...');
 
+    // Initialize Appwrite client
     const client = new Client()
       .setEndpoint(process.env.APPWRITE_ENDPOINT!)
       .setProject(process.env.APPWRITE_PROJECT_ID!)
       .setKey(process.env.APPWRITE_API_KEY!);
 
     const databases = new Databases(client);
+    
+    // Get current time
     const now = new Date().toISOString();
-
+    
+    // Query for due reminders that haven't been sent
     const dueReminders = await databases.listDocuments(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_REMINDERS_COLLECTION_ID!,
       [
         Query.equal('status', 'pending'),
         Query.lessThanEqual('sendAt', now),
-        Query.limit(25)
+        Query.limit(25) // Process max 25 reminders per run
       ]
     );
 
@@ -69,14 +75,17 @@ export async function GET(request: NextRequest) {
       failed: 0
     };
 
+    // Process each reminder
     for (const reminder of dueReminders.documents) {
       try {
         console.log(`📧 Processing reminder: ${reminder.$id}`);
-
+        
+        // Use user details directly from the reminder document
         if (!reminder.userEmail) {
           throw new Error(`Reminder ${reminder.$id} is missing an email address.`);
         }
 
+        // Send email via Resend
         const { error: emailError } = await resend.emails.send({
           from: "Adaptonia <reminders@olonts.site>",
           to: [reminder.userEmail],
@@ -98,6 +107,7 @@ export async function GET(request: NextRequest) {
           throw new Error(`Resend API Error: ${emailError.message}`);
         }
 
+        // Update reminder status to 'sent'
         await databases.updateDocument(
           process.env.APPWRITE_DATABASE_ID!,
           process.env.APPWRITE_REMINDERS_COLLECTION_ID!,
@@ -112,10 +122,11 @@ export async function GET(request: NextRequest) {
       } catch (error) {
         results.processed++;
         results.failed++;
-
+        
+        // Update retry count
         const newRetryCount = (reminder.retryCount || 0) + 1;
         const newStatus = newRetryCount >= 3 ? 'failed' : 'pending';
-
+        
         await databases.updateDocument(
           process.env.APPWRITE_DATABASE_ID!,
           process.env.APPWRITE_REMINDERS_COLLECTION_ID!,
@@ -135,7 +146,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: `Processed ${results.processed} email reminders`,
-      results
+      results: results
     });
 
   } catch (error) {
@@ -145,4 +156,4 @@ export async function GET(request: NextRequest) {
       error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
-}
+} 
