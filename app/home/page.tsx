@@ -8,24 +8,24 @@ import { loginWithGoogle } from '@/services/appwrite/auth'
 const Page = () => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
 
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+//   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const handleGoogleSignIn = async () => {
-    try {
-        setIsGoogleLoading(true);
-        toast.info('Redirecting to Google...');
+//   const handleGoogleSignIn = async () => {
+//     try {
+//         setIsGoogleLoading(true);
+//         toast.info('Redirecting to Google...');
         
-        // This will redirect the user to Google's OAuth page
-        await loginWithGoogle();
+//         // This will redirect the user to Google's OAuth page
+//         await loginWithGoogle();
         
-        // The code below won't execute until the user returns from Google OAuth
-        // because the browser navigates away from this page
-    } catch (error) {
-        setIsGoogleLoading(false);
-        const errorMessage = error instanceof Error ? error.message : 'Google login failed';
-        toast.error(errorMessage);
-    }
-};
+//         // The code below won't execute until the user returns from Google OAuth
+//         // because the browser navigates away from this page
+//     } catch (error) {
+//         setIsGoogleLoading(false);
+//         const errorMessage = error instanceof Error ? error.message : 'Google login failed';
+//         toast.error(errorMessage);
+//     }
+// };
 
   return (
     <div>
@@ -61,7 +61,7 @@ const Page = () => {
                       Signup with email
                     </Link>
       
-                    <button className="w-full py-4 bg-white text-black rounded-full font-semibold flex items-center justify-center shadow-md">
+                    {/* <button className="w-full py-4 bg-white text-black rounded-full font-semibold flex items-center justify-center shadow-md">
                       <svg
                         width="20"
                         height="20"
@@ -74,9 +74,9 @@ const Page = () => {
                         />
                       </svg>
                       Signup with apple
-                    </button>
+                    </button> */}
       
-                    <button
+                    {/* <button
                       onClick={handleGoogleSignIn}
                       disabled={isGoogleLoading}  
                       className="w-full py-4 bg-white text-black rounded-full font-semibold flex items-center justify-center shadow-md"
@@ -113,7 +113,7 @@ const Page = () => {
                       Signup with Google
                       </>
                       )}
-                    </button>
+                    </button> */}
       
                     <div className="text-center mt-4">
                       <p className="text-black">
