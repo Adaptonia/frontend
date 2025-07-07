@@ -28,23 +28,23 @@ const Page = () => {
 // };
 
   return (
-    <div>
-      <div>
-            <div className=" h-screen w-full overflow-hidden">
-              <div className="inset-0 z-0">
+    <div className="min-h-screen w-full overflow-x-hidden">
+      <div className="relative w-full">
+            <div className="relative min-h-screen w-full">
+              <div className="absolute inset-0 z-0">
                 <Image
                   src="/happy-man.jpg"
                   alt="Happy man in light blue outfit"
-                  layout="fill"
-                  className="object-cover" // or "object-cover"
+                  fill
+                  className="object-cover"
                   priority
                 />
-                <div className="absolute h-[83vh] top-40 inset-0 bg-gradient-to-b from-transparent via-white to-white" />
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-60% to-white" />
               </div>
       
               {/* Content Area - Starting from the middle where white fade begins */}
-              <div className="relative z-10 h-full flex flex-col px-6">
-                <div className="flex flex-col h-full justify-end pb-20">
+              <div className="relative z-10 min-h-screen flex flex-col px-6">
+                <div className="flex flex-col min-h-screen justify-end pb-20">
                   {/* Content starts from middle of screen where white fade begins */}
                   <div className="w-full flex flex-col gap-4">
                     <h3 className="text-2xl font-bold text-center">
@@ -115,7 +115,7 @@ const Page = () => {
                       )}
                     </button> */}
       
-                    <div className="text-center mt-4">
+                    <div className="text-center mt-4 mb-10">
                       <p className="text-black">
                         Already have an account?{" "}
                         <Link href="/login" className="text-[#229FDB] font-semibold">

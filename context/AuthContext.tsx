@@ -73,55 +73,72 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Enhanced fetchUser function with proper error handling and session persistence
+  // Enhanced fetchUser function with proper session restoration
   const fetchUser = useCallback(async () => {
-    console.log("🔍 Checking for existing Appwrite session...");
+    console.log("🔍 Starting session restoration check...");
+    
     try {
-      // Get user from Appwrite - this checks if the session is still valid
-      const data = await getCurrentUser();
-      console.log("✅ Found authenticated user:", data?.email);
-      console.log("🔍 User data details:", {
-        userType: data?.userType,
-        hasCompletedUserTypeSelection: data?.hasCompletedUserTypeSelection,
-        role: data?.role
-      });
+      setLoading(true);
       
-      if (data) {
-        // Cache user type info for offline access
-        setUserTypeCache(data);
+      // Call Appwrite's account.get() to check if session is valid
+      // This automatically uses the HTTP-only session cookie
+      const userData = await getCurrentUser();
+      
+      if (userData) {
+        console.log("✅ Session restored successfully for:", userData.email);
+        console.log("🔍 User session details:", {
+          userType: userData.userType,
+          hasCompletedUserTypeSelection: userData.hasCompletedUserTypeSelection,
+          role: userData.role
+        });
         
-        // Also cache basic auth info
+        // Cache user type info for offline access
+        setUserTypeCache(userData);
+        
+        // Cache basic auth info for offline scenarios only
         if (typeof window !== 'undefined') {
           localStorage.setItem('adaptonia_auth_cache', JSON.stringify({
-            id: data.id,
-            email: data.email,
-            name: data.name,
-            role: data.role,
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            role: userData.role,
             lastValidated: Date.now()
           }));
         }
         
-        setUser(data);
-        console.log("✅ Session is valid and persistent for ~1 week");
+        setUser(userData);
+        console.log("✅ Appwrite session is persistent and valid");
+        return;
       }
-    } catch (error) {
-      console.log("ℹ️ No valid Appwrite session found");
       
-      // Only use cache as a very last resort for offline scenarios (not for expired sessions)
-      // Check if we're actually offline vs just having an expired session
+      // If getCurrentUser returns null, session is invalid/expired
+      console.log("ℹ️ No valid Appwrite session found - user needs to login");
+      setUser(null);
+      
+      // Clear any stale cache when session is invalid
+      clearUserTypeCache();
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('adaptonia_auth_cache');
+      }
+      
+    } catch (error) {
+      console.log("❌ Session restoration failed:", error instanceof Error ? error.message : 'Unknown error');
+      
+      // Only use cache as fallback for offline scenarios (not expired sessions)
       if (!navigator.onLine) {
-        console.log("📱 Device appears offline, checking cache...");
+        console.log("📱 Device appears offline, attempting to restore from cache...");
         
-        const cachedAuth = localStorage.getItem('adaptonia_auth_cache');
-        if (cachedAuth) {
-          try {
+        try {
+          const cachedAuth = localStorage.getItem('adaptonia_auth_cache');
+          if (cachedAuth) {
             const authData = JSON.parse(cachedAuth);
-            // Only use cache if it's less than 1 hour old (for offline scenarios)
+            // Only use cache if it's less than 1 hour old (for offline scenarios only)
             const cacheAge = Date.now() - (authData.lastValidated || 0);
+            
             if (authData.id && cacheAge < 60 * 60 * 1000) {
               const cachedUserType = getUserTypeFromCache(authData.id);
               if (cachedUserType) {
-                console.log("🔄 Using cached user data for offline access");
+                console.log("🔄 Restored user session from offline cache");
                 setUser({
                   ...authData,
                   ...cachedUserType
@@ -129,30 +146,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 return;
               }
             }
-          } catch (cacheError) {
-            console.warn('Failed to parse cached auth data:', cacheError);
           }
+        } catch (cacheError) {
+          console.warn('Failed to restore from cache:', cacheError);
         }
+        
+        console.log("❌ No valid offline cache available");
       } else {
-        console.log("🌐 Device is online - session expired or invalid, clearing cache");
+        console.log("🌐 Device is online - session expired, clearing all cache");
         // Clear stale cache when online and session is invalid
         clearUserTypeCache();
-        localStorage.removeItem('adaptonia_auth_cache');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('adaptonia_auth_cache');
+        }
       }
       
-      // Only log detailed error in development
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Auth check details:', error);
-      }
+      // Set user to null when session is invalid
       setUser(null);
+      
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Use effect to check auth on mount - this is critical for OAuth redirects
+  // Session restoration on app startup
   useEffect(() => {
-    console.log("🔄 AuthContext mounted - checking authentication");
+    console.log("🚀 AuthContext mounted - starting session restoration...");
     fetchUser();
   }, [fetchUser]);
 
@@ -187,7 +206,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           id: updatedUser.id,
           email: updatedUser.email,
           name: updatedUser.name,
-          role: updatedUser.role
+          role: updatedUser.role,
+          lastValidated: Date.now()
         }));
       }
       

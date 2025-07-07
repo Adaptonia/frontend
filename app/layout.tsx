@@ -5,6 +5,7 @@ import { Providers } from "./providers";
 import { ThemeProvider } from "@/context/ThemeContext";
 import MobileZoomFix from "@/components/MobileZoomFix";
 import { ReminderChecker } from "@/components/ReminderChecker";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -58,6 +59,8 @@ export default function RootLayout({
         <Providers>
           <ThemeProvider>
               {children}
+              {/* Service Worker Registration - enables offline caching and PWA features */}
+              <ServiceWorkerRegistration />
               {/* Mobile Zoom Fix - prevents and resets mobile zoom on input focus */}
               <MobileZoomFix />
               {/* Email Reminder Checker - automatically sends due goal reminders */}

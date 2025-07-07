@@ -26,6 +26,7 @@ import LibraryModal from '@/components/library/LibraryModal'
 import LibraryItemCard from '@/components/library/LibraryItemCard'
 import { getLibraryItems, deleteLibraryItem, toggleLibraryItemFavorite, toggleLibraryItemCompletion } from '@/services/appwrite/libraryService'
 import { hasCompletedUserTypeSelection, updateUserType } from '@/services/appwrite/userService'
+import OfflineStatusIndicator from '@/components/OfflineStatusIndicator'
 
 
 const Dashboard = () => {
@@ -397,6 +398,8 @@ const Dashboard = () => {
     <div className="bg-gray-100 min-h-screen pb-20">
       {/* PWA Installation Prompt will automatically show based on criteria */}
       
+      {/* Offline Status Indicator */}
+      <OfflineStatusIndicator position="top-right" />
       
       {/* Calendar Section */}
       <DashboardCalendar onDateSelect={handleDateSelect} />
