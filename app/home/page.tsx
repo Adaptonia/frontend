@@ -28,10 +28,10 @@ const Page = () => {
 // };
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden">
-      <div className="relative w-full">
-            <div className="relative min-h-screen w-full">
-              <div className="absolute inset-0 z-0">
+    <div>
+      <div>
+            <div className=" h-screen w-full overflow-y-scroll">
+              <div className="inset-0 z-0">
                 <Image
                   src="/happy-man.jpg"
                   alt="Happy man in light blue outfit"
@@ -39,7 +39,7 @@ const Page = () => {
                   className="object-cover"
                   priority
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-60% to-white" />
+                <div className="absolute h-[83vh] top-40 inset-0 bg-gradient-to-b from-transparent via-white to-white" />
               </div>
       
               {/* Content Area - Starting from the middle where white fade begins */}
