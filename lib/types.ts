@@ -144,6 +144,7 @@ export interface GoalPack {
   targetUserType: 'student' | 'non-student' | 'all';
   milestones?: string; // JSON stringified milestones array
   tags?: string;
+  link?: string;
   isActive: boolean;
   createdBy: string; // Admin user ID
   createdAt: string;
@@ -157,6 +158,7 @@ export interface CreateGoalPackRequest {
   targetUserType: 'student' | 'non-student' | 'all';
   milestones?: string;
   tags?: string;
+  link?: string;
   isActive?: boolean;
 }
 
@@ -167,6 +169,7 @@ export interface UpdateGoalPackRequest {
   targetUserType?: 'student' | 'non-student' | 'all';
   milestones?: string;
   tags?: string;
+  link?: string;
   isActive?: boolean;
 }
 

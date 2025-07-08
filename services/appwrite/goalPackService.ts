@@ -30,6 +30,7 @@ export const createGoalPack = async (goalPackData: CreateGoalPackRequest, adminI
       targetUserType: response.targetUserType,
       milestones: response.milestones,
       tags: response.tags,
+              link: response.link,
       isActive: response.isActive,
       createdBy: response.createdBy,
       createdAt: response.createdAt,

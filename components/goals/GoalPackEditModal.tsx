@@ -371,6 +371,35 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
             onMilestonesChange={setMilestones}
           />
         </div>
+
+        {/* Meeting/Resource Link */}
+                  {goalPack?.link && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              <span className="text-sm font-medium text-green-800">Meeting/Resource Link</span>
+            </div>
+            <p className="text-sm text-green-600 mb-3">
+              Access the related meeting or resource for this goal pack
+            </p>
+            <a
+                              href={goalPack.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+                              {goalPack.link.includes('meet.google.com') ? 'Join Google Meet' :
+                goalPack.link.includes('zoom.us') ? 'Join Zoom Meeting' :
+                goalPack.link.includes('teams.microsoft.com') ? 'Join Teams Meeting' :
+               'Open Resource Link'}
+            </a>
+          </div>
+        )}
       </div>
       
       {/* Save button - fixed at bottom */}

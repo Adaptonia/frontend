@@ -56,7 +56,25 @@ const Page = () => {
       console.log(account)
     } catch (error) {
       console.error(error)
-      setError("Failed to create account. Please try again.")
+      
+      // Handle specific Appwrite errors
+      let errorMessage = "Failed to create account. Please try again.";
+      
+      if (error instanceof Error) {
+        const message = error.message.toLowerCase();
+        
+        if (message.includes('already exists') || message.includes('conflict')) {
+          errorMessage = "This email is already registered. Please try logging in instead.";
+        } else if (message.includes('invalid email')) {
+          errorMessage = "Please enter a valid email address.";
+        } else if (message.includes('password')) {
+          errorMessage = "Password must be at least 8 characters long.";
+        } else if (message.includes('network') || message.includes('connection')) {
+          errorMessage = "Network error. Please check your connection and try again.";
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false)
     }
