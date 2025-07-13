@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Plus, Calendar, User, BookOpen, BarChart3, Edit3, GraduationCap, Briefcase } from 'lucide-react'
+import { Plus, Calendar, User, BookOpen, BarChart3, Edit3, GraduationCap, Briefcase, ChevronDown } from 'lucide-react'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
@@ -391,7 +391,47 @@ const Dashboard = () => {
 
   // Notification functionality removed - using Resend for email notifications
 
+  const [expandedUserType, setExpandedUserType] = useState<string | null>(null);
+  const [showAllGoalPacks, setShowAllGoalPacks] = useState(false);
 
+  // Helper function to group goal packs by user type
+  const groupGoalPacksByUserType = () => {
+    const groups: { [key: string]: GoalPack[] } = {
+      'student': [],
+      'non-student': [],
+      'all': []
+    };
+    
+    goalPacks.forEach(pack => {
+      if (pack.targetUserType === 'all') {
+        groups['all'].push(pack);
+      } else {
+        groups[pack.targetUserType].push(pack);
+      }
+    });
+    
+    return groups;
+  };
+
+  // Helper function to render goal pack item
+  const renderGoalPackItem = (pack: GoalPack) => (
+    <div 
+      key={pack.id}
+      onClick={() => {
+        setActiveGoalPack(pack);
+        setIsGoalPackModalOpen(true);
+      }}
+      className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 mb-2"
+    >
+      <div>
+        <h3 className="font-medium">{pack.title}</h3>
+        <p className="text-sm text-gray-500">
+          {pack.category} • {pack.targetUserType} • {pack.isActive ? 'Active' : 'Inactive'}
+        </p>
+      </div>
+      <div className={`w-3 h-3 rounded-full ${pack.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
+    </div>
+  );
 
 
   return (
@@ -459,29 +499,81 @@ const Dashboard = () => {
               </button>
             </div>
             
-            <div className="space-y-2">
-              {goalPacks.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No goal packs created yet</p>
-              ) : (
-                goalPacks.map(pack => (
-                  <div 
-                    key={pack.id}
-                    onClick={() => {
-                      setActiveGoalPack(pack);
-                      setIsGoalPackModalOpen(true);
-                    }}
-                    className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
-                  >
-                    <div>
-                      <h3 className="font-medium">{pack.title}</h3>
-                      <p className="text-sm text-gray-500">
-                        {pack.category} • {pack.targetUserType} • {pack.isActive ? 'Active' : 'Inactive'}
-                      </p>
+            {goalPacks.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">No goal packs created yet</p>
+            ) : (
+              <div className="space-y-4">
+                {Object.entries(groupGoalPacksByUserType()).map(([userType, packs]) => (
+                  packs.length > 0 && (
+                    <div key={userType} className="border rounded-lg overflow-hidden">
+                      <button
+                        onClick={() => setExpandedUserType(expandedUserType === userType ? null : userType)}
+                        className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100"
+                      >
+                        <span className="font-medium capitalize">
+                          {userType === 'all' ? 'All Users' : userType === 'non-student' ? 'Professional' : userType}
+                          <span className="ml-2 text-sm text-gray-500">({packs.length})</span>
+                        </span>
+                        <ChevronDown
+                          className={`w-5 h-5 transition-transform ${expandedUserType === userType ? 'transform rotate-180' : ''}`}
+                        />
+                      </button>
+                      {expandedUserType === userType && (
+                        <div className="p-3">
+                          {packs.map(pack => renderGoalPackItem(pack))}
+                        </div>
+                      )}
                     </div>
-                    <div className={`w-3 h-3 rounded-full ${pack.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
-                  </div>
-                ))
+                  )
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Regular User Goal Packs */}
+        {!user?.role && userGoalPacks.length > 0 && (
+          <div className="bg-white rounded-xl p-5 mb-6 shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-blue-500 text-lg font-medium">Available Goal Packs</h2>
+              {userGoalPacks.length > 3 && (
+                <button 
+                  onClick={() => setShowAllGoalPacks(!showAllGoalPacks)}
+                  className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+                >
+                  {showAllGoalPacks ? 'Show Less' : 'See More'}
+                </button>
               )}
+            </div>
+            
+            <div className="space-y-2">
+              {(showAllGoalPacks ? userGoalPacks : userGoalPacks.slice(0, 3)).map(pack => (
+                <div 
+                  key={pack.id}
+                  className="mx-4 mb-2 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg cursor-pointer hover:shadow-md transition-all"
+                  onClick={() => handleEditGoalPack(pack)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <h5 className="font-medium text-blue-800">{pack.title}</h5>
+                      {pack.description && (
+                        <p className="text-sm text-blue-600 mt-1">{pack.description}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-2">
+                        {pack.tags && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                            {pack.tags}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="ml-3 flex flex-col items-center">
+                      <Edit3 className="w-5 h-5 text-blue-500" />
+                      <span className="text-xs text-blue-400 mt-1">Edit</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
