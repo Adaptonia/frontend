@@ -9,6 +9,7 @@ import MilestoneComponent from './MilestoneComponent';
 import { createGoal } from '@/services/appwrite/database';
 import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
+// Removed Select imports - using buttons instead
 
 interface GoalPackEditModalProps {
   isOpen: boolean;
@@ -56,30 +57,12 @@ const ActionButton: React.FC<ActionButtonProps> = ({ icon, label, onClick, selec
   );
 };
 
-// Header component with title and save button
-const ModalHeader: React.FC<{ title: string; onSave: () => void; isSaving: boolean }> = ({ 
-  title, 
-  onSave, 
-  isSaving 
-}) => (
+// Header component with title and done button
+const ModalHeader: React.FC<{ title: string; onBack: () => void }> = ({ title, onBack }) => (
   <div className="flex items-center justify-between mb-4 px-5 pt-5">
     <h2 className="text-xl font-semibold">{title}</h2>
-    <button 
-      onClick={onSave} 
-      disabled={isSaving}
-      className="flex items-center gap-2 text-white bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors disabled:bg-blue-300"
-    >
-      {isSaving ? (
-        <>
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Saving...
-        </>
-      ) : (
-        <>
-          <Save className="w-4 h-4" />
-          Save Goal
-        </>
-      )}
+    <button onClick={onBack} className="text-blue-500 font-medium">
+      Done
     </button>
   </div>
 );
@@ -101,10 +84,16 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState('');
-  const [reminderSettings, setReminderSettings] = useState({
+  const [reminderSettings, setReminderSettings] = useState<{
+    enabled: boolean;
+    time: string;
+    date: string;
+    duration?: number; // Added for daily reminders
+  }>({
     enabled: false,
-    date: '',
-    time: ''
+    time: "09:00", // This will be locked at 9 AM
+    date: format(new Date(), 'yyyy-MM-dd'),
+    duration: 30 // Default to 30 days
   });
   
   // Drag to close functionality
@@ -114,34 +103,37 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
   
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Initialize form with goal pack data when modal opens
   useEffect(() => {
-    if (isOpen && goalPack) {
-      setTitle(goalPack.title || '');
-      setDescription(goalPack.description || '');
-      setSelectedTag(goalPack.tags || '');
-      
-      // Parse and set milestones
-      if (goalPack.milestones) {
+    if (isOpen) {
+      if (goalPack) {
+        setTitle(goalPack.title || '');
+        setDescription(goalPack.description || '');
+        setSelectedTag(goalPack.tags || '');
+
         try {
-          const parsedMilestones = JSON.parse(goalPack.milestones);
+          const parsedMilestones = goalPack.milestones ? JSON.parse(goalPack.milestones) : [];
           setMilestones(parsedMilestones);
         } catch (e) {
           console.error("Failed to parse milestones", e);
           setMilestones([]);
         }
       } else {
+        // Reset fields if no goal pack is provided (though this case is unlikely)
+        setTitle('');
+        setDescription('');
+        setSelectedTag('');
         setMilestones([]);
       }
-      
-      // Reset other fields
+
+      // Reset fields that are not part of the goal pack template
       setSelectedDate('');
       setReminder('');
       setLocation('');
       setValidationError('');
+
+      // Reset the view to the main tab whenever the modal is freshly opened.
+      setActiveTab('main');
     }
-    
-    setActiveTab('main');
   }, [isOpen, goalPack]);
 
   // Lock scroll when modal is open
@@ -290,6 +282,11 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Prevent modal from closing when reminderSettings changes
+  const handleReminderSettingsChange = (newSettings: Partial<typeof reminderSettings>) => {
+    setReminderSettings(prev => ({...prev, ...newSettings}));
   };
 
   // Main tab content with editable fields
@@ -443,14 +440,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
 
     return (
       <div className="h-full flex flex-col">
-        <div className="flex items-center justify-between mb-4 px-5 pt-5">
-          <div className="flex items-center">
-            <button onClick={() => setActiveTab('main')} className="mr-3">
-              <X className="w-5 h-5" />
-            </button>
-            <h2 className="text-xl font-semibold">Deadline</h2>
-          </div>
-        </div>
+        <ModalHeader title="Deadline" onBack={() => setActiveTab('main')} />
         
         <div className="px-5 pb-5 flex-1">
           {/* Quick select buttons */}
@@ -529,12 +519,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
   // Tag selection screen
   const renderTagTab = () => (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between mb-4 px-5 pt-5">
-        <h2 className="text-xl font-semibold">Tag</h2>
-        <button onClick={() => setActiveTab('main')} className="text-blue-500 font-medium">
-          Done
-        </button>
-      </div>
+      <ModalHeader title="Tag" onBack={() => setActiveTab('main')} />
       
       <div className="px-5 pb-5 flex-1">
         <button 
@@ -579,17 +564,10 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
     </div>
   );
 
-  // Add reminder tab functionality
+  // Reminder settings screen
   const renderReminderTab = () => (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between mb-4 px-5 pt-5">
-        <div className="flex items-center">
-          <button onClick={() => setActiveTab('main')} className="mr-3">
-            <X className="w-5 h-5" />
-          </button>
-          <h2 className="text-xl font-semibold">Reminder</h2>
-        </div>
-      </div>
+      <ModalHeader title="Reminder" onBack={() => setActiveTab('main')} />
       
       <div className="px-5 pb-5 flex-1">
         {/* Enable/Disable Reminders Toggle */}
@@ -599,12 +577,12 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
               <BellIcon size={20} className="text-blue-500" />
             </div>
             <div>
-              <p className="font-medium">Enable Reminders</p>
-              <p className="text-xs text-gray-500">Get notified about this goal</p>
+              <p className="font-medium">Enable Daily Reminders</p>
+              <p className="text-xs text-gray-500">Get daily notifications at 9:00 AM</p>
             </div>
           </div>
           <button 
-            onClick={() => setReminderSettings(prev => ({...prev, enabled: !prev.enabled}))}
+            onClick={() => handleReminderSettingsChange({enabled: !reminderSettings.enabled})}
             className={`w-12 h-6 rounded-full relative ${reminderSettings.enabled ? 'bg-blue-500' : 'bg-gray-300'}`}
           >
             <span 
@@ -617,7 +595,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
         
         {reminderSettings.enabled && (
           <div className="space-y-5 animate-in fade-in-50">
-            {/* Reminder Date */}
+            {/* Reminder Start Date */}
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
                 <Calendar className="mr-2" size={16} />
@@ -627,43 +605,94 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
                 type="date"
                 className="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={reminderSettings.date}
-                onChange={(e) => setReminderSettings(prev => ({...prev, date: e.target.value}))}
+                onChange={(e) => handleReminderSettingsChange({date: e.target.value})}
               />
-              <p className="text-xs text-gray-500">When should the reminder start?</p>
+              <p className="text-xs text-gray-500">When should the daily reminders start?</p>
             </div>
             
-            {/* Reminder Time */}
+            {/* Locked Reminder Time - 9 AM */}
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
                 <Clock className="mr-2" size={16} />
                 Reminder Time
               </label>
               <div className="flex items-center gap-2">
-                <input
-                  type="time"
-                  className="flex-1 p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={reminderSettings.time}
-                  onChange={(e) => {
-                    setReminderSettings(prev => ({...prev, time: e.target.value}));
-                  }}
-                />
-                <div className="text-sm text-gray-500">
-                  {new Date(`2000-01-01T${reminderSettings.time}`).toLocaleTimeString([], {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
-                  })}
+                <div className="flex-1 p-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-600">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">9:00 AM</span>
+                    <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">Fixed Time</span>
+                  </div>
                 </div>
               </div>
+              <p className="text-xs text-gray-500">Time is locked at 9:00 AM for the free plan</p>
+            </div>
+
+            {/* Duration Selector */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <Calendar className="mr-2" size={16} />
+                Reminder Duration
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => handleReminderSettingsChange({duration: 7})}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    reminderSettings.duration === 7 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  7 days
+                </button>
+                <button
+                  onClick={() => handleReminderSettingsChange({duration: 14})}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    reminderSettings.duration === 14 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  14 days
+                </button>
+                <button
+                  onClick={() => handleReminderSettingsChange({duration: 21})}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    reminderSettings.duration === 21 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  21 days
+                </button>
+                <button
+                  onClick={() => handleReminderSettingsChange({duration: 30})}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    reminderSettings.duration === 30 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  30 days (Recommended)
+                </button>
+                <button
+                  onClick={() => handleReminderSettingsChange({duration: 60})}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    reminderSettings.duration === 60 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  60 days
+                </button>
+                <button
+                  onClick={() => handleReminderSettingsChange({duration: 90})}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    reminderSettings.duration === 90 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  90 days
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">How long should we send daily reminders?</p>
             </div>
             
             {/* Preview Section */}
-            <div className="p-4 rounded-lg bg-gray-50 mt-6">
-              <h4 className="font-medium mb-2">Reminder Preview</h4>
-              <div className="text-sm text-gray-600 space-y-1">
-                <div className="flex items-center">
-                  <Calendar size={14} className="mr-2" />
-                  <span>
+            <div className="p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 mt-6">
+              <h4 className="font-medium mb-2 text-blue-800">📅 Reminder Schedule</h4>
+              <div className="text-sm text-blue-600 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span>Start Date:</span>
+                  <span className="font-medium">
                     {(() => {
                       try {
                         if (!reminderSettings.date) {
@@ -673,7 +702,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
                         if (isNaN(date.getTime())) {
                           return 'Invalid date';
                         }
-                        return format(date, 'EEEE, MMMM d, yyyy');
+                        return format(date, 'MMM d, yyyy');
                       } catch (error) {
                         console.error('Date formatting error:', error);
                         return 'Invalid date';
@@ -681,15 +710,35 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
                     })()}
                   </span>
                 </div>
-                <div className="flex items-center">
-                  <Clock size={14} className="mr-2" />
-                  <span>
-                    {new Date(`2000-01-01T${reminderSettings.time}`).toLocaleTimeString([], {
-                      hour: 'numeric',
-                      minute: '2-digit',
-                      hour12: true
-                    })}
+                <div className="flex items-center justify-between">
+                  <span>End Date:</span>
+                  <span className="font-medium">
+                    {(() => {
+                      try {
+                        if (!reminderSettings.date) {
+                          return 'No date selected';
+                        }
+                        const startDate = new Date(reminderSettings.date);
+                        const endDate = new Date(startDate);
+                        endDate.setDate(startDate.getDate() + (reminderSettings.duration || 30) - 1);
+                        if (isNaN(endDate.getTime())) {
+                          return 'Invalid date';
+                        }
+                        return format(endDate, 'MMM d, yyyy');
+                      } catch (error) {
+                        console.error('Date formatting error:', error);
+                        return 'Invalid date';
+                      }
+                    })()}
                   </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Daily Time:</span>
+                  <span className="font-medium">9:00 AM</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Total Reminders:</span>
+                  <span className="font-medium text-blue-700">{reminderSettings.duration || 30} days</span>
                 </div>
               </div>
             </div>
@@ -703,26 +752,26 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
           <button 
             onClick={() => {
               try {
-                // Set the reminder date from the reminder settings
-                if (reminderSettings.date && reminderSettings.time) {
-                  // Create date in local time zone
-                  const [hours, minutes] = reminderSettings.time.split(':');
+                // Set the reminder date from the reminder settings (locked at 9 AM)
+                if (reminderSettings.date) {
+                  // Create date in local time zone at 9 AM
                   const reminderDate = new Date(reminderSettings.date);
-                  reminderDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                  reminderDate.setHours(9, 0, 0, 0); // Always 9:00 AM
 
                   if (!isNaN(reminderDate.getTime())) {
                     // Store in ISO format (will be converted to UTC)
                     setReminder(reminderDate.toISOString());
                     
-                    toast.success(`Reminder set for ${reminderDate.toLocaleTimeString()}`, {
-                      description: `${reminderDate.toLocaleDateString()}`
+                    const duration = reminderSettings.duration || 30;
+                    toast.success(`Daily reminders set for ${duration} days at 9:00 AM`, {
+                      description: `Starting ${reminderDate.toLocaleDateString()}`
                     });
                   } else {
-                    toast.error('Invalid reminder date/time');
+                    toast.error('Invalid reminder date');
                     return;
                   }
                 } else {
-                  toast.error('Please set both date and time for reminder');
+                  toast.error('Please set a start date for reminders');
                   return;
                 }
               } catch (error) {
@@ -734,7 +783,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
             }}
             className="w-full py-3 bg-blue-500 text-white font-medium rounded-full hover:bg-blue-600"
           >
-            Done
+            Set Daily Reminders
           </button>
         </div>
       )}

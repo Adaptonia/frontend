@@ -499,9 +499,9 @@ const Dashboard = () => {
               </button>
             </div>
             
-            {goalPacks.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">No goal packs created yet</p>
-            ) : (
+              {goalPacks.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No goal packs created yet</p>
+              ) : (
               <div className="space-y-4">
                 {Object.entries(groupGoalPacksByUserType()).map(([userType, packs]) => (
                   packs.length > 0 && (
@@ -548,8 +548,8 @@ const Dashboard = () => {
             
             <div className="space-y-2">
               {(showAllGoalPacks ? userGoalPacks : userGoalPacks.slice(0, 3)).map(pack => (
-                <div 
-                  key={pack.id}
+                  <div 
+                    key={pack.id}
                   className="mx-4 mb-2 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg cursor-pointer hover:shadow-md transition-all"
                   onClick={() => handleEditGoalPack(pack)}
                 >

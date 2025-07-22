@@ -3,7 +3,7 @@
 import { ID, Query } from 'appwrite';
 import { databases, DATABASE_ID, REMINDERS_COLLECTION_ID } from './client';
 
-// Simple reminder data structure following Salein's pattern
+// Updated reminder data structure for recurring reminders
 type ReminderData = {
   goalId: string;
   userId: string;
@@ -14,9 +14,14 @@ type ReminderData = {
   sendAt: string;
   status: 'pending' | 'sent' | 'failed';
   retryCount: number;
+  // New fields for recurring reminders
+  isRecurring?: boolean;
+  recurringDuration?: number;  // Total days (e.g., 30)
+  currentDay?: number;         // Current day (1, 2, 3...)
+  endDate?: string;           // When to stop recurring
+  lastSentDate?: string;      // Track last successful send
 };
 
-// Input type for creating reminders (excludes status and retryCount)
 type ReminderInput = Omit<ReminderData, 'status' | 'retryCount'>;
 
 const CONFIG = {
@@ -52,6 +57,78 @@ export const createReminder = async (reminder: ReminderInput) => {
   );
 };
 
+// New function to create a single recurring reminder
+export const createRecurringReminder = async (
+  reminder: ReminderInput, 
+  duration: number = 30
+) => {
+  validateConfig();
+  
+  const startDate = new Date(reminder.sendAt);
+  const endDate = new Date(startDate);
+  endDate.setDate(startDate.getDate() + duration - 1);
+  
+  return databases.createDocument(
+    CONFIG.databaseId,
+    CONFIG.collectionId,
+    ID.unique(),
+    {
+      ...reminder,
+      status: 'pending',
+      retryCount: 0,
+      isRecurring: true,
+      recurringDuration: duration,
+      currentDay: 1,
+      endDate: endDate.toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  );
+};
+
+// Function to advance a recurring reminder to the next day
+export const advanceRecurringReminder = async (reminderId: string) => {
+  validateConfig();
+  
+  // Get the current reminder
+  const reminder = await databases.getDocument(
+    CONFIG.databaseId,
+    CONFIG.collectionId,
+    reminderId
+  );
+  
+  if (!reminder.isRecurring || reminder.currentDay >= reminder.recurringDuration) {
+    // Not recurring or reached the end, mark as completed
+    return databases.updateDocument(
+      CONFIG.databaseId,
+      CONFIG.collectionId,
+      reminderId,
+      {
+        status: 'sent',
+        updatedAt: new Date().toISOString()
+      }
+    );
+  }
+  
+  // Calculate next send time (tomorrow at same time)
+  const nextSendAt = new Date(reminder.sendAt);
+  nextSendAt.setDate(nextSendAt.getDate() + 1);
+  
+  return databases.updateDocument(
+    CONFIG.databaseId,
+    CONFIG.collectionId,
+    reminderId,
+    {
+      currentDay: reminder.currentDay + 1,
+      sendAt: nextSendAt.toISOString(),
+      lastSentDate: new Date().toISOString(),
+      status: 'pending', // Reset to pending for next send
+      retryCount: 0,     // Reset retry count
+      updatedAt: new Date().toISOString()
+    }
+  );
+};
+
 // Simple function to get due reminders (like Salein)
 export const getDueReminders = async () => {
   validateConfig();
@@ -70,7 +147,7 @@ export const getDueReminders = async () => {
   return reminders;
 };
 
-// Debug function to get ALL pending reminders
+// Function to get all pending reminders for debugging
 export const getAllPendingReminders = async () => {
   validateConfig();
   
@@ -124,6 +201,8 @@ export const updateRetryCount = async (
 // Export reminder service object (like Salein)
 export const reminderService = {
   createReminder,
+  createRecurringReminder,
+  advanceRecurringReminder,
   getDueReminders,
   getAllPendingReminders,
   updateReminderStatus,

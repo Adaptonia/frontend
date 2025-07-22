@@ -13,6 +13,16 @@ import { createGoal } from '@/services/appwrite/database';
 import { updateGoal } from '@/services/appwrite';
 import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
+// Remove the Select imports
+// import {
+//   Select,
+//   SelectContent,
+//   SelectGroup,
+//   SelectItem,
+//   SelectLabel,
+//   SelectTrigger,
+//   SelectValue,
+// } from "@/components/ui/select"
 
 // Helper function to format dates nicely
 const formatDisplayDate = (dateString: string): string => {
@@ -130,6 +140,7 @@ interface GoalFormData {
     enabled: boolean;
     time: string;
     date: string;
+    duration?: number; // Added for daily reminders
   };
 }
 
@@ -161,18 +172,15 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
     icon: React.ReactNode | string;
   } | null>(null);
   
-  const [reminderSettings, setReminderSettings] = useState<{
-    enabled: boolean;
-    time: string;
-    date: string;
-  }>(() => {
+  const [reminderSettings, setReminderSettings] = useState<GoalFormData['reminderSettings']>(() => {
     try {
       if (initialData?.reminderSettings) {
-        const parsed = JSON.parse(initialData.reminderSettings);
+        const parsed = JSON.parse(initialData.reminderSettings as string);
         return {
           enabled: parsed.enabled || false,
-          time: parsed.time || '09:00',
-          date: parsed.date || format(new Date(), 'yyyy-MM-dd')
+          time: parsed.time || '09:00', // This will be locked at 9 AM
+          date: parsed.date || format(new Date(), 'yyyy-MM-dd'),
+          duration: parsed.duration || 30 // Default to 30 days
         };
       }
     } catch (error) {
@@ -182,8 +190,9 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
     // Default settings
     return {
       enabled: false,
-      time: '09:00',
-      date: format(new Date(), 'yyyy-MM-dd')
+      time: '09:00', // This will be locked at 9 AM
+      date: format(new Date(), 'yyyy-MM-dd'),
+      duration: 30 // Default to 30 days
     };
   });
   
@@ -195,63 +204,56 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isOpen && initialData) {
-      setTitle(initialData.title || '');
-      setDescription(initialData.description || '');
-      setSelectedDate(initialData.deadline || '');
-      setSelectedTag(initialData.tags || '');
-      setReminder(initialData.reminderDate || '');
-      setLocation(initialData.location || '');
-      
-      if (initialData.milestones) {
+    if (isOpen) {
+      if (initialData) {
+        setTitle(initialData.title || '');
+        setDescription(initialData.description || '');
+        setSelectedDate(initialData.deadline || '');
+        setSelectedTag(initialData.tags || '');
+        setReminder(initialData.reminderDate || '');
+        setLocation(initialData.location || '');
+
         try {
-          const parsedMilestones = JSON.parse(initialData.milestones as string);
+          const parsedMilestones = initialData.milestones ? JSON.parse(initialData.milestones as string) : [];
           setMilestones(parsedMilestones);
         } catch (e) {
           console.error("Failed to parse milestones", e);
           setMilestones([]);
         }
-      } else {
-        setMilestones([]);
-      }
-      
-      if (initialData.reminderSettings) {
+
         try {
-          const parsedSettings = JSON.parse(initialData.reminderSettings as string);
+          const parsedSettings = initialData.reminderSettings ? JSON.parse(initialData.reminderSettings as string) : {};
           setReminderSettings({
             enabled: parsedSettings.enabled || false,
             time: parsedSettings.time || '09:00',
-            date: parsedSettings.date || format(new Date(), 'yyyy-MM-dd')
+            date: parsedSettings.date || format(new Date(), 'yyyy-MM-dd'),
+            duration: parsedSettings.duration || 30,
           });
         } catch (e) {
           console.error("Failed to parse reminder settings", e);
-          setReminderSettings({
-            enabled: false,
-            time: '09:00',
-            date: format(new Date(), 'yyyy-MM-dd')
-          });
         }
+      } else {
+        setTitle('');
+        setDescription('');
+        setSelectedDate('');
+        setSelectedTag('');
+        setReminder('');
+        setLocation('');
+        setMilestones([]);
+        setReminderSettings({
+          enabled: false,
+          time: "09:00",
+          date: new Date().toISOString().split('T')[0],
+          duration: 30,
+        });
       }
-    } else if (isOpen && !initialData) {
-      setTitle('');
-      setDescription('');
-      setSelectedDate('');
-      setSelectedTag('');
-      setReminder('');
-      setLocation('');
-      setMilestones([]);
-      setReminderSettings({
-        enabled: false,
-        time: "09:00",
-        date: new Date().toISOString().split('T')[0]
-      });
+      setActiveTab('main');
+      setPremiumFeature(null);
+      setShowOptionsDropdown(false);
     }
-    
-    setActiveTab('main');
-    setPremiumFeature(null);
-    setShowOptionsDropdown(false);
   }, [isOpen, initialData]);
 
+  // Separate effect for managing body scroll
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -264,6 +266,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
     };
   }, [isOpen]);
 
+  // Separate effect for dropdown click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -276,6 +279,11 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Prevent modal from closing when reminderSettings changes
+  const handleReminderSettingsChange = (newSettings: Partial<GoalFormData['reminderSettings']>) => {
+    setReminderSettings(prev => ({...prev, ...newSettings}));
+  };
 
   const handleSubmit = async (data: GoalFormData) => {
     if (!user) {
@@ -310,12 +318,12 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           }
           
           try {
-            const { date, time } = data.reminderSettings;
+            const { date, duration } = data.reminderSettings;
             
-            if (date && time) {
-              const [hours, minutes] = time.split(':').map(Number);
+            if (date) {
+              // Create date in local time zone at 9 AM (locked time)
               const reminderDate = new Date(date);
-              reminderDate.setHours(hours, minutes, 0, 0);
+              reminderDate.setHours(9, 0, 0, 0);
 
               // FOR DEBUGGING: Set reminder time to 10 seconds ago in development
               if (process.env.NODE_ENV === 'development') {
@@ -324,7 +332,8 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
               }
               
               if (reminderDate > new Date() || process.env.NODE_ENV === 'development') {
-                const createdReminder = await reminderService.createReminder({
+                // Use the new createRecurringReminder function for persistent reminders
+                const createdReminder = await reminderService.createRecurringReminder({
                   goalId: data.id,
                   userId: user.id,
                   userEmail: user.email,
@@ -332,15 +341,15 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                   title: 'Goal Reminder',
                   description: `Time to work on: ${data.title}`,
                   sendAt: reminderDate.toISOString()
-                });
+                }, duration || 30);
                 
-                console.log('✅ LOG 1: Reminder document created in Appwrite:', createdReminder);
-                toast.success('Goal updated and reminder scheduled! 🚀');
+                console.log(`✅ LOG 1: Recurring reminder created for ${duration || 30} days:`, createdReminder);
+                toast.success(`Goal updated and ${duration || 30} daily reminders scheduled! 🚀`);
               }
             }
           } catch (error) {
-            console.error('Failed to create reminder:', error);
-            toast.error('Goal updated but failed to schedule reminder');
+            console.error('Failed to create reminders:', error);
+            toast.error('Goal updated but failed to schedule reminders');
           }
         } else {
           toast.success('Goal updated successfully!');
@@ -382,12 +391,12 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           }
           
           try {
-            const { date, time } = data.reminderSettings;
+            const { date, duration } = data.reminderSettings;
             
-            if (date && time) {
-              const [hours, minutes] = time.split(':').map(Number);
+            if (date) {
+              // Create date in local time zone at 9 AM (locked time)
               const reminderDate = new Date(date);
-              reminderDate.setHours(hours, minutes, 0, 0);
+              reminderDate.setHours(9, 0, 0, 0);
 
               // FOR DEBUGGING: Set reminder time to 10 seconds ago in development
               if (process.env.NODE_ENV === 'development') {
@@ -396,7 +405,8 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
               }
               
               if (reminderDate > new Date() || process.env.NODE_ENV === 'development') {
-                const createdReminder = await reminderService.createReminder({
+                // Use the new createRecurringReminder function for persistent reminders
+                const createdReminder = await reminderService.createRecurringReminder({
                   goalId: newGoal.id,
                   userId: user.id,
                   userEmail: user.email,
@@ -404,15 +414,15 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                   title: 'Goal Reminder',
                   description: `Time to work on: ${data.title}`,
                   sendAt: reminderDate.toISOString()
-                });
+                }, duration || 30);
                 
-                console.log('✅ LOG 1: Reminder document created in Appwrite:', createdReminder);
-                toast.success('Goal created and reminder scheduled! 🚀');
+                console.log(`✅ LOG 1: Recurring reminder created for ${duration || 30} days:`, createdReminder);
+                toast.success(`Goal created and ${duration || 30} daily reminders scheduled! 🚀`);
               }
             }
           } catch (error) {
-            console.error('Failed to create reminder:', error);
-            toast.error('Goal created but failed to schedule reminder');
+            console.error('Failed to create reminders:', error);
+            toast.error('Goal created but failed to schedule reminders');
           }
         }
 
@@ -575,7 +585,8 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
               reminderSettings: {
                 enabled: reminderSettings.enabled,
                 time: reminderSettings.time,
-                date: reminderSettings.date
+                date: reminderSettings.date,
+                duration: reminderSettings.duration
               }
             };
             
@@ -747,12 +758,12 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
               <BellIcon size={20} className="text-blue-500" />
             </div>
             <div>
-              <p className="font-medium">Enable Reminders</p>
-              <p className="text-xs text-gray-500">Get notified about this goal</p>
+              <p className="font-medium">Enable Daily Reminders</p>
+              <p className="text-xs text-gray-500">Get daily notifications at 9:00 AM</p>
             </div>
           </div>
           <button 
-            onClick={() => setReminderSettings(prev => ({...prev, enabled: !prev.enabled}))}
+            onClick={() => handleReminderSettingsChange({enabled: !reminderSettings.enabled})}
             className={`w-12 h-6 rounded-full relative ${reminderSettings.enabled ? 'bg-blue-500' : 'bg-gray-300'}`}
           >
             <span 
@@ -765,7 +776,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
         
         {reminderSettings.enabled && (
           <div className="space-y-5 animate-in fade-in-50">
-            {/* Reminder Date */}
+            {/* Reminder Start Date */}
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
                 <Calendar className="mr-2" size={16} />
@@ -775,43 +786,94 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                 type="date"
                 className="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={reminderSettings.date}
-                onChange={(e) => setReminderSettings(prev => ({...prev, date: e.target.value}))}
+                onChange={(e) => handleReminderSettingsChange({date: e.target.value})}
               />
-              <p className="text-xs text-gray-500">When should the reminder start?</p>
+              <p className="text-xs text-gray-500">When should the daily reminders start?</p>
             </div>
             
-            {/* Reminder Time */}
+            {/* Locked Reminder Time - 9 AM */}
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
                 <Clock className="mr-2" size={16} />
                 Reminder Time
               </label>
               <div className="flex items-center gap-2">
-                <input
-                  type="time"
-                  className="flex-1 p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={reminderSettings.time}
-                  onChange={(e) => {
-                    setReminderSettings(prev => ({...prev, time: e.target.value}));
-                  }}
-                />
-                <div className="text-sm text-gray-500">
-                  {new Date(`2000-01-01T${reminderSettings.time}`).toLocaleTimeString([], {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
-                  })}
+                <div className="flex-1 p-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-600">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">9:00 AM</span>
+                    <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">Fixed Time</span>
                 </div>
               </div>
+              </div>
+              <p className="text-xs text-gray-500">Time is locked at 9:00 AM for the free plan</p>
+            </div>
+
+            {/* Duration Selector */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <Calendar className="mr-2" size={16} />
+                Reminder Duration
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => handleReminderSettingsChange({duration: 7})}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    reminderSettings.duration === 7 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  7 days
+                </button>
+                <button
+                  onClick={() => handleReminderSettingsChange({duration: 14})}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    reminderSettings.duration === 14 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  14 days
+                </button>
+                <button
+                  onClick={() => handleReminderSettingsChange({duration: 21})}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    reminderSettings.duration === 21 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  21 days
+                </button>
+                <button
+                  onClick={() => handleReminderSettingsChange({duration: 30})}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    reminderSettings.duration === 30 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  30 days (Recommended)
+                </button>
+                <button
+                  onClick={() => handleReminderSettingsChange({duration: 60})}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    reminderSettings.duration === 60 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  60 days
+                </button>
+                <button
+                  onClick={() => handleReminderSettingsChange({duration: 90})}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    reminderSettings.duration === 90 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  90 days
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">How long should we send daily reminders?</p>
             </div>
             
             {/* Preview Section */}
-            <div className="p-4 rounded-lg bg-gray-50 mt-6">
-              <h4 className="font-medium mb-2">Reminder Preview</h4>
-              <div className="text-sm text-gray-600 space-y-1">
-                <div className="flex items-center">
-                  <Calendar size={14} className="mr-2" />
-                  <span>
+            <div className="p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 mt-6">
+              <h4 className="font-medium mb-2 text-blue-800">📅 Reminder Schedule</h4>
+              <div className="text-sm text-blue-600 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span>Start Date:</span>
+                  <span className="font-medium">
                     {(() => {
                       try {
                         if (!reminderSettings.date) {
@@ -821,7 +883,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                         if (isNaN(date.getTime())) {
                           return 'Invalid date';
                         }
-                        return format(date, 'EEEE, MMMM d, yyyy');
+                        return format(date, 'MMM d, yyyy');
                       } catch (error) {
                         console.error('Date formatting error:', error);
                         return 'Invalid date';
@@ -829,15 +891,35 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                     })()}
                   </span>
                 </div>
-                <div className="flex items-center">
-                  <Clock size={14} className="mr-2" />
-                  <span>
-                    {new Date(`2000-01-01T${reminderSettings.time}`).toLocaleTimeString([], {
-                      hour: 'numeric',
-                      minute: '2-digit',
-                      hour12: true
-                    })}
+                <div className="flex items-center justify-between">
+                  <span>End Date:</span>
+                  <span className="font-medium">
+                    {(() => {
+                      try {
+                        if (!reminderSettings.date) {
+                          return 'No date selected';
+                        }
+                        const startDate = new Date(reminderSettings.date);
+                        const endDate = new Date(startDate);
+                        endDate.setDate(startDate.getDate() + (reminderSettings.duration || 30) - 1);
+                        if (isNaN(endDate.getTime())) {
+                          return 'Invalid date';
+                        }
+                        return format(endDate, 'MMM d, yyyy');
+                      } catch (error) {
+                        console.error('Date formatting error:', error);
+                        return 'Invalid date';
+                      }
+                    })()}
                   </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Daily Time:</span>
+                  <span className="font-medium">9:00 AM</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Total Reminders:</span>
+                  <span className="font-medium text-blue-700">{reminderSettings.duration || 30} days</span>
                 </div>
               </div>
             </div>
@@ -852,13 +934,14 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                 const tomorrow = new Date();
                 tomorrow.setDate(tomorrow.getDate() + 1);
                 
-                setReminderSettings({
+                handleReminderSettingsChange({
                   enabled: true,
                   time: "09:00",
-                  date: format(tomorrow, 'yyyy-MM-dd')
+                  date: format(tomorrow, 'yyyy-MM-dd'),
+                  duration: 30
                 });
                 
-                toast.success("Reminder set for tomorrow at 9:00 AM");
+                toast.success("Daily reminders set for 30 days at 9:00 AM");
               }}
               className="flex items-center justify-between w-full p-4 rounded-lg border border-gray-200 hover:bg-gray-50"
             >
@@ -866,32 +949,12 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                 <div className="w-10 h-10 mr-3 rounded-full bg-blue-100 flex items-center justify-center">
                   <BellIcon size={18} className="text-blue-500" />
                 </div>
-                <span className="font-medium">Tomorrow morning</span>
+                <div className="text-left">
+                  <span className="font-medium block">Start Tomorrow</span>
+                  <span className="text-xs text-gray-500">30 days at 9:00 AM</span>
               </div>
-              <span className="text-gray-400">9:00 AM</span>
-            </button>
-            
-            <button 
-              onClick={() => {
-                const today = new Date();
-                
-                setReminderSettings({
-                  enabled: true,
-                  time: "18:00",
-                  date: format(today, 'yyyy-MM-dd')
-                });
-                
-                toast.success("Reminder set for today at 6:00 PM");
-              }}
-              className="flex items-center justify-between w-full p-4 rounded-lg border border-gray-200 hover:bg-gray-50"
-            >
-              <div className="flex items-center">
-                <div className="w-10 h-10 mr-3 rounded-full bg-orange-100 flex items-center justify-center">
-                  <BellIcon size={18} className="text-orange-500" />
                 </div>
-                <span className="font-medium">This evening</span>
-              </div>
-              <span className="text-gray-400">6:00 PM</span>
+              <span className="text-gray-400">→</span>
             </button>
             
             <button 
@@ -899,13 +962,14 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                 const nextWeek = new Date();
                 nextWeek.setDate(nextWeek.getDate() + 7);
                 
-                setReminderSettings({
+                handleReminderSettingsChange({
                   enabled: true,
                   time: "09:00",
-                  date: format(nextWeek, 'yyyy-MM-dd')
+                  date: format(nextWeek, 'yyyy-MM-dd'),
+                  duration: 30
                 });
                 
-                toast.success("Reminder set for next week");
+                toast.success("Daily reminders set starting next week");
               }}
               className="flex items-center justify-between w-full p-4 rounded-lg border border-gray-200 hover:bg-gray-50"
             >
@@ -913,9 +977,12 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                 <div className="w-10 h-10 mr-3 rounded-full bg-green-100 flex items-center justify-center">
                   <BellIcon size={18} className="text-green-500" />
                 </div>
-                <span className="font-medium">Next week</span>
+                <div className="text-left">
+                  <span className="font-medium block">Start Next Week</span>
+                  <span className="text-xs text-gray-500">30 days at 9:00 AM</span>
               </div>
-              <span className="text-gray-400">9:00 AM</span>
+              </div>
+              <span className="text-gray-400">→</span>
             </button>
           </div>
         )}
@@ -927,26 +994,26 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           <button 
             onClick={() => {
               try {
-                // Set the reminder date from the reminder settings
-                if (reminderSettings.date && reminderSettings.time) {
-                  // Create date in local time zone
-                  const [hours, minutes] = reminderSettings.time.split(':');
+                // Set the reminder date from the reminder settings (locked at 9 AM)
+                if (reminderSettings.date) {
+                  // Create date in local time zone at 9 AM
                   const reminderDate = new Date(reminderSettings.date);
-                  reminderDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                  reminderDate.setHours(9, 0, 0, 0); // Always 9:00 AM
 
                   if (!isNaN(reminderDate.getTime())) {
                     // Store in ISO format (will be converted to UTC)
                     setReminder(reminderDate.toISOString());
                     
-                    toast.success(`Reminder set for ${reminderDate.toLocaleTimeString()}`, {
-                      description: `${reminderDate.toLocaleDateString()}`
+                    const duration = reminderSettings.duration || 30;
+                    toast.success(`Daily reminders set for ${duration} days at 9:00 AM`, {
+                      description: `Starting ${reminderDate.toLocaleDateString()}`
                     });
                   } else {
-                    toast.error('Invalid reminder date/time');
+                    toast.error('Invalid reminder date');
                     return;
                   }
                 } else {
-                  toast.error('Please set both date and time for reminder');
+                  toast.error('Please set a start date for reminders');
                   return;
                 }
               } catch (error) {
@@ -958,7 +1025,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
             }}
             className="w-full py-3 bg-blue-500 text-white font-medium rounded-full hover:bg-blue-600"
           >
-            Done
+            Set Daily Reminders
           </button>
         </div>
       )}

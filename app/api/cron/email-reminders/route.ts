@@ -85,12 +85,35 @@ export async function GET(request: NextRequest) {
           throw new Error(`Reminder ${reminder.$id} is missing an email address.`);
         }
 
-        // Send email via Resend
-        const { error: emailError } = await resend.emails.send({
-          from: "Adaptonia <reminders@olonts.site>",
-          to: [reminder.userEmail],
-          subject: `🎯 Reminder: ${reminder.title || 'You have a reminder'}`,
-          html: `
+        // Prepare email content based on recurring status
+        const isRecurring = reminder.isRecurring;
+        const currentDay = reminder.currentDay || 1;
+        const totalDays = reminder.recurringDuration || 1;
+        
+        const emailSubject = isRecurring 
+          ? `🎯 Day ${currentDay}/${totalDays}: ${reminder.title || 'Daily Goal Reminder'}`
+          : `🎯 Reminder: ${reminder.title || 'You have a reminder'}`;
+
+        const emailContent = isRecurring
+          ? `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h2>Hi ${reminder.userName || 'there'},</h2>
+              <p>This is your daily reminder for <strong>Day ${currentDay} of ${totalDays}</strong>:</p>
+              <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
+                <h3 style="color: #0056b3;">${reminder.title}</h3>
+                ${reminder.description ? `<p>${reminder.description}</p>` : ''}
+              </div>
+              <div style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p style="margin: 0; color: #1976d2;">
+                  📅 <strong>Progress:</strong> Day ${currentDay} of ${totalDays} 
+                  ${totalDays > 1 ? `(${Math.round((currentDay / totalDays) * 100)}% complete)` : ''}
+                </p>
+              </div>
+              <p>Keep up the great work! You're building lasting habits. 💪</p>
+              <p>Best regards,<br/>The Adaptonia Team</p>
+            </div>
+          `
+          : `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
               <h2>Hi ${reminder.userName || 'there'},</h2>
               <p>This is your scheduled reminder:</p>
@@ -99,27 +122,69 @@ export async function GET(request: NextRequest) {
                 ${reminder.description ? `<p>${reminder.description}</p>` : ''}
               </div>
               <p>Keep up the great work!</p>
+              <p>Best regards,<br/>The Adaptonia Team</p>
             </div>
-          `,
+          `;
+
+        // Send email via Resend
+        const { error: emailError } = await resend.emails.send({
+          from: "Adaptonia <reminders@olonts.site>",
+          to: [reminder.userEmail],
+          subject: emailSubject,
+          html: emailContent,
         });
 
         if (emailError) {
           throw new Error(`Resend API Error: ${emailError.message}`);
         }
 
-        // Update reminder status to 'sent'
+        // Handle recurring vs non-recurring reminders
+        if (isRecurring && currentDay < totalDays) {
+          // This is a recurring reminder that should continue
+          // Calculate next send time (tomorrow at same time)
+          const nextSendAt = new Date(reminder.sendAt);
+          nextSendAt.setDate(nextSendAt.getDate() + 1);
+          
+          await databases.updateDocument(
+            process.env.APPWRITE_DATABASE_ID!,
+            process.env.APPWRITE_REMINDERS_COLLECTION_ID!,
+            reminder.$id,
+            {
+              currentDay: currentDay + 1,
+              sendAt: nextSendAt.toISOString(),
+              lastSentDate: new Date().toISOString(),
+              status: 'pending', // Keep as pending for next day
+              retryCount: 0,     // Reset retry count
+              updatedAt: new Date().toISOString()
+            }
+          );
+          
+          console.log(`✅ Recurring reminder sent (Day ${currentDay}/${totalDays}) and scheduled for next day`);
+        } else {
+          // Non-recurring or final day of recurring reminder
         await databases.updateDocument(
           process.env.APPWRITE_DATABASE_ID!,
           process.env.APPWRITE_REMINDERS_COLLECTION_ID!,
           reminder.$id,
-          { status: 'sent' }
-        );
+            { 
+              status: 'sent',
+              lastSentDate: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }
+          );
+          
+          if (isRecurring) {
+            console.log(`✅ Final recurring reminder sent (Day ${totalDays}/${totalDays}) - series complete`);
+          } else {
+            console.log(`✅ Single reminder sent successfully`);
+          }
+        }
 
         results.processed++;
         results.successful++;
         console.log(`✅ Email sent successfully to ${reminder.userEmail}`);
 
-      } catch (error) {
+      } catch (error: any) {
         results.processed++;
         results.failed++;
         
