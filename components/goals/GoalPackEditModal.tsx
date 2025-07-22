@@ -106,10 +106,10 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       if (goalPack) {
-        setTitle(goalPack.title || '');
-        setDescription(goalPack.description || '');
-        setSelectedTag(goalPack.tags || '');
-
+      setTitle(goalPack.title || '');
+      setDescription(goalPack.description || '');
+      setSelectedTag(goalPack.tags || '');
+      
         try {
           const parsedMilestones = goalPack.milestones ? JSON.parse(goalPack.milestones) : [];
           setMilestones(parsedMilestones);
@@ -124,7 +124,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
         setSelectedTag('');
         setMilestones([]);
       }
-
+      
       // Reset fields that are not part of the goal pack template
       setSelectedDate('');
       setReminder('');

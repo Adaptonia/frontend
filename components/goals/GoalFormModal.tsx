@@ -206,21 +206,21 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        setTitle(initialData.title || '');
-        setDescription(initialData.description || '');
-        setSelectedDate(initialData.deadline || '');
-        setSelectedTag(initialData.tags || '');
-        setReminder(initialData.reminderDate || '');
-        setLocation(initialData.location || '');
-
+      setTitle(initialData.title || '');
+      setDescription(initialData.description || '');
+      setSelectedDate(initialData.deadline || '');
+      setSelectedTag(initialData.tags || '');
+      setReminder(initialData.reminderDate || '');
+      setLocation(initialData.location || '');
+      
         try {
           const parsedMilestones = initialData.milestones ? JSON.parse(initialData.milestones as string) : [];
           setMilestones(parsedMilestones);
         } catch (e) {
           console.error("Failed to parse milestones", e);
-          setMilestones([]);
-        }
-
+        setMilestones([]);
+      }
+      
         try {
           const parsedSettings = initialData.reminderSettings ? JSON.parse(initialData.reminderSettings as string) : {};
           setReminderSettings({
@@ -233,23 +233,23 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           console.error("Failed to parse reminder settings", e);
         }
       } else {
-        setTitle('');
-        setDescription('');
-        setSelectedDate('');
-        setSelectedTag('');
-        setReminder('');
-        setLocation('');
-        setMilestones([]);
-        setReminderSettings({
-          enabled: false,
-          time: "09:00",
+      setTitle('');
+      setDescription('');
+      setSelectedDate('');
+      setSelectedTag('');
+      setReminder('');
+      setLocation('');
+      setMilestones([]);
+      setReminderSettings({
+        enabled: false,
+        time: "09:00",
           date: new Date().toISOString().split('T')[0],
           duration: 30,
-        });
-      }
-      setActiveTab('main');
-      setPremiumFeature(null);
-      setShowOptionsDropdown(false);
+      });
+    }
+    setActiveTab('main');
+    setPremiumFeature(null);
+    setShowOptionsDropdown(false);
     }
   }, [isOpen, initialData]);
 
@@ -296,8 +296,51 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       const compactReminderSettings = data.reminderSettings.enabled ? {
         e: data.reminderSettings.enabled,
         t: data.reminderSettings.time,
-        d: data.reminderSettings.date
+        d: data.reminderSettings.date,
+        du: data.reminderSettings.duration,
       } : { e: false };
+
+      const processReminders = async (goalId: string) => {
+        if (data.reminderSettings.enabled) {
+          if (!user.id || !user.email) {
+            toast.error('Goal saved but failed to schedule reminders - missing user data');
+            return;
+          }
+          
+          try {
+            const { date, duration, time } = data.reminderSettings;
+            
+            if (date && time) {
+              const [hours, minutes] = time.split(':').map(Number);
+              const reminderDate = new Date(date);
+              reminderDate.setHours(hours, minutes, 0, 0);
+
+              // FOR DEBUGGING: Set reminder time to 10 seconds ago in development
+              if (process.env.NODE_ENV === 'development') {
+                console.log('DEV MODE: Setting reminder to 10 seconds in the past for immediate check.');
+                reminderDate.setSeconds(reminderDate.getSeconds() - 10);
+              }
+              
+              if (reminderDate > new Date() || process.env.NODE_ENV === 'development') {
+                await reminderService.createRecurringReminder({
+                  goalId: goalId,
+                  userId: user.id,
+                  userEmail: user.email,
+                  userName: user.name || user.email,
+                  title: 'Goal Reminder',
+                  description: `Time to work on: ${data.title}`,
+                  sendAt: reminderDate.toISOString()
+                }, duration || 30);
+                
+                toast.success(`Reminders scheduled for ${duration || 30} days! 🚀`);
+              }
+            }
+          } catch (error) {
+            console.error('Failed to create reminders:', error);
+            toast.error('Goal saved but failed to schedule reminders');
+          }
+        }
+      };
 
       if (data.id) {
         await updateGoal(data.id, {
@@ -308,52 +351,8 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           milestones: JSON.stringify(data.milestones),
           reminderSettings: JSON.stringify(compactReminderSettings)
         });
-
-        const hasReminders = data.reminderSettings.enabled;
-        
-        if (hasReminders) {
-          if (!user.id || !user.email) {
-            toast.error('Goal updated but failed to schedule reminders - missing user data');
-            return;
-          }
-          
-          try {
-            const { date, duration } = data.reminderSettings;
-            
-            if (date) {
-              // Create date in local time zone at 9 AM (locked time)
-              const reminderDate = new Date(date);
-              reminderDate.setHours(9, 0, 0, 0);
-
-              // FOR DEBUGGING: Set reminder time to 10 seconds ago in development
-              if (process.env.NODE_ENV === 'development') {
-                console.log('DEV MODE: Setting reminder to 10 seconds in the past for immediate check.');
-                reminderDate.setSeconds(reminderDate.getSeconds() - 10);
-              }
-              
-              if (reminderDate > new Date() || process.env.NODE_ENV === 'development') {
-                // Use the new createRecurringReminder function for persistent reminders
-                const createdReminder = await reminderService.createRecurringReminder({
-                  goalId: data.id,
-                  userId: user.id,
-                  userEmail: user.email,
-                  userName: user.name || user.email,
-                  title: 'Goal Reminder',
-                  description: `Time to work on: ${data.title}`,
-                  sendAt: reminderDate.toISOString()
-                }, duration || 30);
-                
-                console.log(`✅ LOG 1: Recurring reminder created for ${duration || 30} days:`, createdReminder);
-                toast.success(`Goal updated and ${duration || 30} daily reminders scheduled! 🚀`);
-              }
-            }
-          } catch (error) {
-            console.error('Failed to create reminders:', error);
-            toast.error('Goal updated but failed to schedule reminders');
-          }
-        } else {
-          toast.success('Goal updated successfully!');
-        }
+        toast.success('Goal updated successfully!');
+        await processReminders(data.id);
 
         const updatedGoal: Goal = {
           id: data.id,
@@ -368,8 +367,8 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           updatedAt: new Date().toISOString(),
           isCompleted: false
         };
-
         onSave?.(updatedGoal);
+
       } else {
         const goalData: CreateGoalRequest = {
           title: data.title,
@@ -381,50 +380,8 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
         };
         
         const newGoal = await createGoal(goalData, user?.id || '');
-
-        const hasReminders = data.reminderSettings.enabled;
-        
-        if (hasReminders) {
-          if (!user.id || !user.email) {
-            toast.error('Goal created but failed to schedule reminders - missing user data');
-            return;
-          }
-          
-          try {
-            const { date, duration } = data.reminderSettings;
-            
-            if (date) {
-              // Create date in local time zone at 9 AM (locked time)
-              const reminderDate = new Date(date);
-              reminderDate.setHours(9, 0, 0, 0);
-
-              // FOR DEBUGGING: Set reminder time to 10 seconds ago in development
-              if (process.env.NODE_ENV === 'development') {
-                console.log('DEV MODE: Setting reminder to 10 seconds in the past for immediate check.');
-                reminderDate.setSeconds(reminderDate.getSeconds() - 10);
-              }
-              
-              if (reminderDate > new Date() || process.env.NODE_ENV === 'development') {
-                // Use the new createRecurringReminder function for persistent reminders
-                const createdReminder = await reminderService.createRecurringReminder({
-                  goalId: newGoal.id,
-                  userId: user.id,
-                  userEmail: user.email,
-                  userName: user.name || user.email,
-                  title: 'Goal Reminder',
-                  description: `Time to work on: ${data.title}`,
-                  sendAt: reminderDate.toISOString()
-                }, duration || 30);
-                
-                console.log(`✅ LOG 1: Recurring reminder created for ${duration || 30} days:`, createdReminder);
-                toast.success(`Goal created and ${duration || 30} daily reminders scheduled! 🚀`);
-              }
-            }
-          } catch (error) {
-            console.error('Failed to create reminders:', error);
-            toast.error('Goal created but failed to schedule reminders');
-          }
-        }
+        toast.success('Goal created successfully!');
+        await processReminders(newGoal.id);
 
         const createdGoal: Goal = {
           id: newGoal.id,
@@ -439,7 +396,6 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           updatedAt: newGoal.updatedAt || new Date().toISOString(),
           isCompleted: false
         };
-
         onSave?.(createdGoal);
       }
 
@@ -759,21 +715,21 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
             </div>
             <div>
               <p className="font-medium">Enable Daily Reminders</p>
-              <p className="text-xs text-gray-500">Get daily notifications at 9:00 AM</p>
+              <p className="text-xs text-gray-500">Get daily notifications for your goal</p>
             </div>
           </div>
-          <button 
-            onClick={() => handleReminderSettingsChange({enabled: !reminderSettings.enabled})}
+          <button
+            onClick={() => handleReminderSettingsChange({ enabled: !reminderSettings.enabled })}
             className={`w-12 h-6 rounded-full relative ${reminderSettings.enabled ? 'bg-blue-500' : 'bg-gray-300'}`}
           >
-            <span 
+            <span
               className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${
                 reminderSettings.enabled ? 'right-0.5' : 'left-0.5'
               }`}
             />
           </button>
         </div>
-        
+
         {reminderSettings.enabled && (
           <div className="space-y-5 animate-in fade-in-50">
             {/* Reminder Start Date */}
@@ -786,26 +742,24 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                 type="date"
                 className="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={reminderSettings.date}
-                onChange={(e) => handleReminderSettingsChange({date: e.target.value})}
+                onChange={(e) => handleReminderSettingsChange({ date: e.target.value })}
               />
               <p className="text-xs text-gray-500">When should the daily reminders start?</p>
             </div>
-            
-            {/* Locked Reminder Time - 9 AM */}
+
+            {/* Reminder Time Input */}
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
                 <Clock className="mr-2" size={16} />
                 Reminder Time
               </label>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 p-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-600">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">9:00 AM</span>
-                    <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">Fixed Time</span>
-                </div>
-              </div>
-              </div>
-              <p className="text-xs text-gray-500">Time is locked at 9:00 AM for the free plan</p>
+              <input
+                type="time"
+                className="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={reminderSettings.time}
+                onChange={(e) => handleReminderSettingsChange({ time: e.target.value })}
+              />
+              <p className="text-xs text-gray-500">Choose a time for your daily reminder.</p>
             </div>
 
             {/* Duration Selector */}
@@ -815,58 +769,23 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                 Reminder Duration
               </label>
               <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => handleReminderSettingsChange({duration: 7})}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    reminderSettings.duration === 7 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  7 days
-                </button>
-                <button
-                  onClick={() => handleReminderSettingsChange({duration: 14})}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    reminderSettings.duration === 14 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  14 days
-                </button>
-                <button
-                  onClick={() => handleReminderSettingsChange({duration: 21})}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    reminderSettings.duration === 21 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  21 days
-                </button>
-                <button
-                  onClick={() => handleReminderSettingsChange({duration: 30})}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    reminderSettings.duration === 30 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  30 days (Recommended)
-                </button>
-                <button
-                  onClick={() => handleReminderSettingsChange({duration: 60})}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    reminderSettings.duration === 60 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  60 days
-                </button>
-                <button
-                  onClick={() => handleReminderSettingsChange({duration: 90})}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    reminderSettings.duration === 90 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  90 days
-                </button>
+                {[7, 14, 21, 30, 60, 90].map((duration) => (
+                  <button
+                    key={duration}
+                    onClick={() => handleReminderSettingsChange({ duration })}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      reminderSettings.duration === duration
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    {duration} days{duration === 30 && ' (Recommended)'}
+                  </button>
+                ))}
               </div>
               <p className="text-xs text-gray-500">How long should we send daily reminders?</p>
             </div>
-            
+
             {/* Preview Section */}
             <div className="p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 mt-6">
               <h4 className="font-medium mb-2 text-blue-800">📅 Reminder Schedule</h4>
@@ -915,7 +834,15 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Daily Time:</span>
-                  <span className="font-medium">9:00 AM</span>
+                  <span className="font-medium">
+                    {(() => {
+                      try {
+                        if (!reminderSettings.time) return 'Not set';
+                        const d = new Date(`1970-01-01T${reminderSettings.time}`);
+                        return format(d, 'h:mm a');
+                      } catch { return 'Invalid time'; }
+                    })()}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Total Reminders:</span>
@@ -994,18 +921,15 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           <button 
             onClick={() => {
               try {
-                // Set the reminder date from the reminder settings (locked at 9 AM)
-                if (reminderSettings.date) {
-                  // Create date in local time zone at 9 AM
+                if (reminderSettings.date && reminderSettings.time) {
+                  const [hours, minutes] = reminderSettings.time.split(':').map(Number);
                   const reminderDate = new Date(reminderSettings.date);
-                  reminderDate.setHours(9, 0, 0, 0); // Always 9:00 AM
+                  reminderDate.setHours(hours, minutes, 0, 0);
 
                   if (!isNaN(reminderDate.getTime())) {
-                    // Store in ISO format (will be converted to UTC)
                     setReminder(reminderDate.toISOString());
-                    
                     const duration = reminderSettings.duration || 30;
-                    toast.success(`Daily reminders set for ${duration} days at 9:00 AM`, {
+                    toast.success(`Daily reminders set for ${duration} days at ${format(reminderDate, 'h:mm a')}`, {
                       description: `Starting ${reminderDate.toLocaleDateString()}`
                     });
                   } else {
@@ -1013,7 +937,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                     return;
                   }
                 } else {
-                  toast.error('Please set a start date for reminders');
+                  toast.error('Please set a start date and time for reminders');
                   return;
                 }
               } catch (error) {

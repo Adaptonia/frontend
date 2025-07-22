@@ -109,6 +109,16 @@ class ChannelService {
         ]
       )
 
+      console.log('📋 Fetched public channels from database:', {
+        count: response.documents.length,
+        channels: response.documents.map(doc => ({
+          id: doc.$id,
+          name: doc.name,
+          type: doc.type,
+          isActive: doc.isActive
+        }))
+      })
+
       return {
         success: true,
         data: {
@@ -296,6 +306,140 @@ class ChannelService {
       }
     } catch (error) {
       console.error('Error leaving channel:', error)
+      return this.handleError(error)
+    }
+  }
+
+  /**
+   * Delete a channel and all its messages (Admin only)
+   */
+  async deleteChannel(channelId: string, userId: string): Promise<ApiResponse<boolean>> {
+    try {
+      console.log('🔍 Starting channel deletion:', {
+        channelId,
+        userId,
+        DATABASE_ID,
+        COLLECTIONS
+      })
+
+      // Check if user is admin
+      const user = await this.checkUserRole(userId)
+      if (!user.success || !user.data || user.data.role !== 'admin') {
+        throw new PermissionError('Only admins can delete channels')
+      }
+
+      console.log('✅ User is admin, proceeding with deletion')
+
+      // Check if channel exists - handle case where it might already be deleted
+      let channel
+      try {
+        console.log('🔍 Checking if channel exists...')
+        channel = await databases.getDocument(DATABASE_ID, COLLECTIONS.CHANNELS, channelId)
+        console.log('✅ Channel found:', {
+          id: channel.$id,
+          name: channel.name,
+          isActive: channel.isActive
+        })
+        
+        if (!channel.isActive) {
+          console.log('⚠️ Channel exists but is inactive - treating as already deleted')
+          // Channel exists but is inactive - treat as already deleted
+          return {
+            success: true,
+            data: true
+          }
+        }
+      } catch (error: any) {
+        console.log('❌ Error checking channel existence:', {
+          error: error.message,
+          code: error.code,
+          type: error.type
+        })
+        
+        // If channel doesn't exist (404), consider it already deleted
+        if (error.code === 404 || error.type === 'document_not_found') {
+          console.log('✅ Channel already deleted (404) - returning success')
+          return {
+            success: true,
+            data: true
+          }
+        }
+        // If it's a different error, re-throw it
+        throw error
+      }
+
+      // Delete all messages in the channel
+      const messages = await databases.listDocuments(
+        DATABASE_ID,
+        COLLECTIONS.CHANNEL_MESSAGES,
+        [
+          Query.equal('channelId', channelId),
+          Query.limit(1000) // Handle in batches if needed
+        ]
+      )
+
+      // Delete messages in batches
+      for (const message of messages.documents) {
+        try {
+          await databases.deleteDocument(
+            DATABASE_ID,
+            COLLECTIONS.CHANNEL_MESSAGES,
+            message.$id
+          )
+        } catch (error: any) {
+          // Ignore 404 errors for messages (already deleted)
+          if (error.code !== 404 && error.type !== 'document_not_found') {
+            console.warn('Failed to delete message:', message.$id, error)
+          }
+        }
+      }
+
+      // Delete all channel memberships
+      const memberships = await databases.listDocuments(
+        DATABASE_ID,
+        COLLECTIONS.CHANNEL_MEMBERS,
+        [
+          Query.equal('channelId', channelId),
+          Query.limit(1000) // Handle in batches if needed
+        ]
+      )
+
+      // Delete memberships in batches
+      for (const membership of memberships.documents) {
+        try {
+          await databases.deleteDocument(
+            DATABASE_ID,
+            COLLECTIONS.CHANNEL_MEMBERS,
+            membership.$id
+          )
+        } catch (error: any) {
+          // Ignore 404 errors for memberships (already deleted)
+          if (error.code !== 404 && error.type !== 'document_not_found') {
+            console.warn('Failed to delete membership:', membership.$id, error)
+          }
+        }
+      }
+
+      // Finally, delete the channel itself
+      try {
+        await databases.deleteDocument(
+          DATABASE_ID,
+          COLLECTIONS.CHANNELS,
+          channelId
+        )
+      } catch (error: any) {
+        // Ignore 404 errors for channel (already deleted)
+        if (error.code !== 404 && error.type !== 'document_not_found') {
+          throw error
+        }
+      }
+
+      return {
+        success: true,
+        data: true
+      }
+    } catch (error) {
+      console.error('Error deleting channel:', error)
       return this.handleError(error)
     }
   }

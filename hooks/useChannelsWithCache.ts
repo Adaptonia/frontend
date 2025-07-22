@@ -16,9 +16,10 @@ interface UseChannelsWithCacheState {
   isCreating: boolean;
   isJoining: string | null;
   isLeaving: string | null;
-  error: string | null;
+  isDeleting: string | null; // Add delete state
   isRefreshing: boolean; // For background updates
   isCacheHit: boolean; // Indicates if data came from cache
+  error: string | null;
 }
 
 interface UseChannelsWithCacheActions {
@@ -27,6 +28,7 @@ interface UseChannelsWithCacheActions {
   createChannel: (channelData: CreateChannelData) => Promise<boolean>;
   joinChannel: (channelId: string) => Promise<boolean>;
   leaveChannel: (channelId: string) => Promise<boolean>;
+  deleteChannel: (channelId: string) => Promise<boolean>; // Add delete action
   clearError: () => void;
   refreshChannels: (forceRefresh?: boolean) => Promise<void>;
   invalidateAndRefresh: () => Promise<void>;
@@ -44,6 +46,7 @@ export const useChannelsWithCache = (userId?: string): UseChannelsWithCacheRetur
     isCreating: false,
     isJoining: null,
     isLeaving: null,
+    isDeleting: null,
     error: null,
     isRefreshing: false,
     isCacheHit: false,
@@ -372,6 +375,55 @@ export const useChannelsWithCache = (userId?: string): UseChannelsWithCacheRetur
     return false;
   }, [userId, state.userChannels, cache, fetchPublicChannels, safeSetState]);
 
+  // Delete channel
+  const deleteChannel = useCallback(async (channelId: string): Promise<boolean> => {
+    if (!userId) {
+      safeSetState(prev => ({ ...prev, error: 'User not authenticated' }));
+      return false;
+    }
+
+    safeSetState(prev => ({ ...prev, isDeleting: channelId, error: null }));
+
+    try {
+      const response = await channelService.deleteChannel(channelId, userId);
+      
+             if (response.success && isMountedRef.current) {
+         // Force a refresh from the server to ensure UI consistency
+         console.log('✅ Channel deleted from DB. Forcing UI refresh...');
+         
+         // Invalidate the cache to ensure we get fresh data
+         cache.invalidateCache();
+         
+         // Refresh both user and public channels from the server
+         await Promise.all([
+           fetchUserChannels(true),
+           fetchPublicChannels(true)
+         ]);
+
+         safeSetState(prev => ({ ...prev, isDeleting: null }));
+
+         return true;
+       } else if (isMountedRef.current) {
+        safeSetState(prev => ({
+          ...prev,
+          error: response.error || 'Failed to delete channel',
+          isDeleting: null,
+        }));
+        return false;
+      }
+    } catch (error) {
+      if (isMountedRef.current) {
+        safeSetState(prev => ({
+          ...prev,
+          error: 'An unexpected error occurred',
+          isDeleting: null,
+        }));
+      }
+      return false;
+    }
+    return false;
+  }, [userId, cache, fetchUserChannels, fetchPublicChannels, safeSetState]);
+
   // Clear error
   const clearError = useCallback(() => {
     safeSetState(prev => ({ ...prev, error: null }));
@@ -461,6 +513,7 @@ export const useChannelsWithCache = (userId?: string): UseChannelsWithCacheRetur
     createChannel,
     joinChannel,
     leaveChannel,
+    deleteChannel,
     clearError,
     refreshChannels,
     invalidateAndRefresh,

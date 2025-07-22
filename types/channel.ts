@@ -81,9 +81,10 @@ export interface ApiResponse<T> {
   error?: string
 }
 
-export interface PaginatedResponse<T> extends ApiResponse<T[]> {
-  totalCount?: number
-  hasMore?: boolean
+export interface PaginatedResponse<T> {
+  documents: T[];
+  total: number;
+  hasMore: boolean;
 }
 
 export class ChannelError extends Error {
