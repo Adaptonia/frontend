@@ -484,9 +484,9 @@ const ShareModal: React.FC<ShareModalProps> = ({
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col">
               {/* Header */}
-              <div className="p-6 border-b border-gray-200">
+              <div className="p-6 border-b border-gray-200 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -507,7 +507,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
               </div>
 
               {/* Content */}
-              <div className="p-6">
+              <div className="p-6 overflow-y-auto flex-1">
                 {/* Style Selector */}
                 {/* <div className="mb-6">
                   <h3 className="text-sm font-medium text-gray-700 mb-3">Choose Format:</h3>
@@ -569,16 +569,16 @@ const ShareModal: React.FC<ShareModalProps> = ({
                 </div>
 
                 {/* Share Options */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   {shareOptions.map((option, index) => (
                     <button
                       key={index}
                       onClick={option.onClick}
                       disabled={generatingImage || !shareUrl}
-                      className={`${option.color} text-white p-4 rounded-lg flex flex-col items-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105`}
+                      className={`${option.color} text-white p-3 rounded-lg flex flex-col items-center gap-1 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105`}
                     >
-                      <option.icon className="w-5 h-5" />
-                      <span className="text-sm font-medium">{option.name}</span>
+                      <option.icon className="w-4 h-4" />
+                      <span className="text-xs font-medium">{option.name}</span>
                     </button>
                   ))}
                 </div>
