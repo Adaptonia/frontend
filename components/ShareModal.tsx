@@ -421,7 +421,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
               {/* Content */}
               <div className="p-6">
                 {/* Style Selector */}
-                <div className="mb-6">
+                {/* <div className="mb-6">
                   <h3 className="text-sm font-medium text-gray-700 mb-3">Choose Format:</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <button
@@ -451,7 +451,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
                       </div>
                     </button>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Photo Upload */}
                 <div className="mb-6">
