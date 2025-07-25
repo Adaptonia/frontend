@@ -182,6 +182,12 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
 
   // Touch event handlers
   const handleTouchStart = (e: React.TouchEvent) => {
+    // Don't start drag if touching a form input
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA') {
+      return;
+    }
+    
     // Only start drag if touching the top 20px of the modal
     const touchY = e.touches[0].clientY;
     const modalTop = e.currentTarget.getBoundingClientRect().top;
@@ -204,6 +210,12 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
 
   // Mouse event handlers (for desktop)
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Don't start drag if clicking a form input
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA') {
+      return;
+    }
+    
     // Only start drag if clicking the top 20px of the modal
     const modalTop = e.currentTarget.getBoundingClientRect().top;
     if (e.clientY - modalTop <= 20) {
