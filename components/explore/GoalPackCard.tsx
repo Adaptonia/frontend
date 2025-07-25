@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
-import { Star, ShoppingCart, Eye, Users, MessageCircle, Crown, Gift, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { Star, ShoppingCart, Eye, Users, MessageCircle, Crown, Gift, Clock, Share2 } from 'lucide-react';
 import { GoalPackWithStats } from '@/lib/types';
 import { format } from 'date-fns';
+import ShareModal from '../ShareModal';
 
 interface GoalPackCardProps {
   goalPack: GoalPackWithStats;
@@ -18,6 +19,8 @@ const GoalPackCard: React.FC<GoalPackCardProps> = ({
   onReviewClick,
   currentUserId
 }) => {
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'finance':
@@ -91,133 +94,156 @@ const GoalPackCard: React.FC<GoalPackCardProps> = ({
   const isNew = goalPack.tags?.toLowerCase().includes('new');
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200">
-      {/* Header with badges */}
-      <div className="relative">
-        <div className="p-4 pb-2">
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-2xl">{getCategoryIcon(goalPack.category)}</span>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getCategoryColor(goalPack.category)}`}>
-                  {goalPack.category.charAt(0).toUpperCase() + goalPack.category.slice(1)}
-                </span>
-                
-                {/* Special badges */}
-                {isFreePack && (
-                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
-                    <Gift className="w-3 h-3 inline mr-1" />
-                    Free
+    <>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200">
+        {/* Header with badges */}
+        <div className="relative">
+          <div className="p-4 pb-2">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">{getCategoryIcon(goalPack.category)}</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getCategoryColor(goalPack.category)}`}>
+                    {goalPack.category.charAt(0).toUpperCase() + goalPack.category.slice(1)}
                   </span>
-                )}
+                  
+                  {/* Special badges */}
+                  {isFreePack && (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+                      <Gift className="w-3 h-3 inline mr-1" />
+                      Free
+                    </span>
+                  )}
+                  
+                  {isPremium && (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 border border-yellow-200">
+                      <Crown className="w-3 h-3 inline mr-1" />
+                      Premium
+                    </span>
+                  )}
+                  
+                  {isPopular && (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200">
+                      🔥 Popular
+                    </span>
+                  )}
+                  
+                  {isNew && (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                      <Clock className="w-3 h-3 inline mr-1" />
+                      New
+                    </span>
+                  )}
+                </div>
                 
-                {isPremium && (
-                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 border border-yellow-200">
-                    <Crown className="w-3 h-3 inline mr-1" />
-                    Premium
-                  </span>
-                )}
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+                  {goalPack.title}
+                </h3>
                 
-                {isPopular && (
-                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200">
-                    🔥 Popular
-                  </span>
-                )}
-                
-                {isNew && (
-                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
-                    <Clock className="w-3 h-3 inline mr-1" />
-                    New
-                  </span>
+                {goalPack.description && (
+                  <p className="text-gray-600 text-sm line-clamp-2 mb-3">
+                    {goalPack.description}
+                  </p>
                 )}
               </div>
+            </div>
+
+            {/* Rating and stats */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-4">
+                {/* Rating */}
+                <div className="flex items-center gap-1">
+                  <div className="flex items-center">
+                    {renderStars(goalPack.averageRating)}
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">
+                    {goalPack.averageRating > 0 ? goalPack.averageRating.toFixed(1) : 'No rating'}
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    ({goalPack.totalReviews})
+                  </span>
+                </div>
+              </div>
+
+              {/* Purchase count */}
+              <div className="flex items-center gap-1 text-sm text-gray-500">
+                <Users className="w-4 h-4" />
+                <span>{goalPack.totalPurchases} users</span>
+              </div>
+            </div>
+
+            {/* Target user type and share button */}
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm text-gray-600">
+                For: <span className="font-medium">
+                  {goalPack.targetUserType === 'all' ? 'All Users' : 
+                   goalPack.targetUserType === 'student' ? 'Students' : 'Non-Students'}
+                </span>
+              </span>
               
-              <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-                {goalPack.title}
-              </h3>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">
+                  {format(new Date(goalPack.createdAt), 'MMM d, yyyy')}
+                </span>
+                
+                {/* Share Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsShareModalOpen(true);
+                  }}
+                  className="flex items-center gap-1 px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-xs font-medium"
+                >
+                  <Share2 className="w-3 h-3" />
+                  Share
+                </button>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => onCardClick(goalPack)}
+                className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+              >
+                <Eye className="w-4 h-4" />
+                View Details
+              </button>
               
-              {goalPack.description && (
-                <p className="text-gray-600 text-sm line-clamp-2 mb-3">
-                  {goalPack.description}
-                </p>
+              {currentUserId && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReviewClick(goalPack);
+                  }}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  {goalPack.userReview ? 'Edit Review' : 'Review'}
+                </button>
               )}
             </div>
-          </div>
 
-          {/* Rating and stats */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-4">
-              {/* Rating */}
-              <div className="flex items-center gap-1">
-                <div className="flex items-center">
-                  {renderStars(goalPack.averageRating)}
+            {/* Purchase status */}
+            {goalPack.isPurchased && (
+              <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2 text-green-700 text-sm">
+                  <ShoppingCart className="w-4 h-4" />
+                  <span className="font-medium">Purchased</span>
                 </div>
-                <span className="text-sm font-medium text-gray-700">
-                  {goalPack.averageRating > 0 ? goalPack.averageRating.toFixed(1) : 'No rating'}
-                </span>
-                <span className="text-sm text-gray-500">
-                  ({goalPack.totalReviews})
-                </span>
               </div>
-            </div>
-
-            {/* Purchase count */}
-            <div className="flex items-center gap-1 text-sm text-gray-500">
-              <Users className="w-4 h-4" />
-              <span>{goalPack.totalPurchases} users</span>
-            </div>
-          </div>
-
-          {/* Target user type */}
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-sm text-gray-600">
-              For: <span className="font-medium">
-                {goalPack.targetUserType === 'all' ? 'All Users' : 
-                 goalPack.targetUserType === 'student' ? 'Students' : 'Non-Students'}
-              </span>
-            </span>
-            
-            <span className="text-xs text-gray-500">
-              {format(new Date(goalPack.createdAt), 'MMM d, yyyy')}
-            </span>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => onCardClick(goalPack)}
-              className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
-            >
-              <Eye className="w-4 h-4" />
-              View Details
-            </button>
-            
-            {currentUserId && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onReviewClick(goalPack);
-                }}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
-              >
-                <MessageCircle className="w-4 h-4" />
-                {goalPack.userReview ? 'Edit Review' : 'Review'}
-              </button>
             )}
           </div>
-
-          {/* Purchase status */}
-          {goalPack.isPurchased && (
-            <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-center gap-2 text-green-700 text-sm">
-                <ShoppingCart className="w-4 h-4" />
-                <span className="font-medium">Purchased</span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
-    </div>
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        goalPack={goalPack}
+      />
+    </>
   );
 };
 

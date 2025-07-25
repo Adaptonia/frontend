@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Star, ShoppingCart, Users, MessageCircle, Crown, Gift, Target, Calendar, User as UserIcon, Clock, ThumbsUp } from 'lucide-react';
+import { X, Star, ShoppingCart, Users, MessageCircle, Crown, Gift, Target, Calendar, User as UserIcon, Clock, ThumbsUp, Share2 } from 'lucide-react';
 import { GoalPackWithStats, GoalPackReview, Milestone } from '@/lib/types';
 import { getGoalPackReviews, purchaseGoalPack } from '@/services/appwrite/goalPackService';
 import { createGoal } from '@/services/appwrite/database';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import Image from 'next/image';
+import ShareModal from '../ShareModal';
 
 interface GoalPackDetailModalProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ const GoalPackDetailModal: React.FC<GoalPackDetailModalProps> = ({
   const [purchasing, setPurchasing] = useState(false);
   const [addingToGoals, setAddingToGoals] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'reviews' | 'milestones'>('overview');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -410,12 +412,20 @@ const GoalPackDetailModal: React.FC<GoalPackDetailModalProps> = ({
                       </span>
                     </div>
                   </div>
-                  <button
-                    onClick={onClose}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <X className="w-5 h-5 text-gray-500" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setIsShareModalOpen(true)}
+                      className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                      <Share2 className="w-5 h-5 text-gray-500" />
+                    </button>
+                    <button
+                      onClick={onClose}
+                      className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                      <X className="w-5 h-5 text-gray-500" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -501,6 +511,11 @@ const GoalPackDetailModal: React.FC<GoalPackDetailModalProps> = ({
           </div>
         </>
       )}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        goalPack={goalPack}
+      />
     </AnimatePresence>
   );
 };

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Plus, Calendar, User, BookOpen, BarChart3, Edit3, GraduationCap, Briefcase, ChevronDown } from 'lucide-react'
+import { Plus, Calendar, User, BookOpen, BarChart3, Edit3, GraduationCap, Briefcase, ChevronDown, Share2 } from 'lucide-react'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
@@ -27,6 +27,7 @@ import LibraryItemCard from '@/components/library/LibraryItemCard'
 import { getLibraryItems, deleteLibraryItem, toggleLibraryItemFavorite, toggleLibraryItemCompletion } from '@/services/appwrite/libraryService'
 import { hasCompletedUserTypeSelection, updateUserType } from '@/services/appwrite/userService'
 import OfflineStatusIndicator from '@/components/OfflineStatusIndicator'
+import ShareModal from '@/components/ShareModal'
 
 
 const Dashboard = () => {
@@ -40,6 +41,8 @@ const Dashboard = () => {
   const [userGoalPacks, setUserGoalPacks] = useState<GoalPack[]>([])
   const [isGoalPackModalOpen, setIsGoalPackModalOpen] = useState(false)
   const [activeGoalPack, setActiveGoalPack] = useState<GoalPack | null>(null)
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [goalPackToShare, setGoalPackToShare] = useState<GoalPack | null>(null);
   const [isGoalPackEditModalOpen, setIsGoalPackEditModalOpen] = useState(false)
   const [editingGoalPack, setEditingGoalPack] = useState<GoalPack | null>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -520,7 +523,24 @@ const Dashboard = () => {
                       </button>
                       {expandedUserType === userType && (
                         <div className="p-3">
-                          {packs.map(pack => renderGoalPackItem(pack))}
+                          {packs.map(pack => (
+                            <div 
+                              key={pack.id}
+                              onClick={() => {
+                                setActiveGoalPack(pack);
+                                setIsGoalPackModalOpen(true);
+                              }}
+                              className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 mb-2"
+                            >
+                              <div>
+                                <h3 className="font-medium">{pack.title}</h3>
+                                <p className="text-sm text-gray-500">
+                                  {pack.category} • {pack.targetUserType} • {pack.isActive ? 'Active' : 'Inactive'}
+                                </p>
+                              </div>
+                              <div className={`w-3 h-3 rounded-full ${pack.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -571,6 +591,19 @@ const Dashboard = () => {
                       <Edit3 className="w-5 h-5 text-blue-500" />
                       <span className="text-xs text-blue-400 mt-1">Edit</span>
                     </div>
+                    <div className="ml-2 flex flex-col items-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setGoalPackToShare(pack);
+                          setIsShareModalOpen(true);
+                        }}
+                        className="p-1 hover:bg-blue-100 rounded transition-colors"
+                      >
+                        <Share2 className="w-4 h-4 text-blue-500" />
+                      </button>
+                      <span className="text-xs text-blue-400 mt-1">Share</span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -620,6 +653,19 @@ const Dashboard = () => {
                       <div className="ml-3 flex flex-col items-center">
                         <Edit3 className="w-5 h-5 text-blue-500" />
                         <span className="text-xs text-blue-400 mt-1">Edit</span>
+                      </div>
+                      <div className="ml-2 flex flex-col items-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setGoalPackToShare(pack);
+                            setIsShareModalOpen(true);
+                          }}
+                          className="p-1 hover:bg-blue-100 rounded transition-colors"
+                        >
+                          <Share2 className="w-4 h-4 text-blue-500" />
+                        </button>
+                        <span className="text-xs text-blue-400 mt-1">Share</span>
                       </div>
                     </div>
                   </div>
@@ -792,6 +838,13 @@ const Dashboard = () => {
         isOpen={showUserTypeModal}
         onClose={handleUserTypeModalClose}
         onComplete={handleUserTypeComplete}
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        goalPack={goalPackToShare}
       />
     </div>
   )
