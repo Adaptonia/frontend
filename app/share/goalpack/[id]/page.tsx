@@ -75,7 +75,7 @@ const SharePage: React.FC<SharePageProps> = ({ params }) => {
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">5
+              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
                 <Image src="/blueLogo.png" alt="Adaptonia" width={64} height={64} />
               </div>
               <div>
