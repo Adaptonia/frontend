@@ -37,7 +37,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
       setShareUrl(`${window.location.origin}/share/goalpack/${goalPack.id}`);
     }
   }, [goalPack?.id]);
-  
+
   const shareData = {
     title: `Check out this goal pack: ${goalPack?.title}`,
     text: goalPack?.description || `Transform your dreams into achievable goals with ${goalPack?.title}`,
@@ -122,19 +122,48 @@ const ShareModal: React.FC<ShareModalProps> = ({
       ctx.lineWidth = 2;
       ctx.strokeRect(cardX, cardY, cardWidth, cardHeight);
 
-      // Add motivational background pattern
+      // Add user photo at the top (like Spotify share cards)
+      const photoAreaHeight = cardHeight * 0.4;
+      const photoAreaY = cardY;
+      
+      // Load and draw user photo
+      const img = new Image();
+      img.onload = () => {
+        // Calculate aspect ratio to fit properly
+        const aspectRatio = img.width / img.height;
+        const photoWidth = cardWidth;
+        const photoHeight = photoWidth / aspectRatio;
+        
+        // Center the photo and crop if needed
+        const drawX = cardX;
+        const drawY = photoAreaY;
+        const drawWidth = photoWidth;
+        const drawHeight = Math.min(photoHeight, photoAreaHeight);
+        
+        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+        
+        // Add gradient overlay for text readability
+        const gradient = ctx.createLinearGradient(0, photoAreaY, 0, photoAreaY + photoAreaHeight);
+        gradient.addColorStop(0, 'rgba(0, 0, 0, 0.3)');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0.7)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(cardX, photoAreaY, cardWidth, photoAreaHeight);
+      };
+      img.src = '/icons/goalpark.png'; // Use a fixed image for the photo area
+
+      // Add motivational background pattern (only in text area)
       ctx.fillStyle = 'rgba(59, 130, 246, 0.05)';
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 3; i++) {
         ctx.beginPath();
-        ctx.arc(cardX + Math.random() * cardWidth, cardY + Math.random() * cardHeight, 100 + Math.random() * 200, 0, Math.PI * 2);
+        ctx.arc(cardX + Math.random() * cardWidth, cardY + photoAreaHeight + Math.random() * (cardHeight - photoAreaHeight), 50 + Math.random() * 100, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // Add goal pack title
+      // Add goal pack title (positioned over photo or in text area)
       ctx.fillStyle = 'white';
       ctx.font = 'bold 48px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText(goalPack?.title || 'Achieve Your Goals', canvas.width / 2, cardY + 200);
+      ctx.fillText(goalPack?.title || 'Achieve Your Goals', canvas.width / 2, cardY + photoAreaHeight + 100);
 
       // Add description text
       if (goalPack?.description) {
@@ -143,7 +172,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
         
         const words = goalPack.description.split(' ');
         let line = '';
-        let y = cardY + 280;
+        let y = cardY + photoAreaHeight + 180;
         const maxWidth = cardWidth - 60;
         
         for (let i = 0; i < words.length; i++) {
@@ -174,7 +203,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
       ctx.textAlign = 'center';
       ctx.fillText('Day 3 of Goal Journey', canvas.width / 2, cardY + cardHeight - 80);
 
-      // Add category badge
+      // Add category badge (positioned over photo)
       const categoryText = goalPack?.category || 'Goal';
       ctx.fillStyle = '#3B82F6';
       ctx.fillRect(cardX + 60, cardY + 60, 120, 40);
@@ -215,20 +244,49 @@ const ShareModal: React.FC<ShareModalProps> = ({
       ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
       ctx.fillRect(contentX, contentY, contentWidth, contentHeight);
 
+      // Add user photo at the top
+      const photoAreaHeight = contentHeight * 0.5;
+      const photoAreaY = contentY;
+      
+      // Load and draw user photo
+      const img = new Image();
+      img.onload = () => {
+        // Calculate aspect ratio to fit properly
+        const aspectRatio = img.width / img.height;
+        const photoWidth = contentWidth;
+        const photoHeight = photoWidth / aspectRatio;
+        
+        // Center the photo and crop if needed
+        const drawX = contentX;
+        const drawY = photoAreaY;
+        const drawWidth = photoWidth;
+        const drawHeight = Math.min(photoHeight, photoAreaHeight);
+        
+        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+        
+        // Add gradient overlay for text readability
+        const gradient = ctx.createLinearGradient(0, photoAreaY, 0, photoAreaY + photoAreaHeight);
+        gradient.addColorStop(0, 'rgba(0, 0, 0, 0.2)');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(contentX, photoAreaY, contentWidth, photoAreaHeight);
+      };
+      img.src = '/icons/goalpark.png'; // Use a fixed image for the photo area
+
       // Add goal pack title
       ctx.fillStyle = '#1F2937';
-      ctx.font = 'bold 36px Arial';
+      ctx.font = 'bold 32px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText(goalPack?.title || 'Achieve Your Goals', canvas.width / 2, contentY + 80);
+      ctx.fillText(goalPack?.title || 'Achieve Your Goals', canvas.width / 2, contentY + photoAreaHeight + 60);
 
       // Add description
       if (goalPack?.description) {
-        ctx.font = '18px Arial';
+        ctx.font = '16px Arial';
         ctx.fillStyle = '#6B7280';
         
         const words = goalPack.description.split(' ');
         let line = '';
-        let y = contentY + 140;
+        let y = contentY + photoAreaHeight + 100;
         const maxWidth = contentWidth - 40;
         
         for (let i = 0; i < words.length; i++) {
@@ -238,7 +296,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
           if (metrics.width > maxWidth && i > 0) {
             ctx.fillText(line, canvas.width / 2, y);
             line = words[i] + ' ';
-            y += 25;
+            y += 22;
           } else {
             line = testLine;
           }
@@ -248,19 +306,19 @@ const ShareModal: React.FC<ShareModalProps> = ({
 
       // Add category and user type
       ctx.fillStyle = '#3B82F6';
-      ctx.font = 'bold 16px Arial';
+      ctx.font = 'bold 14px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText(`${goalPack?.category || 'Goal'} • For ${goalPack?.targetUserType === 'all' ? 'All Users' : goalPack?.targetUserType}`, canvas.width / 2, contentY + contentHeight - 60);
+      ctx.fillText(`${goalPack?.category || 'Goal'} • For ${goalPack?.targetUserType === 'all' ? 'All Users' : goalPack?.targetUserType}`, canvas.width / 2, contentY + contentHeight - 40);
 
       // Add call to action
       ctx.fillStyle = '#1F2937';
-      ctx.font = 'bold 24px Arial';
-      ctx.fillText('Start Your Journey Today!', canvas.width / 2, contentY + contentHeight - 20);
+      ctx.font = 'bold 20px Arial';
+      ctx.fillText('Start Your Journey Today!', canvas.width / 2, contentY + contentHeight - 10);
 
       // Add Adaptonia branding
       ctx.fillStyle = '#3B82F6';
-      ctx.font = 'bold 20px Arial';
-      ctx.fillText('🎯 adaptonia', canvas.width / 2, canvas.height - 30);
+      ctx.font = 'bold 18px Arial';
+      ctx.fillText('🎯 adaptonia', canvas.width / 2, canvas.height - 20);
     }
 
     setGeneratingImage(false);
@@ -392,6 +450,20 @@ const ShareModal: React.FC<ShareModalProps> = ({
                         <span className="text-xs font-medium">Post (1:1)</span>
                       </div>
                     </button>
+                  </div>
+                </div>
+
+                {/* Photo Upload */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-gray-700 mb-3">Share Image Preview:</h3>
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <img 
+                        src="/icons/goalpark.png" 
+                        alt="Goal pack share image" 
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                    </div>
                   </div>
                 </div>
 

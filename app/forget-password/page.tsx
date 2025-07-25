@@ -13,7 +13,7 @@ const Page = () => {
     const [error, setError] = useState('')
     const router = useRouter()
     
-    const handleSendCode = async (e: React.FormEvent) => {
+    const handleSendResetLink = async (e: React.FormEvent) => {
         e.preventDefault()
         setError('')
         setIsLoading(true)
@@ -23,16 +23,24 @@ const Page = () => {
                 email
             })
 
-            console.log("✅ Forgot password request sent:", response.data)
+            console.log("✅ Password reset email sent:", response.data)
             
-            // Store email in sessionStorage to use it in verification page
-            sessionStorage.setItem('resetEmail', email)
+            // Show success message and redirect to login
+            alert('Password reset email sent! Please check your email and click the reset link.')
+            router.push('/login')
+        } catch (error: any) {
+            console.error("❌ Error sending password reset email:", error)
             
-            // Navigate to verification page
-            router.push('/email-verification')
-        } catch (error) {
-            console.error("❌ Error sending forgot password request:", error)
-            setError('Failed to send reset code. Please check your email and try again.')
+            // Handle specific error messages from the API
+            if (error.response?.data?.error) {
+                setError(error.response.data.error)
+            } else if (error.response?.status === 500) {
+                setError('Server configuration error. Please check your Appwrite settings.')
+            } else if (error.response?.status === 404) {
+                setError('No account found with this email address.')
+            } else {
+                setError('Failed to send reset email. Please check your email and try again.')
+            }
         } finally {
             setIsLoading(false)
         }
@@ -67,7 +75,7 @@ const Page = () => {
         {/* forget password */}
         <div className="flex-1">
           <h1 className="text-3xl font-medium mb-2">Forgot Password?</h1>
-          <p className='text-md font-light mb-6 leading-5'>Don&rsquo;t worry it happens. Please enter the email associated with your account.</p>
+          <p className='text-md font-light mb-6 leading-5'>Don&rsquo;t worry it happens. Please enter the email associated with your account and we&rsquo;ll send you a reset link.</p>
 
           <div className='mb-4'>
             <InputField
@@ -83,11 +91,11 @@ const Page = () => {
           {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
           <Button
-            onClick={handleSendCode}
+            onClick={handleSendResetLink}
             variant="primary"
             disabled={isLoading}
           >
-            {isLoading ? 'Sending...' : 'Send code'}
+            {isLoading ? 'Sending...' : 'Send Reset Link'}
           </Button>
 
           <div className="text-center mt-8">
