@@ -1259,20 +1259,33 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
 
   // Touch event handlers
   const handleTouchStart = (e: React.TouchEvent) => {
-    handleDragStart(e.touches[0].clientY);
+    // Only start drag if touching the top 20px of the modal
+    const touchY = e.touches[0].clientY;
+    const modalTop = e.currentTarget.getBoundingClientRect().top;
+    if (touchY - modalTop <= 20) {
+      handleDragStart(touchY);
+    }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    handleDragMove(e.touches[0].clientY);
+    if (isDragging) {
+      handleDragMove(e.touches[0].clientY);
+    }
   };
 
   const handleTouchEnd = () => {
-    handleDragEnd();
+    if (isDragging) {
+      handleDragEnd();
+    }
   };
 
   // Mouse event handlers (for desktop)
   const handleMouseDown = (e: React.MouseEvent) => {
-    handleDragStart(e.clientY);
+    // Only start drag if clicking the top 20px of the modal
+    const modalTop = e.currentTarget.getBoundingClientRect().top;
+    if (e.clientY - modalTop <= 20) {
+      handleDragStart(e.clientY);
+    }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
