@@ -27,9 +27,15 @@ const ShareModal: React.FC<ShareModalProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [generatingImage, setGeneratingImage] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const shareUrl = `${window.location.origin}/share/goalpack/${goalPack?.id}`;
+  // Set share URL after component mounts (client-side only)
+  useEffect(() => {
+    if (goalPack?.id) {
+      setShareUrl(`${window.location.origin}/share/goalpack/${goalPack.id}`);
+    }
+  }, [goalPack?.id]);
   
   const shareData = {
     title: `Check out this goal pack: ${goalPack?.title}`,
@@ -38,26 +44,31 @@ const ShareModal: React.FC<ShareModalProps> = ({
   };
 
   const handleWhatsAppShare = () => {
+    if (!shareUrl) return;
     const text = encodeURIComponent(`${shareData.title}\n\n${shareData.text}\n\n${shareUrl}`);
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
   const handleWhatsAppStatusShare = () => {
+    if (!shareUrl) return;
     const text = encodeURIComponent(`${shareData.title}\n\n${shareData.text}\n\n${shareUrl}`);
     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
   };
 
   const handleTelegramShare = () => {
+    if (!shareUrl) return;
     const text = encodeURIComponent(`${shareData.title}\n\n${shareData.text}\n\n${shareUrl}`);
     window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareData.title)}`, '_blank');
   };
 
   const handleTwitterShare = () => {
+    if (!shareUrl) return;
     const text = encodeURIComponent(`${shareData.title}\n\n${shareUrl}`);
     window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
   };
 
   const handleCopyLink = async () => {
+    if (!shareUrl) return;
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
@@ -257,7 +268,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
                     <button
                       key={index}
                       onClick={option.onClick}
-                      disabled={generatingImage}
+                      disabled={generatingImage || !shareUrl}
                       className={`${option.color} text-white p-4 rounded-lg flex flex-col items-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105`}
                     >
                       <option.icon className="w-5 h-5" />
@@ -272,14 +283,20 @@ const ShareModal: React.FC<ShareModalProps> = ({
                     <ExternalLink className="w-4 h-4" />
                     <span>Preview Link:</span>
                   </div>
-                  <a
-                    href={shareUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-700 text-sm break-all mt-1 block"
-                  >
-                    {shareUrl}
-                  </a>
+                  {shareUrl ? (
+                    <a
+                      href={shareUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-700 text-sm break-all mt-1 block"
+                    >
+                      {shareUrl}
+                    </a>
+                  ) : (
+                    <div className="text-gray-400 text-sm mt-1">
+                      Loading...
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
