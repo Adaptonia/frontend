@@ -552,21 +552,24 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
           {/* Calendar */}
           <div className="mt-6">
             <h3 className="text-sm font-medium mb-4">Or pick a custom date</h3>
-            <input
-              type="date"
-              className="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={selectedDate ? selectedDate.split('T')[0] : ''}
-              onChange={(e) => {
-                const date = new Date(e.target.value);
-                if (!isNaN(date.getTime())) {
-                  setSelectedDate(date.toISOString());
-                  setActiveTab('main');
-                }
-              }}
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-              min={format(today, 'yyyy-MM-dd')}
-            />
+            <div className="relative">
+              <input
+                type="date"
+                className="w-full p-3 pr-10 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={selectedDate ? selectedDate.split('T')[0] : ''}
+                onChange={(e) => {
+                  const date = new Date(e.target.value);
+                  if (!isNaN(date.getTime())) {
+                    setSelectedDate(date.toISOString());
+                    setActiveTab('main');
+                  }
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+                min={format(today, 'yyyy-MM-dd')}
+              />
+              <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+            </div>
           </div>
         </div>
       </div>
