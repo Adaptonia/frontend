@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button'
 import axios from 'axios'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 
-const Page = () => {
+const ResetPasswordContent = () => {
     const [password, setPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
     const [isLoading, setIsLoading] = useState(false)
@@ -104,72 +104,112 @@ const Page = () => {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              className="text-gray-600"
             >
-              <path d="M19 12H5M12 19l-7-7 7-7" />
+              <path d="m15 18-6-6 6-6"/>
             </svg>
           </button>
         </div>
 
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <Image src="/blueLogo.png" alt="logo" width={50} height={50} />
+          <Image
+            src="/logo.png"
+            alt="Adaptonia Logo"
+            width={120}
+            height={40}
+            className="h-10 w-auto"
+          />
         </div>
 
-        {/* Reset password form */}
-        <div className="flex-1 flex flex-col">
-          <div>
-            <h1 className="text-3xl font-medium mb-2">Reset Password</h1>
-            <p className='text-md font-light mb-6 leading-5'>Please type something you&rsquo;ll remember</p>
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Reset Your Password</h1>
+            <p className="text-gray-600">Enter your new password below</p>
+          </div>
 
-            {!isValidLink ? (
-              <div className="text-center py-8">
-                <p className="text-red-500 mb-4">{error}</p>
-                <Button
-                  onClick={() => router.push('/forget-password')}
-                  variant="primary"
-                >
-                  Request New Reset Link
-                </Button>
+          {!isValidLink ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <p className="text-red-700 text-sm">{error}</p>
+            </div>
+          ) : (
+            <form onSubmit={handleResetPassword} className="space-y-6">
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-red-700 text-sm">{error}</p>
+                </div>
+              )}
+
+              <div>
+                <InputField
+                  label="New Password"
+                  type="password"
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your new password"
+                />
               </div>
-            ) : (
-              <>
-                <div className='mb-4 space-y-3'>
-                  <InputField
-                    label="New Password"
-                    type="password"
-                    id="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="-- Enter Password --"
-                  />
-                  <InputField
-                    label="Confirm New Password"
-                    type="password"
-                    id="confirmPassword"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="-- Enter Password --"
-                  />
+
+              <div>
+                <InputField
+                  label="Confirm Password"
+                  type="password"
+                  id="confirmPassword"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm your new password"
+                />
+              </div>
+
+              {passwordError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-red-700 text-sm">{passwordError}</p>
                 </div>
-                
-                {passwordError && <p className="text-red-500 text-sm mb-4">{passwordError}</p>}
-                {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-                
-                {/* Push button to bottom with margin-top:auto */}
-                <div className="mt-auto pt-8">
-                  <Button
-                    onClick={handleResetPassword}
-                    variant="primary"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Resetting Password...' : 'Reset Password'}
-                  </Button>
-                </div>
-              </>
-            )}
+              )}
+
+              <Button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Resetting Password...' : 'Reset Password'}
+              </Button>
+            </form>
+          )}
+
+          <div className="text-center mt-6">
+            <p className="text-gray-600 text-sm">
+              Remember your password?{' '}
+              <button
+                onClick={() => router.push('/login')}
+                className="text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Sign in
+              </button>
+            </p>
           </div>
         </div>
       </div>
-    );
+    )
 }
+
+const Page = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col min-h-screen p-6">
+        <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Loading...</h1>
+            <p className="text-gray-600">Please wait while we load the reset page</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <ResetPasswordContent />
+    </Suspense>
+  )
+}
+
 export default Page
