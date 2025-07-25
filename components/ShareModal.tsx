@@ -49,7 +49,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
     
     try {
       // Fetch the goalpark.png image
-      const response = await fetch('/icons/goalpark.png');
+      const response = await fetch('/icons/goalparks.png');
       const blob = await response.blob();
       const file = new File([blob], 'goalpack-share.png', { type: 'image/png' });
       
@@ -509,37 +509,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
               {/* Content */}
               <div className="p-6 overflow-y-auto flex-1">
                 {/* Style Selector */}
-                {/* <div className="mb-6">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">Choose Format:</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={() => setSelectedStyle('story')}
-                      className={`p-3 rounded-lg border-2 transition-colors ${
-                        selectedStyle === 'story'
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="w-8 h-12 bg-gray-300 rounded mx-auto mb-2"></div>
-                        <span className="text-xs font-medium">Story (9:16)</span>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => setSelectedStyle('post')}
-                      className={`p-3 rounded-lg border-2 transition-colors ${
-                        selectedStyle === 'post'
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="w-10 h-10 bg-gray-300 rounded mx-auto mb-2"></div>
-                        <span className="text-xs font-medium">Post (1:1)</span>
-                      </div>
-                    </button>
-                  </div>
-                </div> */}
+               
 
                 {/* Photo Upload */}
                 <div className="mb-6">

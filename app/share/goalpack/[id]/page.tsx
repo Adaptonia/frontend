@@ -6,6 +6,7 @@ import { Target, Users, Star, ArrowRight, Download, CheckCircle, Play } from 'lu
 import { GoalPack } from '@/lib/types';
 import { getGoalPackById } from '@/services/appwrite/goalPackService';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface SharePageProps {
   params: {
@@ -51,7 +52,7 @@ const SharePage: React.FC<SharePageProps> = ({ params }) => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Target className="w-8 h-8 text-red-600" />
+            <Image src="/blueLogo.png" alt="Error" width={64} height={64} />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Goal Pack Not Found</h1>
           <p className="text-gray-600 mb-6">{error || 'This goal pack may have been removed or is no longer available.'}</p>
@@ -68,9 +69,9 @@ const SharePage: React.FC<SharePageProps> = ({ params }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -93,7 +94,7 @@ const SharePage: React.FC<SharePageProps> = ({ params }) => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-4xl mx-auto px-4 py-8 flex-1 overflow-y-auto">
         <div className="grid lg:grid-cols-2 gap-8 items-start">
           {/* Goal Pack Details */}
           <motion.div
@@ -104,7 +105,7 @@ const SharePage: React.FC<SharePageProps> = ({ params }) => {
           >
             <div className="flex items-center gap-3 mb-6">
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Target className="w-6 h-6 text-blue-600" />
+                <Image src="/blueLogo.png" alt="Adaptonia" width={64} height={64} />
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">{goalPack.title}</h2>
@@ -230,7 +231,7 @@ const SharePage: React.FC<SharePageProps> = ({ params }) => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-16">
+      <footer className="bg-white border-t border-gray-200 mt-16 flex-shrink-0">
         <div className="max-w-4xl mx-auto px-4 py-8">
           <div className="text-center">
             <p className="text-gray-600 mb-4">
