@@ -51,7 +51,7 @@ const Page = () => {
                       Welcome to adaptonia
                     </h3>
                     <p className="text-center text-gray-800">
-                      Lorem ipsum dolor sit amet consectetur. Dolor tincidunt at.
+                      Transform your dreams into achievable goals with smart tracking and daily motivation.
                     </p>
       
                     <Link

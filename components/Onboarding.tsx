@@ -34,7 +34,7 @@ export default function AdaptoniaOnboarding() {
     },
     // Onboarding Screen 1
     {
-      title: "Lorem Ipsum dolor sit amet",
+      title: "Set Your Goals",
       content: (
         <div className="w-full h-full relative">
   <div className="absolute inset-0 -mx-6 mt-4">
@@ -54,7 +54,7 @@ export default function AdaptoniaOnboarding() {
         </div>
       ),
       description:
-        "Lorem ipsum dolor sit amet consectetur. At laoreet morbi amet aliquam arcu pharetra tellus elit. Eget integer duis tortor amet purus.",
+        "Create meaningful goals that align with your vision. Break them down into manageable milestones and track your progress with ease.",
     },
     // Onboarding Screen 2
     {
@@ -78,7 +78,7 @@ export default function AdaptoniaOnboarding() {
         </div>
       ),
       description:
-        "Lorem ipsum dolor sit amet consectetur. At laoreet morbi amet aliquam arcu pharetra tellus elit. Eget integer duis tortor amet purus.",
+        "Stay motivated with smart reminders and daily progress tracking. Celebrate your achievements and build lasting habits.",
     },
     // Onboarding Screen 3
     {

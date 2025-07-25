@@ -961,7 +961,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
     return (
       <PremiumFeatureModal
         title="Targets are for Pros"
-        description="Lorem ipsum dolor sit amet consectetur. Pellentesque ut pellentesque erat consectetur facilisis sed."
+        description="Set specific targets and deadlines to keep your goals on track. Premium users get advanced goal analytics and progress insights."
         icon={
           <div className="relative w-full h-full">
             <div className="absolute inset-0 flex items-center justify-center">
@@ -988,7 +988,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
     return (
       <PremiumFeatureModal
         title="Pro Location Reminders"
-        description="Lorem ipsum dolor sit amet consectetur. Varius consectetur nullam vulputate turpis ac viverra tincidunt ut facilisis."
+        description="Get location-based reminders to help you stay on track wherever you are. Perfect for goals that require specific locations or routines."
         icon={
           <div className="w-full h-full bg-gray-100 rounded-lg overflow-hidden relative">
             <div className="absolute inset-0 bg-[url('https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/-122.4194,37.7749,13,0/300x300?access_token=example')] bg-center bg-no-repeat bg-cover">

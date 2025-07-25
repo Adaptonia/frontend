@@ -41,7 +41,7 @@ const PremiumPage = () => {
                 <path d="M20 6L9 17L4 12" stroke="#2196F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <p className="text-white">Lorem ipsum dolor sit amet consectetur.</p>
+            <p className="text-white">Unlimited goal tracking with advanced analytics</p>
           </div>
           <div className="flex items-center mb-4">
             <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center mr-4">
@@ -49,7 +49,7 @@ const PremiumPage = () => {
                 <path d="M20 6L9 17L4 12" stroke="#2196F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <p className="text-white">Lorem ipsum dolor sit amet consectetur.</p>
+            <p className="text-white">Priority support and personalized coaching</p>
           </div>
           <div className="flex items-center mb-4">
             <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center mr-4">
@@ -57,7 +57,7 @@ const PremiumPage = () => {
                 <path d="M20 6L9 17L4 12" stroke="#2196F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <p className="text-white">Lorem ipsum dolor sit amet consectetur.</p>
+            <p className="text-white">Exclusive goal templates and expert insights</p>
           </div>
         </div>
 
