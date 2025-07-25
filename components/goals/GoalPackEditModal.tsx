@@ -185,6 +185,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
     // Don't start drag if touching a form input
     const target = e.target as HTMLElement;
     if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA') {
+      e.stopPropagation();
       return;
     }
     
@@ -198,12 +199,14 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (isDragging) {
+      e.preventDefault();
       handleDragMove(e.touches[0].clientY);
     }
   };
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (e: React.TouchEvent) => {
     if (isDragging) {
+      e.preventDefault();
       handleDragEnd();
     }
   };
@@ -213,6 +216,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
     // Don't start drag if clicking a form input
     const target = e.target as HTMLElement;
     if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA') {
+      e.stopPropagation();
       return;
     }
     
@@ -224,35 +228,61 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    handleDragMove(e.clientY);
+    if (isDragging) {
+      e.preventDefault();
+      handleDragMove(e.clientY);
+    }
   };
 
-  const handleMouseUp = () => {
-    handleDragEnd();
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (isDragging) {
+      e.preventDefault();
+      handleDragEnd();
+    }
   };
 
   // Add global mouse move and up listeners when dragging
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (isDragging) {
+        e.preventDefault();
         handleDragMove(e.clientY);
       }
     };
 
-    const handleGlobalMouseUp = () => {
+    const handleGlobalMouseUp = (e: MouseEvent) => {
       if (isDragging) {
+        e.preventDefault();
+        handleDragEnd();
+      }
+    };
+
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      if (isDragging) {
+        e.preventDefault();
+        handleDragMove(e.touches[0].clientY);
+      }
+    };
+
+    const handleGlobalTouchEnd = (e: TouchEvent) => {
+      if (isDragging) {
+        e.preventDefault();
         handleDragEnd();
       }
     };
 
     if (isDragging) {
-      document.addEventListener('mousemove', handleGlobalMouseMove);
-      document.addEventListener('mouseup', handleGlobalMouseUp);
+      document.addEventListener('mousemove', handleGlobalMouseMove, { passive: false });
+      document.addEventListener('mouseup', handleGlobalMouseUp, { passive: false });
+      document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
+      document.addEventListener('touchend', handleGlobalTouchEnd, { passive: false });
     }
 
     return () => {
       document.removeEventListener('mousemove', handleGlobalMouseMove);
       document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.removeEventListener('touchmove', handleGlobalTouchMove);
+      document.removeEventListener('touchend', handleGlobalTouchEnd);
     };
   }, [isDragging, startY, dragY]);
 
@@ -533,6 +563,8 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
                   setActiveTab('main');
                 }
               }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
               min={format(today, 'yyyy-MM-dd')}
             />
           </div>
