@@ -69,14 +69,14 @@ const SharePage: React.FC<SharePageProps> = ({ params }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col overflow-y-auto">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Target className="w-6 h-6 text-white" />
+                <Image src="/blueLogo.png" alt="Adaptonia" width={64} height={64} />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Adaptonia</h1>
