@@ -44,28 +44,116 @@ const ShareModal: React.FC<ShareModalProps> = ({
     url: shareUrl
   };
 
-  const handleWhatsAppShare = () => {
+  const handleWhatsAppShare = async () => {
     if (!shareUrl) return;
-    const text = encodeURIComponent(`${shareData.title}\n\n${shareData.text}\n\n${shareUrl}`);
-    window.open(`https://wa.me/?text=${text}`, '_blank');
+    
+    try {
+      // Fetch the goalpark.png image
+      const response = await fetch('/icons/goalpark.png');
+      const blob = await response.blob();
+      const file = new File([blob], 'goalpack-share.png', { type: 'image/png' });
+      
+      // Share with image
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `Check out this goal pack: ${goalPack?.title}`,
+          text: goalPack?.description || `Transform your dreams into achievable goals with ${goalPack?.title}`,
+          url: shareUrl,
+          files: [file]
+        });
+      } else {
+        // Fallback to URL only
+        window.open(`https://wa.me/?text=${encodeURIComponent(`${shareData.title}\n\n${shareData.text}\n\n${shareData.url}`)}`);
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+      // Fallback to URL only
+      window.open(`https://wa.me/?text=${encodeURIComponent(`${shareData.title}\n\n${shareData.text}\n\n${shareData.url}`)}`);
+    }
   };
 
-  const handleWhatsAppStatusShare = () => {
+  const handleWhatsAppStatusShare = async () => {
     if (!shareUrl) return;
-    const text = encodeURIComponent(`${shareData.title}\n\n${shareData.text}\n\n${shareUrl}`);
-    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+    
+    try {
+      // Fetch the goalpark.png image
+      const response = await fetch('/icons/goalpark.png');
+      const blob = await response.blob();
+      const file = new File([blob], 'goalpack-status.png', { type: 'image/png' });
+      
+      // Share with image
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `Check out this goal pack: ${goalPack?.title}`,
+          text: goalPack?.description || `Transform your dreams into achievable goals with ${goalPack?.title}`,
+          url: shareUrl,
+          files: [file]
+        });
+      } else {
+        // Fallback to URL only
+        window.open(`https://wa.me/?text=${encodeURIComponent(`${shareData.title}\n\n${shareData.text}\n\n${shareData.url}`)}`);
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+      // Fallback to URL only
+      window.open(`https://wa.me/?text=${encodeURIComponent(`${shareData.title}\n\n${shareData.text}\n\n${shareData.url}`)}`);
+    }
   };
 
-  const handleTelegramShare = () => {
+  const handleTelegramShare = async () => {
     if (!shareUrl) return;
-    const text = encodeURIComponent(`${shareData.title}\n\n${shareData.text}\n\n${shareUrl}`);
-    window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareData.title)}`, '_blank');
+    
+    try {
+      // Fetch the goalpark.png image
+      const response = await fetch('/icons/goalpark.png');
+      const blob = await response.blob();
+      const file = new File([blob], 'goalpack-telegram.png', { type: 'image/png' });
+      
+      // Share with image
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `Check out this goal pack: ${goalPack?.title}`,
+          text: goalPack?.description || `Transform your dreams into achievable goals with ${goalPack?.title}`,
+          url: shareUrl,
+          files: [file]
+        });
+      } else {
+        // Fallback to URL only
+        window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(`${shareData.title}\n\n${shareData.text}`)}`);
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+      // Fallback to URL only
+      window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(`${shareData.title}\n\n${shareData.text}`)}`);
+    }
   };
 
-  const handleTwitterShare = () => {
+  const handleTwitterShare = async () => {
     if (!shareUrl) return;
-    const text = encodeURIComponent(`${shareData.title}\n\n${shareUrl}`);
-    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+    
+    try {
+      // Fetch the goalpark.png image
+      const response = await fetch('/icons/goalpark.png');
+      const blob = await response.blob();
+      const file = new File([blob], 'goalpack-twitter.png', { type: 'image/png' });
+      
+      // Share with image
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `Check out this goal pack: ${goalPack?.title}`,
+          text: goalPack?.description || `Transform your dreams into achievable goals with ${goalPack?.title}`,
+          url: shareUrl,
+          files: [file]
+        });
+      } else {
+        // Fallback to URL only
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`${shareData.title}\n\n${shareData.text}`)}&url=${encodeURIComponent(shareUrl)}`);
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+      // Fallback to URL only
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`${shareData.title}\n\n${shareData.text}`)}&url=${encodeURIComponent(shareUrl)}`);
+    }
   };
 
   const handleCopyLink = async () => {
