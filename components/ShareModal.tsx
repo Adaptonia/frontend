@@ -28,6 +28,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [generatingImage, setGeneratingImage] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
+  const [selectedStyle, setSelectedStyle] = useState<'story' | 'post'>('story');
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Set share URL after component mounts (client-side only)
@@ -86,69 +87,181 @@ const ShareModal: React.FC<ShareModalProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size
-    canvas.width = 1200;
-    canvas.height = 630;
-
-    // Create gradient background
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, '#3B82F6');
-    gradient.addColorStop(1, '#1E40AF');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Add app logo/name
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 48px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('🎯 Adaptonia', canvas.width / 2, 80);
-
-    // Add goal pack title
-    ctx.font = 'bold 36px Arial';
-    ctx.fillText(goalPack?.title || '', canvas.width / 2, 160);
-
-    // Add description
-    if (goalPack?.description) {
-      ctx.font = '20px Arial';
-      const words = goalPack.description.split(' ');
-      let line = '';
-      let y = 220;
-      const maxWidth = canvas.width - 100;
+    if (selectedStyle === 'story') {
+      // Instagram Story style (9:16 aspect ratio)
+      canvas.width = 1080;
+      canvas.height = 1920;
       
-      for (let i = 0; i < words.length; i++) {
-        const testLine = line + words[i] + ' ';
-        const metrics = ctx.measureText(testLine);
-        
-        if (metrics.width > maxWidth && i > 0) {
-          ctx.fillText(line, canvas.width / 2, y);
-          line = words[i] + ' ';
-          y += 30;
-        } else {
-          line = testLine;
+      // Create dark gradient background
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, '#1a1a1a');
+      gradient.addColorStop(1, '#2d2d2d');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Add subtle pattern overlay
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+      for (let i = 0; i < canvas.width; i += 40) {
+        for (let j = 0; j < canvas.height; j += 40) {
+          ctx.fillRect(i, j, 1, 1);
         }
       }
-      ctx.fillText(line, canvas.width / 2, y);
+
+      // Create main content card
+      const cardWidth = canvas.width - 80;
+      const cardHeight = canvas.height - 200;
+      const cardX = 40;
+      const cardY = 100;
+
+      // Card background
+      ctx.fillStyle = '#2a2a2a';
+      ctx.fillRect(cardX, cardY, cardWidth, cardHeight);
+
+      // Add subtle border
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cardX, cardY, cardWidth, cardHeight);
+
+      // Add motivational background pattern
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.05)';
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        ctx.arc(cardX + Math.random() * cardWidth, cardY + Math.random() * cardHeight, 100 + Math.random() * 200, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Add goal pack title
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 48px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(goalPack?.title || 'Achieve Your Goals', canvas.width / 2, cardY + 200);
+
+      // Add description text
+      if (goalPack?.description) {
+        ctx.font = '24px Arial';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        
+        const words = goalPack.description.split(' ');
+        let line = '';
+        let y = cardY + 280;
+        const maxWidth = cardWidth - 60;
+        
+        for (let i = 0; i < words.length; i++) {
+          const testLine = line + words[i] + ' ';
+          const metrics = ctx.measureText(testLine);
+          
+          if (metrics.width > maxWidth && i > 0) {
+            ctx.fillText(line, canvas.width / 2, y);
+            line = words[i] + ' ';
+            y += 35;
+          } else {
+            line = testLine;
+          }
+        }
+        ctx.fillText(line, canvas.width / 2, y);
+      }
+
+      // Add progress indicator
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.fillRect(cardX + 60, cardY + cardHeight - 120, cardWidth - 120, 8);
+      
+      ctx.fillStyle = '#3B82F6';
+      ctx.fillRect(cardX + 60, cardY + cardHeight - 120, (cardWidth - 120) * 0.7, 8);
+
+      // Add progress text
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.font = '20px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Day 3 of Goal Journey', canvas.width / 2, cardY + cardHeight - 80);
+
+      // Add category badge
+      const categoryText = goalPack?.category || 'Goal';
+      ctx.fillStyle = '#3B82F6';
+      ctx.fillRect(cardX + 60, cardY + 60, 120, 40);
+      
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText(categoryText.charAt(0).toUpperCase() + categoryText.slice(1), cardX + 80, cardY + 85);
+
+      // Add Adaptonia branding
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.font = 'bold 24px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('🎯 adaptonia', canvas.width / 2, canvas.height - 80);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.font = '18px Arial';
+      ctx.fillText('Transform dreams into achievable goals', canvas.width / 2, canvas.height - 50);
+
+    } else {
+      // Social media post style (1:1 aspect ratio)
+      canvas.width = 1080;
+      canvas.height = 1080;
+      
+      // Create gradient background
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      gradient.addColorStop(0, '#3B82F6');
+      gradient.addColorStop(1, '#1E40AF');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Add content area
+      const contentWidth = canvas.width - 100;
+      const contentHeight = canvas.height - 200;
+      const contentX = 50;
+      const contentY = 100;
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.fillRect(contentX, contentY, contentWidth, contentHeight);
+
+      // Add goal pack title
+      ctx.fillStyle = '#1F2937';
+      ctx.font = 'bold 36px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(goalPack?.title || 'Achieve Your Goals', canvas.width / 2, contentY + 80);
+
+      // Add description
+      if (goalPack?.description) {
+        ctx.font = '18px Arial';
+        ctx.fillStyle = '#6B7280';
+        
+        const words = goalPack.description.split(' ');
+        let line = '';
+        let y = contentY + 140;
+        const maxWidth = contentWidth - 40;
+        
+        for (let i = 0; i < words.length; i++) {
+          const testLine = line + words[i] + ' ';
+          const metrics = ctx.measureText(testLine);
+          
+          if (metrics.width > maxWidth && i > 0) {
+            ctx.fillText(line, canvas.width / 2, y);
+            line = words[i] + ' ';
+            y += 25;
+          } else {
+            line = testLine;
+          }
+        }
+        ctx.fillText(line, canvas.width / 2, y);
+      }
+
+      // Add category and user type
+      ctx.fillStyle = '#3B82F6';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${goalPack?.category || 'Goal'} • For ${goalPack?.targetUserType === 'all' ? 'All Users' : goalPack?.targetUserType}`, canvas.width / 2, contentY + contentHeight - 60);
+
+      // Add call to action
+      ctx.fillStyle = '#1F2937';
+      ctx.font = 'bold 24px Arial';
+      ctx.fillText('Start Your Journey Today!', canvas.width / 2, contentY + contentHeight - 20);
+
+      // Add Adaptonia branding
+      ctx.fillStyle = '#3B82F6';
+      ctx.font = 'bold 20px Arial';
+      ctx.fillText('🎯 adaptonia', canvas.width / 2, canvas.height - 30);
     }
-
-    // Add category and user type
-    ctx.font = '18px Arial';
-    ctx.fillText(`Category: ${goalPack?.category || 'N/A'} • For: ${goalPack?.targetUserType || 'N/A'}`, canvas.width / 2, 350);
-
-    // Add call to action
-    ctx.font = 'bold 24px Arial';
-    ctx.fillText('Start Your Journey Today!', canvas.width / 2, 400);
-
-    // Add QR code placeholder
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.fillRect(canvas.width - 150, canvas.height - 150, 120, 120);
-    ctx.fillStyle = 'white';
-    ctx.font = '14px Arial';
-    ctx.fillText('Scan to', canvas.width - 90, canvas.height - 120);
-    ctx.fillText('get started', canvas.width - 90, canvas.height - 100);
-
-    // Add website
-    ctx.font = '16px Arial';
-    ctx.fillText('adaptonia.com', canvas.width / 2, canvas.height - 50);
 
     setGeneratingImage(false);
   };
@@ -249,6 +362,39 @@ const ShareModal: React.FC<ShareModalProps> = ({
 
               {/* Content */}
               <div className="p-6">
+                {/* Style Selector */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-gray-700 mb-3">Choose Format:</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setSelectedStyle('story')}
+                      className={`p-3 rounded-lg border-2 transition-colors ${
+                        selectedStyle === 'story'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="w-8 h-12 bg-gray-300 rounded mx-auto mb-2"></div>
+                        <span className="text-xs font-medium">Story (9:16)</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setSelectedStyle('post')}
+                      className={`p-3 rounded-lg border-2 transition-colors ${
+                        selectedStyle === 'post'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="w-10 h-10 bg-gray-300 rounded mx-auto mb-2"></div>
+                        <span className="text-xs font-medium">Post (1:1)</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
                 {/* Goal Pack Preview */}
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-6">
                   <h3 className="font-semibold text-gray-900 mb-2">{goalPack?.title}</h3>

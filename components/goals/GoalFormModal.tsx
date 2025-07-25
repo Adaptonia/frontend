@@ -718,18 +718,18 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
               <p className="text-xs text-gray-500">Get daily notifications for your goal</p>
             </div>
           </div>
-          <button
+          <button 
             onClick={() => handleReminderSettingsChange({ enabled: !reminderSettings.enabled })}
             className={`w-12 h-6 rounded-full relative ${reminderSettings.enabled ? 'bg-blue-500' : 'bg-gray-300'}`}
           >
-            <span
+            <span 
               className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${
                 reminderSettings.enabled ? 'right-0.5' : 'left-0.5'
               }`}
             />
           </button>
         </div>
-
+        
         {reminderSettings.enabled && (
           <div className="space-y-5 animate-in fade-in-50">
             {/* Reminder Start Date */}
@@ -746,21 +746,21 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
               />
               <p className="text-xs text-gray-500">When should the daily reminders start?</p>
             </div>
-
+            
             {/* Reminder Time Input */}
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
                 <Clock className="mr-2" size={16} />
                 Reminder Time
               </label>
-              <input
-                type="time"
+                <input
+                  type="time"
                 className="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={reminderSettings.time}
+                  value={reminderSettings.time}
                 onChange={(e) => handleReminderSettingsChange({ time: e.target.value })}
-              />
+                />
               <p className="text-xs text-gray-500">Choose a time for your daily reminder.</p>
-            </div>
+                </div>
 
             {/* Duration Selector */}
             <div className="space-y-2">
@@ -785,7 +785,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
               </div>
               <p className="text-xs text-gray-500">How long should we send daily reminders?</p>
             </div>
-
+            
             {/* Preview Section */}
             <div className="p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 mt-6">
               <h4 className="font-medium mb-2 text-blue-800">📅 Reminder Schedule</h4>
@@ -1275,13 +1275,13 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (isDragging) {
-      handleDragMove(e.touches[0].clientY);
+    handleDragMove(e.touches[0].clientY);
     }
   };
 
   const handleTouchEnd = () => {
     if (isDragging) {
-      handleDragEnd();
+    handleDragEnd();
     }
   };
 
@@ -1296,7 +1296,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
     // Only start drag if clicking the top 20px of the modal
     const modalTop = e.currentTarget.getBoundingClientRect().top;
     if (e.clientY - modalTop <= 20) {
-      handleDragStart(e.clientY);
+    handleDragStart(e.clientY);
     }
   };
 
