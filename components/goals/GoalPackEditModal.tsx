@@ -100,6 +100,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [startY, setStartY] = useState(0);
+  const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
   
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -133,6 +134,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
 
       // Reset the view to the main tab whenever the modal is freshly opened.
       setActiveTab('main');
+      setShowCustomDatePicker(false);
     }
   }, [isOpen, goalPack]);
 
@@ -552,25 +554,116 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
           {/* Calendar */}
           <div className="mt-6">
             <h3 className="text-sm font-medium mb-4">Or pick a custom date</h3>
-            <div className="relative">
-              <input
-                type="date"
-                className="w-full p-3 pr-10 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={selectedDate ? selectedDate.split('T')[0] : ''}
-                onChange={(e) => {
-                  const date = new Date(e.target.value);
-                  if (!isNaN(date.getTime())) {
-                    setSelectedDate(date.toISOString());
-                    setActiveTab('main');
-                  }
-                }}
+            <button
+              onClick={() => setShowCustomDatePicker(true)}
+              className="w-full p-3 pr-10 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-left bg-white relative"
+            >
+              <span className={selectedDate ? 'text-gray-900' : 'text-gray-500'}>
+                {selectedDate ? formatDisplayDate(selectedDate) : 'Select a date'}
+              </span>
+              <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            </button>
+          </div>
+
+          {/* Custom Date Picker Modal */}
+          {showCustomDatePicker && (
+            <div 
+              className="fixed inset-0 bg-black/50 z-60 flex items-center justify-center p-4"
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+            >
+              <div 
+                className="bg-white rounded-lg p-6 w-full max-w-sm"
                 onMouseDown={(e) => e.stopPropagation()}
                 onTouchStart={(e) => e.stopPropagation()}
-                min={format(today, 'yyyy-MM-dd')}
-              />
-              <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Select Date</h3>
+                  <button 
+                    onClick={() => setShowCustomDatePicker(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-7 gap-1 mb-4">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                    <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+                      {day}
+                    </div>
+                  ))}
+                  
+                  {(() => {
+                    const today = new Date();
+                    const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                    const firstDayOfWeek = currentMonth.getDay();
+                    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+                    
+                    const days = [];
+                    
+                    // Add empty cells for days before the first day of the month
+                    for (let i = 0; i < firstDayOfWeek; i++) {
+                      days.push(<div key={`empty-${i}`} className="h-10"></div>);
+                    }
+                    
+                    // Add days of the month
+                    for (let day = 1; day <= daysInMonth; day++) {
+                      const date = new Date(today.getFullYear(), today.getMonth(), day);
+                      const isToday = day === today.getDate();
+                      const isSelected = selectedDate && new Date(selectedDate).toDateString() === date.toDateString();
+                      const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                      
+                      days.push(
+                        <button
+                          key={day}
+                          onClick={() => {
+                            setSelectedDate(date.toISOString());
+                            setShowCustomDatePicker(false);
+                            setActiveTab('main');
+                          }}
+                          disabled={isPast}
+                          className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                            isSelected 
+                              ? 'bg-blue-500 text-white' 
+                              : isToday 
+                                ? 'bg-blue-100 text-blue-600' 
+                                : isPast 
+                                  ? 'text-gray-300 cursor-not-allowed' 
+                                  : 'hover:bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          {day}
+                        </button>
+                      );
+                    }
+                    
+                    return days;
+                  })()}
+                </div>
+                
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowCustomDatePicker(false)}
+                    className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowCustomDatePicker(false);
+                      setActiveTab('main');
+                    }}
+                    className="flex-1 py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     );

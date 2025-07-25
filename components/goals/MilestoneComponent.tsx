@@ -100,8 +100,25 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
       }
       
       onMilestonesChange(defaultMilestones);
+    } else {
+      // Initialize expanded state for milestones with descriptions (not collapsed by default)
+      const milestonesWithDescriptions = milestones.filter(m => m.description && m.description.trim());
+      if (milestonesWithDescriptions.length > 0 && !expandedMilestone) {
+        setExpandedMilestone(milestonesWithDescriptions[0].id);
+      }
     }
-  }, [milestones.length, onMilestonesChange]);
+  }, [milestones.length, onMilestonesChange, expandedMilestone]);
+
+  // Auto-expand milestones when they get a description
+  useEffect(() => {
+    const milestonesWithDescriptions = milestones.filter(m => m.description && m.description.trim());
+    if (milestonesWithDescriptions.length > 0) {
+      // If no milestone is currently expanded, expand the first one with description
+      if (!expandedMilestone || !milestonesWithDescriptions.find(m => m.id === expandedMilestone)) {
+        setExpandedMilestone(milestonesWithDescriptions[0].id);
+      }
+    }
+  }, [milestones, expandedMilestone]);
 
   const updateMilestone = async (id: string, updates: Partial<Milestone>) => {
     const updatedMilestones = milestones.map(milestone =>
@@ -325,7 +342,7 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
               </div>
 
               {/* Description display for milestones with description */}
-              {milestone.description && (
+              {milestone.description && expandedMilestone === milestone.id && (
                 <div className="ml-14 mt-2">
                   <div className="rounded-lg p-4 border">
                     {editingField?.id === milestone.id && editingField?.field === 'description' ? (
@@ -383,7 +400,7 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
               )}
 
               {/* Expanded description editor for milestones without description */}
-              {!milestone.description && expandedMilestone === milestone.id && (
+              {(!milestone.description || milestone.description.trim() === '') && expandedMilestone === milestone.id && (
                 <div 
                   className="overflow-hidden transition-all duration-500 ease-in-out max-h-40 opacity-100 mt-3"
                 >
