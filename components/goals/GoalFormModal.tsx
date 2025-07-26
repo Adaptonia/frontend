@@ -199,6 +199,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [startY, setStartY] = useState(0);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   
   const modalRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -283,6 +284,31 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
   // Prevent modal from closing when reminderSettings changes
   const handleReminderSettingsChange = (newSettings: Partial<GoalFormData['reminderSettings']>) => {
     setReminderSettings(prev => ({...prev, ...newSettings}));
+  };
+
+  // Month navigation helpers
+  const goToPreviousMonth = () => {
+    setCurrentMonth(prev => {
+      const newMonth = new Date(prev);
+      newMonth.setMonth(prev.getMonth() - 1);
+      return newMonth;
+    });
+  };
+
+  const goToNextMonth = () => {
+    setCurrentMonth(prev => {
+      const newMonth = new Date(prev);
+      newMonth.setMonth(prev.getMonth() + 1);
+      return newMonth;
+    });
+  };
+
+  const isDateSelectable = (date: Date) => {
+    const today = new Date();
+    const sixMonthsFromNow = new Date();
+    sixMonthsFromNow.setMonth(today.getMonth() + 6);
+    
+    return date >= today && date <= sixMonthsFromNow;
   };
 
   const handleSubmit = async (data: GoalFormData) => {
@@ -672,28 +698,85 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           
           {/* Mini calendar */}
           <div className="border rounded-lg p-3 mb-4">
-            <div className="grid grid-cols-7 gap-2 text-center">
-              {[...Array(31)].map((_, i) => {
-                const day = i + 1;
-                const currentMonth = new Date().toLocaleDateString('en-US', { month: 'short' });
-                const dateStr = `${day < 10 ? '0' + day : day} ${currentMonth}`;
-                const isSelected = selectedDate === dateStr;
+            {/* Month Navigation */}
+            <div className="flex items-center justify-between mb-3">
+              <button
+                onClick={goToPreviousMonth}
+                className="p-1 hover:bg-gray-100 rounded transition-colors"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              <h4 className="text-sm font-medium">
+                {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </h4>
+              <button
+                onClick={goToNextMonth}
+                className="p-1 hover:bg-gray-100 rounded transition-colors"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-7 gap-1 text-center mb-2">
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day) => (
+                <div key={day} className="text-xs font-medium text-gray-500 py-1">
+                  {day}
+                </div>
+              ))}
+            </div>
+            
+            <div className="grid grid-cols-7 gap-1">
+              {(() => {
+                const today = new Date();
+                const currentMonthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+                const firstDayOfWeek = currentMonthStart.getDay();
+                const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
                 
-                return (
-                  <button 
-                    key={i}
-                    onClick={() => {
-                      setSelectedDate(dateStr);
-                      setActiveTab('main');
-                    }}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      isSelected ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    {day}
-                  </button>
-                );
-              })}
+                const days = [];
+                
+                // Add empty cells for days before the first day of the month
+                for (let i = 0; i < firstDayOfWeek; i++) {
+                  days.push(<div key={`empty-${i}`} className="h-8"></div>);
+                }
+                
+                // Add days of the month
+                for (let day = 1; day <= daysInMonth; day++) {
+                  const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                  const isToday = date.toDateString() === today.toDateString();
+                  const isSelected = selectedDate && new Date(selectedDate).toDateString() === date.toDateString();
+                  const isSelectable = isDateSelectable(date);
+                  
+                  days.push(
+                    <button
+                      key={day}
+                      onClick={() => {
+                        if (isSelectable) {
+                          setSelectedDate(format(date, 'yyyy-MM-dd'));
+                          setActiveTab('main');
+                        }
+                      }}
+                      disabled={!isSelectable}
+                      className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                        isSelected 
+                          ? 'bg-blue-500 text-white' 
+                          : isToday 
+                            ? 'bg-blue-100 text-blue-600' 
+                            : isSelectable
+                              ? 'hover:bg-gray-100 text-gray-700' 
+                              : 'text-gray-300 cursor-not-allowed'
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  );
+                }
+                
+                return days;
+              })()}
             </div>
           </div>
         </div>

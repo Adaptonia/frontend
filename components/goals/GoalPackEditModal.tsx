@@ -9,6 +9,7 @@ import MilestoneComponent from './MilestoneComponent';
 import { createGoal } from '@/services/appwrite/database';
 import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
+import { reminderService } from '@/services/appwrite/reminderService';
 // Removed Select imports - using buttons instead
 
 interface GoalPackEditModalProps {
@@ -101,6 +102,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [startY, setStartY] = useState(0);
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -320,6 +322,51 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
       
       const result = await createGoal(goalData, user.id);
       
+      // Process reminders if enabled
+      const processReminders = async (goalId: string) => {
+        if (reminderSettings.enabled) {
+          if (!user.id || !user.email) {
+            toast.error('Goal saved but failed to schedule reminders - missing user data');
+            return;
+          }
+          
+          try {
+            const { date, duration, time } = reminderSettings;
+            
+            if (date && time) {
+              const [hours, minutes] = time.split(':').map(Number);
+              const reminderDate = new Date(date);
+              reminderDate.setHours(hours, minutes, 0, 0);
+
+              // FOR DEBUGGING: Set reminder time to 10 seconds ago in development
+              if (process.env.NODE_ENV === 'development') {
+                console.log('DEV MODE: Setting reminder to 10 seconds in the past for immediate check.');
+                reminderDate.setSeconds(reminderDate.getSeconds() - 10);
+              }
+              
+              if (reminderDate > new Date() || process.env.NODE_ENV === 'development') {
+                await reminderService.createRecurringReminder({
+                  goalId: goalId,
+                  userId: user.id,
+                  userEmail: user.email,
+                  userName: user.name || user.email,
+                  title: 'Goal Reminder',
+                  description: `Time to work on: ${title}`,
+                  sendAt: reminderDate.toISOString()
+                }, duration || 30);
+                
+                toast.success(`Reminders scheduled for ${duration || 30} days! 🚀`);
+              }
+            }
+          } catch (error) {
+            console.error('Failed to create reminders:', error);
+            toast.error('Goal saved but failed to schedule reminders');
+          }
+        }
+      };
+
+      await processReminders(result.id);
+      
       toast.success(
         <div className="flex flex-col gap-1">
           <span className="font-medium">Goal Created! 🎉</span>
@@ -344,6 +391,31 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
   // Prevent modal from closing when reminderSettings changes
   const handleReminderSettingsChange = (newSettings: Partial<typeof reminderSettings>) => {
     setReminderSettings(prev => ({...prev, ...newSettings}));
+  };
+
+  // Month navigation helpers
+  const goToPreviousMonth = () => {
+    setCurrentMonth(prev => {
+      const newMonth = new Date(prev);
+      newMonth.setMonth(prev.getMonth() - 1);
+      return newMonth;
+    });
+  };
+
+  const goToNextMonth = () => {
+    setCurrentMonth(prev => {
+      const newMonth = new Date(prev);
+      newMonth.setMonth(prev.getMonth() + 1);
+      return newMonth;
+    });
+  };
+
+  const isDateSelectable = (date: Date) => {
+    const today = new Date();
+    const sixMonthsFromNow = new Date();
+    sixMonthsFromNow.setMonth(today.getMonth() + 6);
+    
+    return date >= today && date <= sixMonthsFromNow;
   };
 
   // Main tab content with editable fields
@@ -588,6 +660,29 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
                     </svg>
                   </button>
                 </div>
+
+                {/* Month Navigation */}
+                <div className="flex items-center justify-between mb-4">
+                  <button
+                    onClick={goToPreviousMonth}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                  <h4 className="text-lg font-medium">
+                    {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </h4>
+                  <button
+                    onClick={goToNextMonth}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
                 
                 <div className="grid grid-cols-7 gap-1 mb-4">
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
@@ -598,9 +693,9 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
                   
                   {(() => {
                     const today = new Date();
-                    const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-                    const firstDayOfWeek = currentMonth.getDay();
-                    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+                    const currentMonthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+                    const firstDayOfWeek = currentMonthStart.getDay();
+                    const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
                     
                     const days = [];
                     
@@ -611,28 +706,30 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
                     
                     // Add days of the month
                     for (let day = 1; day <= daysInMonth; day++) {
-                      const date = new Date(today.getFullYear(), today.getMonth(), day);
-                      const isToday = day === today.getDate();
+                      const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                      const isToday = date.toDateString() === today.toDateString();
                       const isSelected = selectedDate && new Date(selectedDate).toDateString() === date.toDateString();
-                      const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                      const isSelectable = isDateSelectable(date);
                       
                       days.push(
                         <button
                           key={day}
                           onClick={() => {
-                  setSelectedDate(date.toISOString());
-                            setShowCustomDatePicker(false);
-                  setActiveTab('main');
+                            if (isSelectable) {
+                              setSelectedDate(date.toISOString());
+                              setShowCustomDatePicker(false);
+                              setActiveTab('main');
+                            }
                           }}
-                          disabled={isPast}
+                          disabled={!isSelectable}
                           className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
                             isSelected 
                               ? 'bg-blue-500 text-white' 
                               : isToday 
                                 ? 'bg-blue-100 text-blue-600' 
-                                : isPast 
-                                  ? 'text-gray-300 cursor-not-allowed' 
-                                  : 'hover:bg-gray-100 text-gray-700'
+                                : isSelectable
+                                  ? 'hover:bg-gray-100 text-gray-700' 
+                                  : 'text-gray-300 cursor-not-allowed'
                           }`}
                         >
                           {day}
@@ -660,7 +757,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
                   >
                     Done
                   </button>
-          </div>
+                </div>
               </div>
             </div>
           )}
