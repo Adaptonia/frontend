@@ -1,11 +1,13 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Plus, Calendar, User, BookOpen, BarChart3, Edit3, GraduationCap, Briefcase, ChevronDown, Share2 } from 'lucide-react'
+import { Plus, Calendar, User, BookOpen, BarChart3, Edit3, GraduationCap, Briefcase, ChevronDown, Share2, Users } from 'lucide-react'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { useAuth } from '@/context/AuthContext'
+import { useIsAdmin } from '@/hooks/useIsAdmin'
+import { useRouter } from 'next/navigation';
 
 // Custom components
 import DashboardCalendar from '@/components/dashboard/Calendar'
@@ -51,6 +53,8 @@ const Dashboard = () => {
   const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([])
   const [isLibraryModalOpen, setIsLibraryModalOpen] = useState(false)
   const [activeLibraryItem, setActiveLibraryItem] = useState<LibraryItem | null>(null)
+  const [expandedUserType, setExpandedUserType] = useState<string | null>(null)
+  const [showAllGoalPacks, setShowAllGoalPacks] = useState(false)
   
   // User type selection states
   const [showUserTypeModal, setShowUserTypeModal] = useState(false)
@@ -58,6 +62,8 @@ const Dashboard = () => {
   
   const { user, loading: authLoading } = useRequireAuth()
   const { updateUser } = useAuth()
+  const isAdmin = useIsAdmin();
+  const router = useRouter();
   
   // Categories for the dashboard
   const categories = [
@@ -394,9 +400,6 @@ const Dashboard = () => {
 
   // Notification functionality removed - using Resend for email notifications
 
-  const [expandedUserType, setExpandedUserType] = useState<string | null>(null);
-  const [showAllGoalPacks, setShowAllGoalPacks] = useState(false);
-
   // Helper function to group goal packs by user type
   const groupGoalPacksByUserType = () => {
     const groups: { [key: string]: GoalPack[] } = {
@@ -486,7 +489,7 @@ const Dashboard = () => {
        
 
         {/* Admin Goal Pack Section - Only visible to admins */}
-        {user?.role === 'admin' && (
+        {isAdmin && (
           <div className="bg-white rounded-xl p-5 mb-6 shadow-sm">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-blue-500 text-lg font-medium">Admin: Goal Packs</h2>
@@ -551,8 +554,39 @@ const Dashboard = () => {
           </div>
         )}
 
+        {/* Admin Dashboard Button - Only visible to admins */}
+        {isAdmin && (
+          <div className="bg-white rounded-xl p-5 mb-6 shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-blue-500 text-lg font-medium">Admin Management</h2>
+            </div>
+            
+            <div className="space-y-3">
+              <button 
+                onClick={() => router.push('/admin')}
+                className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg hover:shadow-md transition-all"
+              >
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                    <Users className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-medium text-blue-800">User Management</h3>
+                    <p className="text-sm text-blue-600">View and manage all users</p>
+                  </div>
+                </div>
+                <div className="text-blue-400">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Regular User Goal Packs */}
-        {!user?.role && userGoalPacks.length > 0 && (
+        {!isAdmin && userGoalPacks.length > 0 && (
           <div className="bg-white rounded-xl p-5 mb-6 shadow-sm">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-blue-500 text-lg font-medium">Available Goal Packs</h2>
@@ -781,7 +815,7 @@ const Dashboard = () => {
       )}
 
       {/* Goal Pack Modal - Admin Only */}
-      {user?.role === 'admin' && (
+      {isAdmin && (
         <GoalPackModal
           isOpen={isGoalPackModalOpen}
           onClose={() => {

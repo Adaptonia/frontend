@@ -4,6 +4,7 @@ import { getCurrentUser, logoutUser } from '../services/appwrite';
 import { AuthContextType, User } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useState, createContext, useEffect, useContext, useCallback } from "react";
+import { updateUserLoginActivity } from '../services/appwrite/userService';
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -108,6 +109,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         setUser(userData);
         console.log("✅ Appwrite session is persistent and valid");
+        
+        // Update login activity for admin tracking
+        try {
+          if (userData.id) {
+            console.log('🔐 Calling updateUserLoginActivity for user:', userData.id);
+            await updateUserLoginActivity(userData.id);
+            console.log('✅ Login activity update completed');
+          } else {
+            console.warn('⚠️ No user ID available for login activity update');
+          }
+        } catch (error) {
+          console.warn('❌ Failed to update login activity:', error);
+          // Don't block the login process if this fails
+        }
+        
         return;
       }
       
