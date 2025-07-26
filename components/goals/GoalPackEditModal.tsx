@@ -716,11 +716,11 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
                           key={day}
                           onClick={() => {
                             if (isSelectable) {
-                              setSelectedDate(date.toISOString());
+                  setSelectedDate(date.toISOString());
                               setShowCustomDatePicker(false);
-                              setActiveTab('main');
-                            }
-                          }}
+                  setActiveTab('main');
+                }
+              }}
                           disabled={!isSelectable}
                           className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
                             isSelected 
@@ -739,7 +739,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
                     
                     return days;
                   })()}
-                </div>
+          </div>
                 
                 <div className="flex gap-2">
                   <button
@@ -860,23 +860,21 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
               <p className="text-xs text-gray-500">When should the daily reminders start?</p>
             </div>
             
-            {/* Locked Reminder Time - 9 AM */}
+            {/* Reminder Time Input */}
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
                 <Clock className="mr-2" size={16} />
                 Reminder Time
               </label>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 p-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-600">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">9:00 AM</span>
-                    <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">Fixed Time</span>
-                </div>
-              </div>
-              </div>
-              <p className="text-xs text-gray-500">Time is locked at 9:00 AM for the free plan</p>
+              <input
+                type="time"
+                className="w-full p-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={reminderSettings.time}
+                onChange={(e) => handleReminderSettingsChange({ time: e.target.value })}
+              />
+              <p className="text-xs text-gray-500">Choose a time for your daily reminder.</p>
             </div>
-
+            
             {/* Duration Selector */}
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
@@ -984,7 +982,15 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Daily Time:</span>
-                  <span className="font-medium">9:00 AM</span>
+                  <span className="font-medium">
+                    {(() => {
+                      try {
+                        if (!reminderSettings.time) return 'Not set';
+                        const d = new Date(`1970-01-01T${reminderSettings.time}`);
+                        return format(d, 'h:mm a');
+                      } catch { return 'Invalid time'; }
+                    })()}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Total Reminders:</span>
@@ -1002,18 +1008,15 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
           <button 
             onClick={() => {
               try {
-                // Set the reminder date from the reminder settings (locked at 9 AM)
-                if (reminderSettings.date) {
-                  // Create date in local time zone at 9 AM
+                if (reminderSettings.date && reminderSettings.time) {
+                  const [hours, minutes] = reminderSettings.time.split(':').map(Number);
                   const reminderDate = new Date(reminderSettings.date);
-                  reminderDate.setHours(9, 0, 0, 0); // Always 9:00 AM
+                  reminderDate.setHours(hours, minutes, 0, 0);
 
                   if (!isNaN(reminderDate.getTime())) {
-                    // Store in ISO format (will be converted to UTC)
                     setReminder(reminderDate.toISOString());
-                    
                     const duration = reminderSettings.duration || 30;
-                    toast.success(`Daily reminders set for ${duration} days at 9:00 AM`, {
+                    toast.success(`Daily reminders set for ${duration} days at ${format(reminderDate, 'h:mm a')}`, {
                       description: `Starting ${reminderDate.toLocaleDateString()}`
                     });
                   } else {
@@ -1021,7 +1024,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
                     return;
                   }
                 } else {
-                  toast.error('Please set a start date for reminders');
+                  toast.error('Please set a start date and time for reminders');
                   return;
                 }
               } catch (error) {

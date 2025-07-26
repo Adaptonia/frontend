@@ -751,12 +751,12 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                   const isSelectable = isDateSelectable(date);
                   
                   days.push(
-                    <button
+                  <button 
                       key={day}
-                      onClick={() => {
+                    onClick={() => {
                         if (isSelectable) {
                           setSelectedDate(format(date, 'yyyy-MM-dd'));
-                          setActiveTab('main');
+                      setActiveTab('main');
                         }
                       }}
                       disabled={!isSelectable}
@@ -768,11 +768,11 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                             : isSelectable
                               ? 'hover:bg-gray-100 text-gray-700' 
                               : 'text-gray-300 cursor-not-allowed'
-                      }`}
-                    >
-                      {day}
-                    </button>
-                  );
+                    }`}
+                  >
+                    {day}
+                  </button>
+                );
                 }
                 
                 return days;
