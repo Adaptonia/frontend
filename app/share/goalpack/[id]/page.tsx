@@ -38,7 +38,7 @@ const SharePage: React.FC<SharePageProps> = ({ params }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading amazing goal pack...</p>
@@ -49,7 +49,7 @@ const SharePage: React.FC<SharePageProps> = ({ params }) => {
 
   if (error || !goalPack) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Image src="/blueLogo.png" alt="Error" width={64} height={64} />
@@ -69,7 +69,7 @@ const SharePage: React.FC<SharePageProps> = ({ params }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col overflow-y-auto">
+    <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -93,8 +93,8 @@ const SharePage: React.FC<SharePageProps> = ({ params }) => {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-8 flex-1">
+      {/* Main Content (Scrollable) */}
+      <main className="max-w-4xl mx-auto px-4 py-8 flex-1 overflow-y-auto">
         <div className="grid lg:grid-cols-2 gap-8 items-start">
           {/* Goal Pack Details */}
           <motion.div
@@ -118,22 +118,17 @@ const SharePage: React.FC<SharePageProps> = ({ params }) => {
             )}
 
             <div className="space-y-4 mb-8">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="w-5 h-5 text-green-500" />
-                <span className="text-gray-700">Structured goal framework</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <CheckCircle className="w-5 h-5 text-green-500" />
-                <span className="text-gray-700">Progress tracking tools</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <CheckCircle className="w-5 h-5 text-green-500" />
-                <span className="text-gray-700">Smart reminders & motivation</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <CheckCircle className="w-5 h-5 text-green-500" />
-                <span className="text-gray-700">Community support</span>
-              </div>
+              {[
+                "Structured goal framework",
+                "Progress tracking tools",
+                "Smart reminders & motivation",
+                "Community support"
+              ].map((text, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span className="text-gray-700">{text}</span>
+                </div>
+              ))}
             </div>
 
             <div className="bg-blue-50 rounded-lg p-4 mb-6">
@@ -155,14 +150,14 @@ const SharePage: React.FC<SharePageProps> = ({ params }) => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="space-y-6"
           >
-            {/* Main CTA */}
+            {/* CTA Box */}
             <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-8 text-white">
               <h3 className="text-2xl font-bold mb-4">Ready to Transform Your Dreams?</h3>
               <p className="text-blue-100 mb-6">
                 Join Adaptonia and start your journey towards achieving your goals. 
                 Get access to this goal pack and hundreds more.
               </p>
-              
+
               <div className="space-y-4">
                 <Link
                   href="/signup"
@@ -171,7 +166,7 @@ const SharePage: React.FC<SharePageProps> = ({ params }) => {
                   <Play className="w-5 h-5" />
                   Start Your Journey - It's Free!
                 </Link>
-                
+
                 <Link
                   href="/login"
                   className="w-full border border-white text-white px-6 py-3 rounded-lg hover:bg-white hover:text-blue-600 transition-colors flex items-center justify-center gap-2"
@@ -181,34 +176,23 @@ const SharePage: React.FC<SharePageProps> = ({ params }) => {
               </div>
             </div>
 
-            {/* Features */}
+            {/* Why Adaptonia */}
             <div className="bg-white rounded-2xl p-6 shadow-lg">
               <h4 className="text-lg font-semibold text-gray-900 mb-4">Why Choose Adaptonia?</h4>
               <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
+                {[
+                  { icon: "green", text: "Smart goal tracking with AI insights" },
+                  { icon: "purple", text: "Personalized motivation & reminders" },
+                  { icon: "orange", text: "Community of goal achievers" },
+                  { icon: "red", text: "Progress analytics & insights" }
+                ].map(({ icon, text }, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className={`w-8 h-8 bg-${icon}-100 rounded-full flex items-center justify-center`}>
+                      <CheckCircle className={`w-4 h-4 text-${icon}-600`} />
+                    </div>
+                    <span className="text-gray-700">{text}</span>
                   </div>
-                  <span className="text-gray-700">Smart goal tracking with AI insights</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                    <CheckCircle className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <span className="text-gray-700">Personalized motivation & reminders</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                    <CheckCircle className="w-4 h-4 text-orange-600" />
-                  </div>
-                  <span className="text-gray-700">Community of goal achievers</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                    <CheckCircle className="w-4 h-4 text-red-600" />
-                  </div>
-                  <span className="text-gray-700">Progress analytics & insights</span>
-                </div>
+                ))}
               </div>
             </div>
 
@@ -249,4 +233,4 @@ const SharePage: React.FC<SharePageProps> = ({ params }) => {
   );
 };
 
-export default SharePage; 
+export default SharePage;

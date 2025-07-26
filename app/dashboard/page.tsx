@@ -524,22 +524,22 @@ const Dashboard = () => {
                       {expandedUserType === userType && (
                         <div className="p-3">
                           {packs.map(pack => (
-                            <div 
-                              key={pack.id}
-                              onClick={() => {
-                                setActiveGoalPack(pack);
-                                setIsGoalPackModalOpen(true);
-                              }}
+                  <div 
+                    key={pack.id}
+                    onClick={() => {
+                      setActiveGoalPack(pack);
+                      setIsGoalPackModalOpen(true);
+                    }}
                               className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 mb-2"
-                            >
-                              <div>
-                                <h3 className="font-medium">{pack.title}</h3>
-                                <p className="text-sm text-gray-500">
-                                  {pack.category} • {pack.targetUserType} • {pack.isActive ? 'Active' : 'Inactive'}
-                                </p>
-                              </div>
-                              <div className={`w-3 h-3 rounded-full ${pack.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
-                            </div>
+                  >
+                    <div>
+                      <h3 className="font-medium">{pack.title}</h3>
+                      <p className="text-sm text-gray-500">
+                        {pack.category} • {pack.targetUserType} • {pack.isActive ? 'Active' : 'Inactive'}
+                      </p>
+                    </div>
+                    <div className={`w-3 h-3 rounded-full ${pack.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
+                  </div>
                           ))}
                         </div>
                       )}

@@ -131,9 +131,9 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
       setReminder('');
       setLocation('');
       setValidationError('');
-
+    
       // Reset the view to the main tab whenever the modal is freshly opened.
-      setActiveTab('main');
+    setActiveTab('main');
       setShowCustomDatePicker(false);
     }
   }, [isOpen, goalPack]);
@@ -202,14 +202,14 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
   const handleTouchMove = (e: React.TouchEvent) => {
     if (isDragging) {
       e.preventDefault();
-      handleDragMove(e.touches[0].clientY);
+    handleDragMove(e.touches[0].clientY);
     }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (isDragging) {
       e.preventDefault();
-      handleDragEnd();
+    handleDragEnd();
     }
   };
 
@@ -225,21 +225,21 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
     // Only start drag if clicking the top 20px of the modal
     const modalTop = e.currentTarget.getBoundingClientRect().top;
     if (e.clientY - modalTop <= 20) {
-      handleDragStart(e.clientY);
+    handleDragStart(e.clientY);
     }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isDragging) {
       e.preventDefault();
-      handleDragMove(e.clientY);
+    handleDragMove(e.clientY);
     }
   };
 
   const handleMouseUp = (e: React.MouseEvent) => {
     if (isDragging) {
       e.preventDefault();
-      handleDragEnd();
+    handleDragEnd();
     }
   };
 
@@ -260,7 +260,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
     };
 
     const handleGlobalTouchMove = (e: TouchEvent) => {
-      if (isDragging) {
+    if (isDragging) {
         e.preventDefault();
         handleDragMove(e.touches[0].clientY);
       }
@@ -620,9 +620,9 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
                         <button
                           key={day}
                           onClick={() => {
-                            setSelectedDate(date.toISOString());
+                  setSelectedDate(date.toISOString());
                             setShowCustomDatePicker(false);
-                            setActiveTab('main');
+                  setActiveTab('main');
                           }}
                           disabled={isPast}
                           className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
@@ -660,7 +660,7 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
                   >
                     Done
                   </button>
-                </div>
+          </div>
               </div>
             </div>
           )}
@@ -774,8 +774,8 @@ const GoalPackEditModal: React.FC<GoalPackEditModalProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="font-medium">9:00 AM</span>
                     <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">Fixed Time</span>
-                  </div>
                 </div>
+              </div>
               </div>
               <p className="text-xs text-gray-500">Time is locked at 9:00 AM for the free plan</p>
             </div>
