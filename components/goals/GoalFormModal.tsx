@@ -472,7 +472,10 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
           
           <div className="" ref={dropdownRef}>
             <button 
-              onClick={() => setShowOptionsDropdown(!showOptionsDropdown)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowOptionsDropdown(!showOptionsDropdown);
+              }}
               className="flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full"
             >
               <Settings size={16} />
@@ -480,12 +483,16 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
             
             {showOptionsDropdown && (
               <>
-                <div className="fixed inset-0 bg-black/5 " onClick={() => setShowOptionsDropdown(false)} />
+                <div className="fixed inset-0 bg-black/5 " onClick={(e) => {
+                  e.stopPropagation();
+                  setShowOptionsDropdown(false);
+                }} />
                 
                 <div className="absolute left-[68%] transform -translate-x-1/2 p-1 bg-white rounded-md shadow-[0_2px_15px_rgba(0,0,0,0.1)] w-[220px] z-50">
                   <div 
                     className="flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setShowOptionsDropdown(false);
                       setActiveTab('target');
                       setPremiumFeature(null);
@@ -499,7 +506,8 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                   
                   <div 
                     className="flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setShowOptionsDropdown(false);
                       setActiveTab('location');
                       setPremiumFeature(null);
@@ -513,7 +521,8 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
                   
                   <div 
                     className="flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setShowOptionsDropdown(false);
                       setActiveTab('more');
                       setPremiumFeature(null);
