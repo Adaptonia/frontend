@@ -14,6 +14,7 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
   const [expandedMilestones, setExpandedMilestones] = useState<string[]>([]);
   const [editingField, setEditingField] = useState<{id: string, field: 'title' | 'date' | 'description'} | null>(null);
   const [localDescriptions, setLocalDescriptions] = useState<{[key: string]: string}>({});
+  const [isExpanding, setIsExpanding] = useState(false);
 
   const generateId = () => {
     return Math.random().toString(36).substr(2, 9);
@@ -131,11 +132,14 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
   };
 
   const toggleExpanded = (id: string) => {
+    setIsExpanding(true);
     setExpandedMilestones(prev => 
       prev.includes(id) 
         ? prev.filter(milestoneId => milestoneId !== id)
         : [...prev, id]
     );
+    // Reset the flag after a short delay to allow the blur event to be ignored
+    setTimeout(() => setIsExpanding(false), 100);
   };
 
   const handleFieldEdit = (id: string, field: 'title' | 'date' | 'description') => {
@@ -155,6 +159,11 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
   };
 
   const handleDescriptionBlur = (id: string) => {
+    // Skip blur logic if we're in the middle of expanding/collapsing
+    if (isExpanding) {
+      return;
+    }
+    
     // Sync to parent when user finishes editing
     const localValue = localDescriptions[id];
     if (localValue !== undefined) {
@@ -355,7 +364,10 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
 
                 {/* Expand/Collapse button */}
                 <button
-                  onClick={() => toggleExpanded(milestone.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleExpanded(milestone.id);
+                  }}
                   className="ml-1 p-2 hover:bg-gray-100 rounded-full transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
                 >
                   <div className="transform transition-transform duration-300 ease-in-out">
