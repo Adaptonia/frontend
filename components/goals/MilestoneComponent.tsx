@@ -15,6 +15,7 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
   const [editingField, setEditingField] = useState<{id: string, field: 'title' | 'date' | 'description'} | null>(null);
   const [localDescriptions, setLocalDescriptions] = useState<{[key: string]: string}>({});
   const [isExpanding, setIsExpanding] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   const generateId = () => {
     return Math.random().toString(36).substr(2, 9);
@@ -102,25 +103,20 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
       }
       
       onMilestonesChange(defaultMilestones);
-    } else {
-      // Initialize expanded state for milestones with descriptions (not collapsed by default)
-      const milestonesWithDescriptions = milestones.filter(m => m.description && m.description.trim());
-      if (milestonesWithDescriptions.length > 0 && expandedMilestones.length === 0) {
-        setExpandedMilestones([milestonesWithDescriptions[0].id]);
-      }
     }
-  }, [milestones.length, onMilestonesChange, expandedMilestones]);
+  }, [milestones.length, onMilestonesChange]);
 
-  // Auto-expand milestones when they get a description
+  // Auto-expand milestones when they get a description (only on initial load)
   useEffect(() => {
-    const milestonesWithDescriptions = milestones.filter(m => m.description && m.description.trim());
-    if (milestonesWithDescriptions.length > 0) {
-      // If no milestone is currently expanded, expand the first one with description
-      if (expandedMilestones.length === 0 || !milestonesWithDescriptions.find(m => expandedMilestones.includes(m.id))) {
+    if (!hasInitialized && milestones.length > 0) {
+      const milestonesWithDescriptions = milestones.filter(m => m.description && m.description.trim());
+      if (milestonesWithDescriptions.length > 0) {
+        // Only auto-expand on initial load, not when user manually collapses
         setExpandedMilestones([milestonesWithDescriptions[0].id]);
       }
+      setHasInitialized(true);
     }
-  }, [milestones, expandedMilestones]);
+  }, [milestones.length, hasInitialized]); // Only depend on milestones.length and initialization flag
 
   const updateMilestone = async (id: string, updates: Partial<Milestone>) => {
     const updatedMilestones = milestones.map(milestone =>
