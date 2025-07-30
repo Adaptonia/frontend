@@ -11,8 +11,9 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
   milestones,
   onMilestonesChange
 }) => {
-  const [expandedMilestone, setExpandedMilestone] = useState<string | null>(null);
+  const [expandedMilestones, setExpandedMilestones] = useState<string[]>([]);
   const [editingField, setEditingField] = useState<{id: string, field: 'title' | 'date' | 'description'} | null>(null);
+  const [localDescriptions, setLocalDescriptions] = useState<{[key: string]: string}>({});
 
   const generateId = () => {
     return Math.random().toString(36).substr(2, 9);
@@ -103,22 +104,22 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
     } else {
       // Initialize expanded state for milestones with descriptions (not collapsed by default)
       const milestonesWithDescriptions = milestones.filter(m => m.description && m.description.trim());
-      if (milestonesWithDescriptions.length > 0 && !expandedMilestone) {
-        setExpandedMilestone(milestonesWithDescriptions[0].id);
+      if (milestonesWithDescriptions.length > 0 && expandedMilestones.length === 0) {
+        setExpandedMilestones([milestonesWithDescriptions[0].id]);
       }
     }
-  }, [milestones.length, onMilestonesChange, expandedMilestone]);
+  }, [milestones.length, onMilestonesChange, expandedMilestones]);
 
   // Auto-expand milestones when they get a description
   useEffect(() => {
     const milestonesWithDescriptions = milestones.filter(m => m.description && m.description.trim());
     if (milestonesWithDescriptions.length > 0) {
       // If no milestone is currently expanded, expand the first one with description
-      if (!expandedMilestone || !milestonesWithDescriptions.find(m => m.id === expandedMilestone)) {
-        setExpandedMilestone(milestonesWithDescriptions[0].id);
+      if (expandedMilestones.length === 0 || !milestonesWithDescriptions.find(m => expandedMilestones.includes(m.id))) {
+        setExpandedMilestones([milestonesWithDescriptions[0].id]);
       }
     }
-  }, [milestones, expandedMilestone]);
+  }, [milestones, expandedMilestones]);
 
   const updateMilestone = async (id: string, updates: Partial<Milestone>) => {
     const updatedMilestones = milestones.map(milestone =>
@@ -130,7 +131,11 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
   };
 
   const toggleExpanded = (id: string) => {
-    setExpandedMilestone(expandedMilestone === id ? null : id);
+    setExpandedMilestones(prev => 
+      prev.includes(id) 
+        ? prev.filter(milestoneId => milestoneId !== id)
+        : [...prev, id]
+    );
   };
 
   const handleFieldEdit = (id: string, field: 'title' | 'date' | 'description') => {
@@ -139,6 +144,28 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
 
   const handleFieldSave = () => {
     setEditingField(null);
+  };
+
+  const handleDescriptionChange = (id: string, value: string) => {
+    // Update local state immediately for smooth typing
+    setLocalDescriptions(prev => ({
+      ...prev,
+      [id]: value
+    }));
+  };
+
+  const handleDescriptionBlur = (id: string) => {
+    // Sync to parent when user finishes editing
+    const localValue = localDescriptions[id];
+    if (localValue !== undefined) {
+      updateMilestone(id, { description: localValue });
+      // Clear local state after syncing
+      setLocalDescriptions(prev => {
+        const newState = { ...prev };
+        delete newState[id];
+        return newState;
+      });
+    }
   };
 
   const handleFormatDescription = (id: string, formatType: 'paragraph' | 'bullets') => {
@@ -332,7 +359,7 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
                   className="ml-1 p-2 hover:bg-gray-100 rounded-full transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
                 >
                   <div className="transform transition-transform duration-300 ease-in-out">
-                    {expandedMilestone === milestone.id ? (
+                    {expandedMilestones.includes(milestone.id) ? (
                       <ChevronUp size={16} className="text-gray-400 transition-colors duration-200 hover:text-gray-600" />
                     ) : (
                       <ChevronDown size={16} className="text-gray-400 transition-colors duration-200 hover:text-gray-600" />
@@ -342,7 +369,7 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
               </div>
 
               {/* Description display for milestones with description */}
-              {milestone.description && expandedMilestone === milestone.id && (
+              {milestone.description && expandedMilestones.includes(milestone.id) && (
                 <div className="ml-14 mt-2">
                   <div className="rounded-lg p-4 border">
                     {editingField?.id === milestone.id && editingField?.field === 'description' ? (
@@ -368,12 +395,12 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
                         </div>
 
                         <textarea
-                          value={milestone.description}
-                          onChange={(e) => updateMilestone(milestone.id, { description: e.target.value })}
-                          onBlur={handleFieldSave}
+                          value={localDescriptions[milestone.id] !== undefined ? localDescriptions[milestone.id] : milestone.description}
+                          onChange={(e) => handleDescriptionChange(milestone.id, e.target.value)}
+                          onBlur={() => handleDescriptionBlur(milestone.id)}
                           onKeyPress={(e) => {
                             if (e.key === 'Enter' && e.ctrlKey) {
-                              handleFieldSave();
+                              handleDescriptionBlur(milestone.id);
                             }
                           }}
                           className="w-full bg-transparent border-none outline-none resize-none text-sm text-gray-700 focus:text-gray-900 mobile-input-fix"
@@ -400,7 +427,7 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
               )}
 
               {/* Expanded description editor for milestones without description */}
-              {(!milestone.description || milestone.description.trim() === '') && expandedMilestone === milestone.id && (
+              {(!milestone.description || milestone.description.trim() === '') && expandedMilestones.includes(milestone.id) && (
                 <div 
                   className="overflow-hidden transition-all duration-500 ease-in-out max-h-40 opacity-100 mt-3"
                 >
@@ -427,8 +454,9 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
                       </div>
 
                       <textarea
-                        value={milestone.description || ''}
-                        onChange={(e) => updateMilestone(milestone.id, { description: e.target.value })}
+                        value={localDescriptions[milestone.id] !== undefined ? localDescriptions[milestone.id] : (milestone.description || '')}
+                        onChange={(e) => handleDescriptionChange(milestone.id, e.target.value)}
+                        onBlur={() => handleDescriptionBlur(milestone.id)}
                         placeholder="Enter your milestone details. Use formatting buttons above to organize your text."
                         className="w-full bg-transparent border-none outline-none resize-none text-sm text-gray-700 placeholder-gray-400 transition-all duration-200 focus:text-gray-900 mobile-input-fix"
                         rows={3}
