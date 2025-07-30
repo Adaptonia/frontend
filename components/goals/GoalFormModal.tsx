@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Calendar, Tag as TagIcon, Bell as BellIcon, Settings, Flag, Loader2, MapPin, Clock, Check } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -204,55 +204,68 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
   const modalRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      if (initialData) {
-      setTitle(initialData.title || '');
-      setDescription(initialData.description || '');
-      setSelectedDate(initialData.deadline || '');
-      setSelectedTag(initialData.tags || '');
-      setReminder(initialData.reminderDate || '');
-      setLocation(initialData.location || '');
+  // Memoize parsed data to prevent expensive re-parsing
+  const parsedInitialData = useMemo(() => {
+    if (!initialData) return null;
+    
+    try {
+      const parsedMilestones = initialData.milestones ? JSON.parse(initialData.milestones as string) : [];
+      const parsedSettings = initialData.reminderSettings ? JSON.parse(initialData.reminderSettings as string) : {};
       
-        try {
-          const parsedMilestones = initialData.milestones ? JSON.parse(initialData.milestones as string) : [];
-          setMilestones(parsedMilestones);
-        } catch (e) {
-          console.error("Failed to parse milestones", e);
-        setMilestones([]);
-      }
-      
-        try {
-          const parsedSettings = initialData.reminderSettings ? JSON.parse(initialData.reminderSettings as string) : {};
-          setReminderSettings({
-            enabled: parsedSettings.enabled || false,
-            time: parsedSettings.time || '09:00',
-            date: parsedSettings.date || format(new Date(), 'yyyy-MM-dd'),
-            duration: parsedSettings.duration || 30,
-          });
-        } catch (e) {
-          console.error("Failed to parse reminder settings", e);
+      return {
+        milestones: parsedMilestones,
+        settings: {
+          enabled: parsedSettings.enabled || false,
+          time: parsedSettings.time || '09:00',
+          date: parsedSettings.date || format(new Date(), 'yyyy-MM-dd'),
+          duration: parsedSettings.duration || 30,
         }
-      } else {
-      setTitle('');
-      setDescription('');
-      setSelectedDate('');
-      setSelectedTag('');
-      setReminder('');
-      setLocation('');
-      setMilestones([]);
-      setReminderSettings({
-        enabled: false,
-        time: "09:00",
+      };
+    } catch (e) {
+      console.error("Failed to parse initial data", e);
+      return {
+        milestones: [],
+        settings: {
+          enabled: false,
+          time: "09:00",
           date: new Date().toISOString().split('T')[0],
           duration: 30,
-      });
+        }
+      };
     }
-    setActiveTab('main');
-    setPremiumFeature(null);
-    setShowOptionsDropdown(false);
+  }, [initialData?.milestones, initialData?.reminderSettings]);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialData && parsedInitialData) {
+        setTitle(initialData.title || '');
+        setDescription(initialData.description || '');
+        setSelectedDate(initialData.deadline || '');
+        setSelectedTag(initialData.tags || '');
+        setReminder(initialData.reminderDate || '');
+        setLocation(initialData.location || '');
+        setMilestones(parsedInitialData.milestones);
+        setReminderSettings(parsedInitialData.settings);
+      } else {
+        setTitle('');
+        setDescription('');
+        setSelectedDate('');
+        setSelectedTag('');
+        setReminder('');
+        setLocation('');
+        setMilestones([]);
+        setReminderSettings({
+          enabled: false,
+          time: "09:00",
+          date: new Date().toISOString().split('T')[0],
+          duration: 30,
+        });
+      }
+      setActiveTab('main');
+      setPremiumFeature(null);
+      setShowOptionsDropdown(false);
     }
-  }, [isOpen, initialData]);
+  }, [isOpen, initialData, parsedInitialData]);
 
   // Separate effect for managing body scroll
   useEffect(() => {
@@ -286,30 +299,30 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
     setReminderSettings(prev => ({...prev, ...newSettings}));
   };
 
-  // Month navigation helpers
-  const goToPreviousMonth = () => {
+  // Month navigation helpers - memoized to prevent unnecessary re-renders
+  const goToPreviousMonth = useCallback(() => {
     setCurrentMonth(prev => {
       const newMonth = new Date(prev);
       newMonth.setMonth(prev.getMonth() - 1);
       return newMonth;
     });
-  };
+  }, []);
 
-  const goToNextMonth = () => {
+  const goToNextMonth = useCallback(() => {
     setCurrentMonth(prev => {
       const newMonth = new Date(prev);
       newMonth.setMonth(prev.getMonth() + 1);
       return newMonth;
     });
-  };
+  }, []);
 
-  const isDateSelectable = (date: Date) => {
+  const isDateSelectable = useCallback((date: Date) => {
     const today = new Date();
     const sixMonthsFromNow = new Date();
     sixMonthsFromNow.setMonth(today.getMonth() + 6);
     
     return date >= today && date <= sixMonthsFromNow;
-  };
+  }, []);
 
   const handleSubmit = async (data: GoalFormData) => {
     if (!user) {
@@ -1318,14 +1331,14 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
     };
   }, [isOpen, onClose]);
 
-  // Drag to close handlers
-  const handleDragStart = (clientY: number) => {
+  // Drag to close handlers - memoized to prevent unnecessary re-renders
+  const handleDragStart = useCallback((clientY: number) => {
     setIsDragging(true);
     setStartY(clientY);
     setDragY(0);
-  };
+  }, []);
 
-  const handleDragMove = (clientY: number) => {
+  const handleDragMove = useCallback((clientY: number) => {
     if (!isDragging) return;
     
     const deltaY = clientY - startY;
@@ -1333,9 +1346,9 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
     if (deltaY > 0) {
       setDragY(deltaY);
     }
-  };
+  }, [isDragging, startY]);
 
-  const handleDragEnd = () => {
+  const handleDragEnd = useCallback(() => {
     if (!isDragging) return;
     
     setIsDragging(false);
@@ -1347,10 +1360,10 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       // Snap back to original position
       setDragY(0);
     }
-  };
+  }, [isDragging, dragY, onClose]);
 
-  // Touch event handlers
-  const handleTouchStart = (e: React.TouchEvent) => {
+  // Touch event handlers - memoized to prevent unnecessary re-renders
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
     // Don't start drag if touching a form input
     const target = e.target as HTMLElement;
     if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA') {
@@ -1363,22 +1376,22 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
     if (touchY - modalTop <= 20) {
       handleDragStart(touchY);
     }
-  };
+  }, [handleDragStart]);
 
-  const handleTouchMove = (e: React.TouchEvent) => {
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (isDragging) {
-    handleDragMove(e.touches[0].clientY);
+      handleDragMove(e.touches[0].clientY);
     }
-  };
+  }, [isDragging, handleDragMove]);
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = useCallback(() => {
     if (isDragging) {
-    handleDragEnd();
+      handleDragEnd();
     }
-  };
+  }, [isDragging, handleDragEnd]);
 
-  // Mouse event handlers (for desktop)
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // Mouse event handlers (for desktop) - memoized to prevent unnecessary re-renders
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
     // Don't start drag if clicking a form input
     const target = e.target as HTMLElement;
     if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA') {
@@ -1388,19 +1401,19 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
     // Only start drag if clicking the top 20px of the modal
     const modalTop = e.currentTarget.getBoundingClientRect().top;
     if (e.clientY - modalTop <= 20) {
-    handleDragStart(e.clientY);
+      handleDragStart(e.clientY);
     }
-  };
+  }, [handleDragStart]);
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
     handleDragMove(e.clientY);
-  };
+  }, [handleDragMove]);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     handleDragEnd();
-  };
+  }, [handleDragEnd]);
 
-  // Add global mouse move and up listeners when dragging
+  // Add global mouse move and up listeners when dragging - optimized to prevent frequent re-attachments
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (isDragging) {
@@ -1423,7 +1436,7 @@ const GoalFormModal: React.FC<GoalFormModalProps> = ({
       document.removeEventListener('mousemove', handleGlobalMouseMove);
       document.removeEventListener('mouseup', handleGlobalMouseUp);
     };
-  }, [isDragging, startY, dragY]);
+  }, [isDragging, handleDragMove, handleDragEnd]);
 
   return (
     <AnimatePresence>

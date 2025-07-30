@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ChevronDown, ChevronUp, Target, Trash2, Type, List, Check } from 'lucide-react';
 import { Milestone, MilestoneComponentProps } from '@/lib/types';
 import { format } from 'date-fns';
@@ -118,16 +118,16 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
     }
   }, [milestones.length, hasInitialized]); // Only depend on milestones.length and initialization flag
 
-  const updateMilestone = async (id: string, updates: Partial<Milestone>) => {
+  const updateMilestone = useCallback(async (id: string, updates: Partial<Milestone>) => {
     const updatedMilestones = milestones.map(milestone =>
       milestone.id === id ? { ...milestone, ...updates } : milestone
     );
     onMilestonesChange(updatedMilestones);
     
     // Milestone notifications removed - using Resend for email notifications
-  };
+  }, [milestones, onMilestonesChange]);
 
-  const toggleExpanded = (id: string) => {
+  const toggleExpanded = useCallback((id: string) => {
     setIsExpanding(true);
     setExpandedMilestones(prev => 
       prev.includes(id) 
@@ -136,25 +136,25 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
     );
     // Reset the flag after a short delay to allow the blur event to be ignored
     setTimeout(() => setIsExpanding(false), 100);
-  };
+  }, []);
 
-  const handleFieldEdit = (id: string, field: 'title' | 'date' | 'description') => {
+  const handleFieldEdit = useCallback((id: string, field: 'title' | 'date' | 'description') => {
     setEditingField({ id, field });
-  };
+  }, []);
 
-  const handleFieldSave = () => {
+  const handleFieldSave = useCallback(() => {
     setEditingField(null);
-  };
+  }, []);
 
-  const handleDescriptionChange = (id: string, value: string) => {
+  const handleDescriptionChange = useCallback((id: string, value: string) => {
     // Update local state immediately for smooth typing
     setLocalDescriptions(prev => ({
       ...prev,
       [id]: value
     }));
-  };
+  }, []);
 
-  const handleDescriptionBlur = (id: string) => {
+  const handleDescriptionBlur = useCallback((id: string) => {
     // Skip blur logic if we're in the middle of expanding/collapsing
     if (isExpanding) {
       return;
@@ -171,7 +171,7 @@ const MilestoneComponent: React.FC<MilestoneComponentProps> = ({
         return newState;
       });
     }
-  };
+  }, [isExpanding, localDescriptions, updateMilestone]);
 
   const handleFormatDescription = (id: string, formatType: 'paragraph' | 'bullets') => {
     const milestone = milestones.find(m => m.id === id);
