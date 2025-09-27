@@ -28,6 +28,11 @@ export const OfflineStatusIndicator: React.FC<OfflineStatusIndicatorProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [cacheStats, setCacheStats] = useState<any>({});
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isExpanded) {
@@ -67,8 +72,8 @@ export const OfflineStatusIndicator: React.FC<OfflineStatusIndicatorProps> = ({
     }
   };
 
-  // Don't show if service worker isn't supported
-  if (!isServiceWorkerRegistered && process.env.NODE_ENV === 'production') {
+  // Don't show if service worker isn't supported or not mounted yet
+  if (!isMounted || (!isServiceWorkerRegistered && process.env.NODE_ENV === 'production')) {
     return null;
   }
 

@@ -31,6 +31,14 @@ import { hasCompletedUserTypeSelection, updateUserType } from '@/services/appwri
 import OfflineStatusIndicator from '@/components/OfflineStatusIndicator'
 import ShareModal from '@/components/ShareModal'
 
+// Partner Accountability Components
+import PartnerPreferencesForm from '@/components/partnership/PartnerPreferencesForm'
+import PartnerMatchingInterface from '@/components/partnership/PartnerMatchingInterface'
+import PartnerDashboard from '@/components/partnership/PartnerDashboard'
+import { partnershipService } from '@/services/appwrite/partnershipService'
+import partnerMatchingService from '@/services/partnerMatchingService'
+import { Partnership, PartnershipPreferences } from '@/database/partner-accountability-schema'
+
 
 const Dashboard = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -59,6 +67,14 @@ const Dashboard = () => {
   // User type selection states
   const [showUserTypeModal, setShowUserTypeModal] = useState(false)
   const [hasCheckedUserType, setHasCheckedUserType] = useState(false)
+
+  // Partner Accountability states
+  const [showPartnerPreferences, setShowPartnerPreferences] = useState(false)
+  const [showPartnerMatching, setShowPartnerMatching] = useState(false)
+  const [showPartnerDashboard, setShowPartnerDashboard] = useState(false)
+  const [userPartnership, setUserPartnership] = useState<Partnership | null>(null)
+  const [userPreferences, setUserPreferences] = useState<PartnershipPreferences | null>(null)
+  const [partnershipLoading, setPartnershipLoading] = useState(false)
   
   const { user, loading: authLoading } = useRequireAuth()
   const { updateUser } = useAuth()
@@ -104,6 +120,7 @@ const Dashboard = () => {
       console.log("📊 User authenticated, loading goals for:", user.email);
       loadGoals();
       loadLibraryItems();
+      loadPartnershipData();
       // Load goal packs if user is admin
       if (user.role === 'admin') {
         loadGoalPacks();
@@ -163,12 +180,43 @@ const Dashboard = () => {
 
   const loadUserGoalPacks = async () => {
     if (!user?.userType) return;
-    
+
     try {
       const data = await getGoalPacksForUserType(user.userType);
       setUserGoalPacks(data);
     } catch (error) {
       console.error('Error fetching user goal packs:', error);
+    }
+  };
+
+  const loadPartnershipData = async () => {
+    if (!user?.id) return;
+
+    try {
+      setPartnershipLoading(true);
+
+      // Load user's partnership
+      const partnership = await partnershipService.getUserPartnership(user.id);
+      setUserPartnership(partnership);
+
+      // Load user's partner preferences
+      const preferences = await partnershipService.getPartnerPreferences(user.id);
+      setUserPreferences(preferences);
+
+      console.log('Partnership data loaded:', {
+        hasPartnership: !!partnership,
+        hasPreferences: !!preferences
+      });
+    } catch (error) {
+      // Only log actual errors, not "document not found" cases
+      if (error instanceof Error && !error.message.includes('Document with the requested ID could not be found')) {
+        console.error('Error loading partnership data:', error);
+      }
+      // Set defaults for missing data
+      setUserPartnership(null);
+      setUserPreferences(null);
+    } finally {
+      setPartnershipLoading(false);
     }
   };
 
@@ -190,7 +238,7 @@ const Dashboard = () => {
       });
 
       setShowUserTypeModal(false);
-      
+
       // Show success message
       if (userType === 'student') {
         toast.success("Welcome, Student! 🎓", {
@@ -207,6 +255,31 @@ const Dashboard = () => {
         description: "Please try again later."
       });
     }
+  };
+
+  // Partner Accountability Handlers
+  const handlePartnerPreferencesSaved = async (preferences: PartnershipPreferences) => {
+    setUserPreferences(preferences);
+    setShowPartnerPreferences(false);
+    toast.success('Partner preferences saved! Ready to find your accountability partner.');
+  };
+
+  const handlePartnershipCreated = async (partnership: Partnership) => {
+    setUserPartnership(partnership);
+    setShowPartnerMatching(false);
+    loadPartnershipData(); // Reload partnership data
+    toast.success('🎉 Partnership created! Check your email for details.');
+  };
+
+  const handleFindPartner = async () => {
+    if (!user?.id) return;
+
+    if (!userPreferences) {
+      setShowPartnerPreferences(true);
+      return;
+    }
+
+    setShowPartnerMatching(true);
   };
 
   const handleUserTypeModalClose = () => {
@@ -486,7 +559,108 @@ const Dashboard = () => {
 
         {/* Notification Settings section removed - using Resend for email notifications */}
 
-       
+        {/* Accountability Partner Section */}
+        <div className="bg-white rounded-xl p-5 mb-6 shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-blue-500 text-lg font-medium flex items-center">
+              <Users className="w-5 h-5 mr-2" />
+              Accountability Partner
+            </h2>
+          </div>
+
+          {partnershipLoading ? (
+            <div className="text-center py-6">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+              <p className="text-gray-600">Loading partnership status...</p>
+            </div>
+          ) : userPartnership ? (
+            // User has a partner
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <Users className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-green-800">Partnership Active</h3>
+                    <p className="text-sm text-green-600">
+                      Status: {userPartnership.status.charAt(0).toUpperCase() + userPartnership.status.slice(1)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setShowPartnerDashboard(true)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    View Dashboard
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <p className="text-lg font-bold text-gray-900">0</p>
+                  <p className="text-xs text-gray-600">Shared Goals</p>
+                </div>
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <p className="text-lg font-bold text-gray-900">0</p>
+                  <p className="text-xs text-gray-600">Tasks Verified</p>
+                </div>
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <p className="text-lg font-bold text-gray-900">0</p>
+                  <p className="text-xs text-gray-600">Pending Reviews</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            // User doesn't have a partner
+            <div className="text-center py-6">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Find Your Accountability Partner</h3>
+              <p className="text-gray-600 mb-4 max-w-md mx-auto">
+                {!userPreferences
+                  ? "Set up your preferences and get matched with someone who shares your goals and commitment."
+                  : "Your preferences are set! Ready to find your perfect accountability partner."}
+              </p>
+
+              <div className="flex justify-center space-x-3">
+                {!userPreferences && (
+                  <button
+                    onClick={() => setShowPartnerPreferences(true)}
+                    className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                  >
+                    Set Preferences
+                  </button>
+                )}
+                <button
+                  onClick={handleFindPartner}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                >
+                  <Users className="w-4 h-4" />
+                  <span>Find Partner</span>
+                </button>
+              </div>
+
+              {userPreferences && (
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    ✓ Preferences set • {userPreferences.preferredPartnerType.replace('_', ' ')} • {userPreferences.timeCommitment}
+                  </p>
+                  <button
+                    onClick={() => setShowPartnerPreferences(true)}
+                    className="text-xs text-blue-600 hover:text-blue-700 mt-1"
+                  >
+                    Update preferences
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Admin Goal Pack Section - Only visible to admins */}
         {isAdmin && (
@@ -880,6 +1054,40 @@ const Dashboard = () => {
         onClose={() => setIsShareModalOpen(false)}
         goalPack={goalPackToShare}
       />
+
+      {/* Partner Preferences Modal */}
+      <PartnerPreferencesForm
+        isOpen={showPartnerPreferences}
+        onClose={() => setShowPartnerPreferences(false)}
+        onPreferencesSaved={handlePartnerPreferencesSaved}
+        initialData={userPreferences}
+      />
+
+      {/* Partner Matching Modal */}
+      {showPartnerMatching && (
+        <PartnerMatchingInterface
+          onPartnershipCreated={handlePartnershipCreated}
+          onClose={() => setShowPartnerMatching(false)}
+        />
+      )}
+
+      {/* Partner Dashboard Modal */}
+      {showPartnerDashboard && userPartnership && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Partnership Dashboard</h2>
+              <button
+                onClick={() => setShowPartnerDashboard(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                ×
+              </button>
+            </div>
+            <PartnerDashboard partnershipId={userPartnership.id} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
