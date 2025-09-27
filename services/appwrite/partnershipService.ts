@@ -319,13 +319,47 @@ class PartnershipService {
   ): Promise<Partnership> {
     const now = new Date().toISOString();
 
-    const partnership: Omit<Partnership, 'id'> = {
+    const partnershipData = {
       user1Id,
       user2Id,
       partnershipType,
       status: 'pending',
       matchedAt: now,
-      matchingPreferences,
+      matchingPreferences: JSON.stringify(matchingPreferences || {}),
+      partnershipRules: JSON.stringify({
+        verificationRequired: true,
+        reminderFrequency: 'weekly',
+        allowTaskCreation: true,
+      }),
+      metrics: JSON.stringify({
+        totalSharedGoals: 0,
+        totalTasksVerified: 0,
+        averageVerificationTime: 0,
+        lastInteraction: now,
+      }),
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const result = await databases.createDocument(
+      DATABASE_ID,
+      COLLECTIONS.PARTNERSHIPS,
+      ID.unique(),
+      partnershipData
+    );
+
+    // Mark both users as unavailable for matching
+    await this.setAvailableForMatching(user1Id, false);
+    await this.setAvailableForMatching(user2Id, false);
+
+    return {
+      id: result.$id,
+      user1Id,
+      user2Id,
+      partnershipType,
+      status: 'pending',
+      matchedAt: now,
+      matchingPreferences: matchingPreferences || {},
       partnershipRules: {
         verificationRequired: true,
         reminderFrequency: 'weekly',
@@ -340,19 +374,6 @@ class PartnershipService {
       createdAt: now,
       updatedAt: now,
     };
-
-    const result = await databases.createDocument(
-      DATABASE_ID,
-      COLLECTIONS.PARTNERSHIPS,
-      ID.unique(),
-      partnership
-    );
-
-    // Mark both users as unavailable for matching
-    await this.setAvailableForMatching(user1Id, false);
-    await this.setAvailableForMatching(user2Id, false);
-
-    return { id: result.$id, ...partnership };
   }
 
   async getPartnership(partnershipId: string): Promise<Partnership | null> {
