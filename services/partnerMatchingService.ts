@@ -77,7 +77,20 @@ class PartnerMatchingService {
         };
       }
 
-      // 5. Calculate compatibility score for user feedback
+      // 5. Send email notifications to both partners
+      try {
+        const partnerNotificationService = (await import('./partnerNotificationService')).default;
+        await partnerNotificationService.notifyPartnerAssignment(
+          partnership.id,
+          partnership.user1Id,
+          partnership.user2Id
+        );
+      } catch (error) {
+        console.error('Failed to send partner assignment notifications:', error);
+        // Don't fail the partnership creation if email fails
+      }
+
+      // 6. Calculate compatibility score for user feedback
       const compatibilityScore = await partnershipService.calculateCompatibilityScore(
         userPreferences,
         bestMatch
@@ -86,7 +99,7 @@ class PartnerMatchingService {
       return {
         success: true,
         partnership,
-        message: `Great match found! You have ${compatibilityScore}% compatibility with your new partner.`
+        message: `Great match found! You have ${compatibilityScore}% compatibility with your new partner. Check your email for details!`
       };
 
     } catch (error) {
