@@ -361,10 +361,14 @@ export const promoteToAdmin = async (email: string): Promise<PromoteAdminRespons
 export const updateUserLoginActivity = async (userId: string): Promise<void> => {
   try {
     console.log('🔄 Updating login activity for user:', userId);
-    
+
     // First ensure the user has the required fields
-    await ensureUserFields(userId);
-    
+    const userExists = await ensureUserFields(userId);
+    if (!userExists) {
+      console.log('❌ User document does not exist, skipping login activity update');
+      return;
+    }
+
     const user = await databases.getDocument(
       DATABASE_ID,
       USERS_COLLECTION_ID,
@@ -411,10 +415,10 @@ export const updateUserLoginActivity = async (userId: string): Promise<void> => 
 }; 
 
 // Check if user document has required fields, if not, create them
-export const ensureUserFields = async (userId: string): Promise<void> => {
+export const ensureUserFields = async (userId: string): Promise<boolean> => {
   try {
     console.log('🔍 Checking user fields for:', userId);
-    
+
     const user = await databases.getDocument(
       DATABASE_ID,
       USERS_COLLECTION_ID,
@@ -422,24 +426,24 @@ export const ensureUserFields = async (userId: string): Promise<void> => {
     );
 
     const needsUpdate = !user.lastLoginAt || user.loginCount === undefined || user.isActive === undefined;
-    
+
     if (needsUpdate) {
       console.log('⚠️ User missing required fields, updating...');
-      
+
       const updateData: any = {};
-      
+
       if (!user.lastLoginAt) {
         updateData.lastLoginAt = new Date().toISOString();
       }
-      
+
       if (user.loginCount === undefined) {
         updateData.loginCount = 0;
       }
-      
+
       if (user.isActive === undefined) {
         updateData.isActive = true;
       }
-      
+
       if (Object.keys(updateData).length > 0) {
         await databases.updateDocument(
           DATABASE_ID,
@@ -452,7 +456,14 @@ export const ensureUserFields = async (userId: string): Promise<void> => {
     } else {
       console.log('✅ User has all required fields');
     }
-  } catch (error) {
+
+    return true; // User exists and has been processed
+  } catch (error: any) {
+    if (error.code === 404 || error.message?.includes('Document with the requested ID could not be found')) {
+      console.log('ℹ️ User document not found in users collection, this is normal for users who haven\'t completed profile setup');
+      return false; // User document doesn't exist
+    }
     console.error('❌ Error ensuring user fields:', error);
+    return false; // Error occurred
   }
 }; 
