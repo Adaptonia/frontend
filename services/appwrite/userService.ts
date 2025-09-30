@@ -362,47 +362,60 @@ export const updateUserLoginActivity = async (userId: string): Promise<void> => 
   try {
     console.log('🔄 Updating login activity for user:', userId);
 
-    // First ensure the user has the required fields
-    const userExists = await ensureUserFields(userId);
-    if (!userExists) {
-      console.log('❌ User document does not exist, skipping login activity update');
+    // Query user document by userId field
+    const { Query } = await import('appwrite');
+    const result = await databases.listDocuments(
+      DATABASE_ID,
+      USERS_COLLECTION_ID,
+      [Query.equal('userId', userId)]
+    );
+
+    if (result.documents.length === 0) {
+      console.log('ℹ️ User document not found, skipping login activity update');
       return;
     }
 
-    const user = await databases.getDocument(
-      DATABASE_ID,
-      USERS_COLLECTION_ID,
-      userId
-    );
+    const user = result.documents[0];
 
     console.log('📊 Current user data:', {
       id: user.$id,
       email: user.email,
-      currentLoginCount: user.loginCount,
-      currentLastLogin: user.lastLoginAt
+      hasLoginCount: user.loginCount !== undefined,
+      hasLastLoginAt: user.lastLoginAt !== undefined
     });
 
-    const currentLoginCount = user.loginCount || 0;
+    // Only update fields that exist in the schema
+    const updateData: Record<string, unknown> = {};
 
-    const updateData = {
-      lastLoginAt: new Date().toISOString(),
-      loginCount: currentLoginCount + 1,
-      isActive: true
-    };
+    // Check if fields exist before trying to update them
+    if (user.loginCount !== undefined) {
+      const currentLoginCount = user.loginCount || 0;
+      updateData.loginCount = currentLoginCount + 1;
+    }
 
-    console.log('📝 Updating user with data:', updateData);
+    if (user.lastLoginAt !== undefined) {
+      updateData.lastLoginAt = new Date().toISOString();
+    }
 
-    const updatedUser = await databases.updateDocument(
-      DATABASE_ID,
-      USERS_COLLECTION_ID,
-      userId,
-      updateData
-    );
+    if (user.isActive !== undefined) {
+      updateData.isActive = true;
+    }
 
-    console.log('✅ Login activity updated successfully:', {
-      newLoginCount: updatedUser.loginCount,
-      newLastLogin: updatedUser.lastLoginAt
-    });
+    // Only update if we have fields to update
+    if (Object.keys(updateData).length > 0) {
+      console.log('📝 Updating user with data:', updateData);
+
+      await databases.updateDocument(
+        DATABASE_ID,
+        USERS_COLLECTION_ID,
+        user.$id, // Use document ID, not userId
+        updateData
+      );
+
+      console.log('✅ Login activity updated successfully');
+    } else {
+      console.log('ℹ️ No login activity fields to update (fields not in schema)');
+    }
   } catch (error) {
     console.error('❌ Error updating user login activity:', error);
     console.error('Error details:', {
@@ -414,56 +427,32 @@ export const updateUserLoginActivity = async (userId: string): Promise<void> => 
   }
 }; 
 
-// Check if user document has required fields, if not, create them
+// Check if user document exists
 export const ensureUserFields = async (userId: string): Promise<boolean> => {
   try {
-    console.log('🔍 Checking user fields for:', userId);
+    console.log('🔍 Checking if user document exists for:', userId);
 
-    const user = await databases.getDocument(
+    // Query by userId field, not document ID
+    const { Query } = await import('appwrite');
+    const result = await databases.listDocuments(
       DATABASE_ID,
       USERS_COLLECTION_ID,
-      userId
+      [Query.equal('userId', userId)]
     );
 
-    const needsUpdate = !user.lastLoginAt || user.loginCount === undefined || user.isActive === undefined;
-
-    if (needsUpdate) {
-      console.log('⚠️ User missing required fields, updating...');
-
-      const updateData: any = {};
-
-      if (!user.lastLoginAt) {
-        updateData.lastLoginAt = new Date().toISOString();
-      }
-
-      if (user.loginCount === undefined) {
-        updateData.loginCount = 0;
-      }
-
-      if (user.isActive === undefined) {
-        updateData.isActive = true;
-      }
-
-      if (Object.keys(updateData).length > 0) {
-        await databases.updateDocument(
-          DATABASE_ID,
-          USERS_COLLECTION_ID,
-          userId,
-          updateData
-        );
-        console.log('✅ User fields updated:', updateData);
-      }
-    } else {
-      console.log('✅ User has all required fields');
-    }
-
-    return true; // User exists and has been processed
-  } catch (error: any) {
-    if (error.code === 404 || error.message?.includes('Document with the requested ID could not be found')) {
-      console.log('ℹ️ User document not found in users collection, this is normal for users who haven\'t completed profile setup');
+    if (result.documents.length === 0) {
+      console.log('ℹ️ User document not found in users collection');
       return false; // User document doesn't exist
     }
-    console.error('❌ Error ensuring user fields:', error);
+
+    console.log('✅ User document exists');
+    return true; // User exists
+  } catch (error: unknown) {
+    const errorObj = error as { code?: number; message?: string };
+    console.error('❌ Error checking user document:', {
+      error: errorObj.message || 'Unknown error',
+      userId
+    });
     return false; // Error occurred
   }
 }; 

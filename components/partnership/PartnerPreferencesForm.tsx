@@ -144,12 +144,18 @@ const PartnerPreferencesForm: React.FC<PartnerPreferencesFormProps> = ({
     try {
       let result: PartnershipPreferences | null;
 
+      // Ensure userId is set before saving
+      const dataToSave = {
+        ...formData,
+        userId: user.id
+      };
+
       if (initialData) {
         // Update existing preferences
-        result = await partnershipService.updatePartnerPreferences(user.id, formData);
+        result = await partnershipService.updatePartnerPreferences(user.id, dataToSave);
       } else {
         // Create new preferences
-        result = await partnershipService.createPartnerPreferences(formData);
+        result = await partnershipService.createPartnerPreferences(dataToSave);
       }
 
       if (result) {

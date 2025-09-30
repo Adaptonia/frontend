@@ -54,6 +54,23 @@ class PartnershipService {
   // ========== PARTNERSHIP PREFERENCES ==========
 
   async createPartnerPreferences(data: CreatePartnerPreferencesData): Promise<PartnershipPreferences> {
+    console.log('📝 Creating partner preferences for userId:', data.userId);
+    console.log('📦 Preferences data:', data);
+
+    // Check if preferences already exist for this user
+    const existing = await this.getPartnerPreferences(data.userId);
+
+    if (existing) {
+      // If preferences exist, update them instead
+      console.log('⚠️ Preferences already exist for user, updating instead of creating');
+      const updated = await this.updatePartnerPreferences(data.userId, data);
+      if (updated) {
+        console.log('✅ Successfully updated existing preferences');
+        return updated;
+      }
+    }
+
+    // Create new preferences
     const now = new Date().toISOString();
 
     const preferences: Omit<PartnershipPreferences, 'id'> = {
@@ -72,6 +89,8 @@ class PartnershipService {
       updatedAt: now,
     };
 
+    console.log('💾 Saving to database:', preferences);
+
     const result = await databases.createDocument(
       DATABASE_ID,
       COLLECTIONS.PARTNERSHIP_PREFERENCES,
@@ -79,20 +98,37 @@ class PartnershipService {
       preferences
     );
 
+    console.log('✅ Successfully created preferences with ID:', result.$id);
+    console.log('📄 Created document:', result);
+
     return { id: result.$id, ...preferences };
   }
 
   async getPartnerPreferences(userId: string): Promise<PartnershipPreferences | null> {
     try {
+      console.log('🔍 Fetching partner preferences for userId:', userId);
+      console.log('📦 Using collection:', COLLECTIONS.PARTNERSHIP_PREFERENCES);
+
       const result = await databases.listDocuments(
         DATABASE_ID,
         COLLECTIONS.PARTNERSHIP_PREFERENCES,
         [Query.equal('userId', userId)]
       );
 
-      if (result.documents.length === 0) return null;
+      console.log('📊 Query result:', {
+        total: result.total,
+        documentsFound: result.documents.length,
+        documents: result.documents
+      });
+
+      if (result.documents.length === 0) {
+        console.log('❌ No preferences found for user:', userId);
+        return null;
+      }
 
       const doc = result.documents[0];
+      console.log('✅ Found preferences:', doc);
+
       return {
         id: doc.$id,
         userId: doc.userId,
@@ -110,6 +146,14 @@ class PartnershipService {
         updatedAt: doc.updatedAt,
       };
     } catch (error: any) {
+      console.error('❌ Error fetching partner preferences:', {
+        userId,
+        errorCode: error.code,
+        errorMessage: error.message,
+        errorType: error.type,
+        fullError: error
+      });
+
       // Only log errors that aren't "document not found"
       if (error.code !== 404 && !error.message?.includes('Document with the requested ID could not be found')) {
         console.error('Error getting partner preferences:', error);
