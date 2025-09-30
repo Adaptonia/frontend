@@ -1,6 +1,7 @@
 import { ID, OAuthProvider, Query } from 'appwrite';
 import { account, databases, USERS_COLLECTION_ID, DATABASE_ID } from './client';
 import { User, UserRole } from '@/lib/types';
+import { welcomeEmailService } from '../welcomeEmailService';
 
 // Import the correct OAuthProvider type
 
@@ -39,6 +40,15 @@ export const registerUser = async (email: string, password: string): Promise<Use
 
     // Log created user data
     console.log('Created user document:', newUser);
+
+    // Send welcome email (non-blocking - don't await)
+    welcomeEmailService.sendWelcomeEmail({
+      to: email,
+      userName: newUser.name || email.split('@')[0]
+    }).catch(error => {
+      console.error('Failed to send welcome email:', error);
+      // Don't throw - registration should succeed even if email fails
+    });
 
     return {
       id: newAccount.$id,
@@ -167,7 +177,15 @@ export const getCurrentUser = async (): Promise<User | null> => {
               hasCompletedUserTypeSelection: false
             }
           );
-          
+
+          // Send welcome email for OAuth users (non-blocking)
+          welcomeEmailService.sendWelcomeEmail({
+            to: accountDetails.email,
+            userName: newUser.name
+          }).catch(error => {
+            console.error('Failed to send welcome email to OAuth user:', error);
+          });
+
           return {
             id: accountDetails.$id,
             email: accountDetails.email,

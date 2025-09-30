@@ -5,7 +5,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: NextRequest) {
   try {
-    const { emailData, notificationId } = await request.json();
+    const { emailData } = await request.json();
 
     if (!emailData || !emailData.to || !emailData.subject) {
       return NextResponse.json(
@@ -16,14 +16,13 @@ export async function POST(request: NextRequest) {
 
     // Send email using Resend
     const emailResult = await resend.emails.send({
-      from: 'Adaptonia <notifications@olonts.site>',
+      from: 'Adaptonia <welcome@olonts.site>',
       to: emailData.to,
       subject: emailData.subject,
       html: emailData.htmlContent,
       text: emailData.textContent,
       headers: {
-        'X-Notification-ID': notificationId || 'unknown',
-        'X-Email-Type': 'partner-notification'
+        'X-Email-Type': 'welcome-email'
       }
     });
 
@@ -35,8 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Partner notification email sent successfully:', {
-      notificationId,
+    console.log('Welcome email sent successfully:', {
       emailId: emailResult.data?.id,
       recipient: emailData.to,
       subject: emailData.subject
@@ -45,11 +43,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       emailId: emailResult.data?.id,
-      message: 'Email sent successfully'
+      message: 'Welcome email sent successfully'
     });
 
-  } catch (error) {
-    console.error('Error sending partner notification email:', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error sending welcome email:', errorMessage);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
