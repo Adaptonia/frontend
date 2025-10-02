@@ -136,12 +136,20 @@ class PartnerNotificationService {
 
   private async getUserById(userId: string): Promise<any> {
     try {
-      const result = await databases.getDocument(
+      // Query by userId field, not document ID
+      const { Query } = await import('appwrite');
+      const result = await databases.listDocuments(
         DATABASE_ID,
         COLLECTIONS.USERS,
-        userId
+        [Query.equal('userId', userId)]
       );
-      return result;
+
+      if (result.documents.length === 0) {
+        console.error('User not found for userId:', userId);
+        return null;
+      }
+
+      return result.documents[0];
     } catch (error) {
       console.error('Error getting user:', error);
       return null;
@@ -649,6 +657,19 @@ class PartnerNotificationService {
   }
 
   // ========== QUICK NOTIFICATION HELPERS ==========
+
+  async notifyPartnershipRequest(partnershipId: string, requesterId: string, partnerId: string): Promise<void> {
+    // Notify partner about the partnership request (pending)
+    await this.createNotification({
+      partnershipId,
+      fromUserId: requesterId,
+      toUserId: partnerId,
+      type: 'partner_assigned',
+      title: 'Partnership Request',
+      message: 'Someone wants to be your accountability partner! Review and accept or decline the request.',
+      priority: 'high'
+    });
+  }
 
   async notifyPartnerAssignment(partnershipId: string, user1Id: string, user2Id: string): Promise<void> {
     // Notify user 2 about the new partnership

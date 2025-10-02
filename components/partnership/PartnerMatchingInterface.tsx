@@ -55,6 +55,13 @@ const PartnerMatchingInterface: React.FC<PartnerMatchingInterfaceProps> = ({
     loadUserPreferences();
   }, [user?.id]);
 
+  // Auto-search when switching to manual mode
+  useEffect(() => {
+    if (mode === 'manual' && user?.id && userPreferences && potentialPartners.length === 0) {
+      handleManualSearch();
+    }
+  }, [mode, user?.id, userPreferences]);
+
   const loadUserPreferences = async () => {
     if (!user?.id) return;
 
@@ -106,13 +113,19 @@ const PartnerMatchingInterface: React.FC<PartnerMatchingInterfaceProps> = ({
 
     setLoading(true);
     try {
-      const result = await partnerMatchingService.searchPotentialPartners(user.id, {
-        category: searchFilters.category || undefined,
-        supportStyle: searchFilters.supportStyle || undefined,
-        timeCommitment: (searchFilters.timeCommitment as 'daily' | 'weekly' | 'flexible') || undefined,
-        partnerType: (searchFilters.partnerType as 'p2p' | 'premium_expert' | 'either') || undefined,
-        experienceLevel: (searchFilters.experienceLevel as 'beginner' | 'intermediate' | 'advanced') || undefined,
-      });
+      // Check if any filter is set
+      const hasFilters = Object.values(searchFilters).some(v => v);
+
+      const result = await partnerMatchingService.searchPotentialPartners(
+        user.id,
+        hasFilters ? {
+          category: searchFilters.category || undefined,
+          supportStyle: searchFilters.supportStyle || undefined,
+          timeCommitment: (searchFilters.timeCommitment as 'daily' | 'weekly' | 'flexible') || undefined,
+          partnerType: (searchFilters.partnerType as 'p2p' | 'premium_expert' | 'either') || undefined,
+          experienceLevel: (searchFilters.experienceLevel as 'beginner' | 'intermediate' | 'advanced') || undefined,
+        } : undefined
+      );
       setPotentialPartners(result.partners);
       setCompatibilityScores(result.scores);
 

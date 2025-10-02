@@ -230,19 +230,27 @@ class PartnershipService {
 
   // ========== PARTNER MATCHING ==========
 
-  async findPotentialPartners(criteria: PartnerMatchingCriteria): Promise<PartnershipPreferences[]> {
+  async findPotentialPartners(criteria?: PartnerMatchingCriteria, requireAvailable: boolean = false): Promise<PartnershipPreferences[]> {
     try {
-      const queries = [
-        Query.equal('isAvailableForMatching', true)
-      ];
+      const queries = [];
 
-      // Add partner type filter
-      if (criteria.preferredPartnerType !== 'either') {
-        queries.push(Query.equal('preferredPartnerType', [criteria.preferredPartnerType, 'either']));
+      // Only filter by availability if explicitly required (for auto-match)
+      if (requireAvailable) {
+        queries.push(Query.equal('isAvailableForMatching', true));
       }
 
-      // Add time commitment filter
-      queries.push(Query.equal('timeCommitment', [criteria.timeCommitment, 'flexible']));
+      // Only apply filters if criteria is provided
+      if (criteria) {
+        // Add partner type filter
+        if (criteria.preferredPartnerType !== 'either') {
+          queries.push(Query.equal('preferredPartnerType', [criteria.preferredPartnerType, 'either']));
+        }
+
+        // Add time commitment filter
+        if (criteria.timeCommitment) {
+          queries.push(Query.equal('timeCommitment', [criteria.timeCommitment, 'flexible']));
+        }
+      }
 
       const result = await databases.listDocuments(
         DATABASE_ID,
@@ -250,36 +258,39 @@ class PartnershipService {
         queries
       );
 
-      const potentialPartners: PartnershipPreferences[] = result.documents.map(doc => ({
-        id: doc.$id,
-        userId: doc.userId,
-        preferredPartnerType: doc.preferredPartnerType,
-        supportStyle: doc.supportStyle,
-        availableCategories: doc.availableCategories,
-        timeCommitment: doc.timeCommitment,
-        experienceLevel: doc.experienceLevel,
-        isAvailableForMatching: doc.isAvailableForMatching,
-        timezone: doc.timezone,
-        preferredMeetingTimes: doc.preferredMeetingTimes,
-        bio: doc.bio,
-        lastActiveAt: doc.lastActiveAt,
-        createdAt: doc.createdAt,
-        updatedAt: doc.updatedAt,
-      }));
+      const potentialPartners: PartnershipPreferences[] = result.documents
+        .filter(doc => doc.userId && doc.preferredPartnerType) // Only valid documents
+        .map(doc => ({
+          id: doc.$id,
+          userId: doc.userId,
+          preferredPartnerType: doc.preferredPartnerType,
+          supportStyle: doc.supportStyle || [],
+          availableCategories: doc.availableCategories || [],
+          timeCommitment: doc.timeCommitment,
+          experienceLevel: doc.experienceLevel,
+          isAvailableForMatching: doc.isAvailableForMatching,
+          timezone: doc.timezone,
+          preferredMeetingTimes: doc.preferredMeetingTimes || [],
+          bio: doc.bio,
+          lastActiveAt: doc.lastActiveAt,
+          createdAt: doc.createdAt,
+          updatedAt: doc.updatedAt,
+        }));
 
-      // Apply client-side filtering for arrays and more complex logic
+      // Apply client-side filtering only if criteria is provided
+      if (!criteria) {
+        return potentialPartners; // Return all if no criteria
+      }
+
       return potentialPartners.filter(partner => {
-        // Don't match with yourself
-        if (partner.userId === criteria.preferredPartnerType) return false;
-
         // Check for overlapping categories
         const hasCommonCategory = partner.availableCategories.some(category =>
-          criteria.categories.includes(category)
+          criteria.categories?.includes(category)
         );
 
         // Check for overlapping support styles
         const hasCommonSupportStyle = partner.supportStyle.some(style =>
-          criteria.supportStyle.includes(style)
+          criteria.supportStyle?.includes(style)
         );
 
         return hasCommonCategory && hasCommonSupportStyle;
@@ -359,7 +370,8 @@ class PartnershipService {
     user1Id: string,
     user2Id: string,
     partnershipType: 'p2p' | 'premium_expert',
-    matchingPreferences: any
+    matchingPreferences: any,
+    autoApproved: boolean = true // ✅ Auto-match = active immediately
   ): Promise<Partnership> {
     const now = new Date().toISOString();
 
@@ -367,7 +379,7 @@ class PartnershipService {
       user1Id,
       user2Id,
       partnershipType,
-      status: 'pending',
+      status: autoApproved ? 'active' : 'pending', // ✅ FIX: Active if auto-matched
       matchedAt: now,
       matchingPreferences: JSON.stringify(matchingPreferences || {}),
       partnershipRules: JSON.stringify({
@@ -401,7 +413,7 @@ class PartnershipService {
       user1Id,
       user2Id,
       partnershipType,
-      status: 'pending',
+      status: autoApproved ? 'active' : 'pending', // ✅ Match the created status
       matchedAt: now,
       matchingPreferences: matchingPreferences || {},
       partnershipRules: {
@@ -487,6 +499,35 @@ class PartnershipService {
     }
   }
 
+  async getAllActivePartnerships(): Promise<Partnership[]> {
+    try {
+      const result = await databases.listDocuments(
+        DATABASE_ID,
+        COLLECTIONS.PARTNERSHIPS,
+        [Query.equal('status', ['active', 'pending'])]
+      );
+
+      return result.documents.map(doc => ({
+        id: doc.$id,
+        user1Id: doc.user1Id,
+        user2Id: doc.user2Id,
+        partnershipType: doc.partnershipType,
+        status: doc.status,
+        matchedAt: doc.matchedAt,
+        startedAt: doc.startedAt,
+        endedAt: doc.endedAt,
+        matchingPreferences: JSON.parse(doc.matchingPreferences || '{}'),
+        partnershipRules: JSON.parse(doc.partnershipRules || '{}'),
+        metrics: JSON.parse(doc.metrics || '{}'),
+        createdAt: doc.createdAt,
+        updatedAt: doc.updatedAt,
+      }));
+    } catch (error) {
+      console.error('Error getting all active partnerships:', error);
+      return [];
+    }
+  }
+
   async updatePartnershipStatus(
     partnershipId: string,
     status: 'pending' | 'active' | 'paused' | 'ended'
@@ -544,7 +585,7 @@ class PartnershipService {
         timezone: userPreferences.timezone,
       };
 
-      const potentialPartners = await this.findPotentialPartners(criteria);
+      const potentialPartners = await this.findPotentialPartners(criteria, true); // Auto-match requires availability
 
       if (potentialPartners.length === 0) return null;
 
@@ -572,7 +613,8 @@ class PartnershipService {
   async requestPartnership(
     requesterId: string,
     partnerId: string,
-    partnershipType: 'p2p' | 'premium_expert' = 'p2p'
+    partnershipType: 'p2p' | 'premium_expert' = 'p2p',
+    autoApproved: boolean = true // ✅ true for auto-match, false for manual
   ): Promise<Partnership | null> {
     try {
       // Check if both users are available
@@ -592,7 +634,8 @@ class PartnershipService {
           supportStyle: requesterPrefs.supportStyle,
           categories: requesterPrefs.availableCategories,
           timeCommitment: requesterPrefs.timeCommitment,
-        }
+        },
+        autoApproved // ✅ Pass through auto-approved status
       );
 
       return partnership;

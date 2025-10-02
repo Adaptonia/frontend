@@ -117,7 +117,7 @@ class PartnerMatchingService {
    */
   async searchPotentialPartners(
     userId: string,
-    criteria: PartnerSearchCriteria
+    criteria?: PartnerSearchCriteria
   ): Promise<{ partners: PartnershipPreferences[]; scores: number[] }> {
     try {
       const userPreferences = await partnershipService.getPartnerPreferences(userId);
@@ -125,22 +125,34 @@ class PartnerMatchingService {
         return { partners: [], scores: [] };
       }
 
-      // Build search criteria from user preferences and filters
-      const searchCriteria = {
-        preferredPartnerType: criteria.partnerType || userPreferences.preferredPartnerType,
-        supportStyle: criteria.supportStyle ? [criteria.supportStyle] : userPreferences.supportStyle,
-        categories: criteria.category ? [criteria.category] : userPreferences.availableCategories,
-        timeCommitment: criteria.timeCommitment || userPreferences.timeCommitment,
-        experienceLevel: criteria.experienceLevel || userPreferences.experienceLevel,
-        timezone: userPreferences.timezone,
-      };
+      // If no criteria provided, show all users (no filters)
+      let searchCriteria = undefined;
+
+      // Build search criteria only if filters are provided
+      if (criteria && Object.values(criteria).some(v => v)) {
+        searchCriteria = {
+          preferredPartnerType: criteria.partnerType || userPreferences.preferredPartnerType,
+          supportStyle: criteria.supportStyle ? [criteria.supportStyle] : userPreferences.supportStyle,
+          categories: criteria.category ? [criteria.category] : userPreferences.availableCategories,
+          timeCommitment: criteria.timeCommitment || userPreferences.timeCommitment,
+          experienceLevel: criteria.experienceLevel || userPreferences.experienceLevel,
+          timezone: userPreferences.timezone,
+        };
+      }
 
       const potentialPartners = await partnershipService.findPotentialPartners(searchCriteria);
+
+      // Get users who already have active partnerships
+      const activePartnerships = await partnershipService.getAllActivePartnerships();
+      const usersWithPartners = new Set(
+        activePartnerships.flatMap((p: Partnership) => [p.user1Id, p.user2Id])
+      );
 
       // Calculate compatibility scores
       const partnersWithScores = await Promise.all(
         potentialPartners
           .filter(partner => partner.userId !== userId) // Don't include self
+          .filter(partner => !usersWithPartners.has(partner.userId)) // Don't include users already partnered
           .map(async (partner) => ({
             partner,
             score: await partnershipService.calculateCompatibilityScore(userPreferences, partner)
@@ -204,11 +216,12 @@ class PartnerMatchingService {
         };
       }
 
-      // Create partnership
+      // Create partnership (pending - needs acceptance for manual requests)
       const partnership = await partnershipService.requestPartnership(
         requesterId,
         partnerId,
-        partnershipType
+        partnershipType,
+        false // ✅ Manual search = pending until accepted
       );
 
       if (!partnership) {
@@ -217,6 +230,19 @@ class PartnerMatchingService {
           message: 'Failed to create partnership',
           error: 'CREATION_FAILED'
         };
+      }
+
+      // Send email notification to partner about the request
+      try {
+        const partnerNotificationService = (await import('./partnerNotificationService')).default;
+        await partnerNotificationService.notifyPartnershipRequest(
+          partnership.id,
+          requesterId,
+          partnerId
+        );
+      } catch (error) {
+        console.error('Failed to send partnership request notification:', error);
+        // Don't fail the request if email fails
       }
 
       return {

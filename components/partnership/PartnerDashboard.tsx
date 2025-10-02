@@ -14,12 +14,14 @@ import {
   MessageSquare,
   Settings,
   Award,
-  AlertCircle
+  AlertCircle,
+  XCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { partnershipService } from '@/services/appwrite/partnershipService';
 import { sharedGoalsService } from '@/services/sharedGoalsService';
+import partnerMatchingService from '@/services/partnerMatchingService';
 import { Partnership, SharedGoal, PartnerTask } from '@/database/partner-accountability-schema';
 
 interface PartnerDashboardProps {
@@ -41,6 +43,7 @@ const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ partnershipId }) =>
     completionRate: 0,
   });
   const [activeTab, setActiveTab] = useState<'overview' | 'goals' | 'tasks' | 'verification'>('overview');
+  const [showEndPartnershipModal, setShowEndPartnershipModal] = useState(false);
 
   // Load partnership data
   useEffect(() => {
@@ -98,6 +101,23 @@ const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ partnershipId }) =>
     task => task.ownerId === user?.id && task.verificationStatus === 'pending'
   );
 
+  const handleEndPartnership = async () => {
+    if (!user?.id || !partnershipId) return;
+
+    try {
+      const result = await partnerMatchingService.endPartnership(partnershipId, user.id);
+      if (result.success) {
+        toast.success(result.message);
+        window.location.reload(); // Refresh to show new state
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      console.error('Error ending partnership:', error);
+      toast.error('Failed to end partnership');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -144,10 +164,41 @@ const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ partnershipId }) =>
               </div>
             </div>
             <div className="flex items-center space-x-3">
+              {partnership.status === 'pending' && (
+                <>
+                  <button
+                    onClick={async () => {
+                      const result = await partnerMatchingService.acceptPartnership(partnership.id, user?.id || '');
+                      if (result.success) {
+                        window.location.reload();
+                      }
+                    }}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Accept</span>
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const result = await partnerMatchingService.declinePartnership(partnership.id, user?.id || '');
+                      if (result.success) {
+                        window.location.reload();
+                      }
+                    }}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    <span>Decline</span>
+                  </button>
+                </>
+              )}
               <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
                 <MessageSquare className="w-5 h-5" />
               </button>
-              <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+              <button
+                onClick={() => setShowEndPartnershipModal(true)}
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              >
                 <Settings className="w-5 h-5" />
               </button>
             </div>
@@ -512,6 +563,45 @@ const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ partnershipId }) =>
             </AnimatePresence>
           </div>
         </div>
+
+        {/* End Partnership Modal */}
+        {showEndPartnershipModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-xl shadow-xl max-w-md w-full p-6"
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">End Partnership</h3>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to end this partnership? This action cannot be undone.
+                You will be able to find a new partner after this.
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowEndPartnershipModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    handleEndPartnership();
+                    setShowEndPartnershipModal(false);
+                  }}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  End Partnership
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </div>
     </div>
   );
