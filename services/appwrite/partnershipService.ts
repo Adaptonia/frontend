@@ -33,6 +33,7 @@ export interface CreatePartnerPreferencesData {
   preferredPartnerType: 'p2p' | 'premium_expert' | 'either';
   supportStyle: string[];
   availableCategories: string[];
+  goalCategories: string[];
   timeCommitment: 'daily' | 'weekly' | 'flexible';
   experienceLevel: 'beginner' | 'intermediate' | 'advanced';
   timezone?: string;
@@ -78,6 +79,7 @@ class PartnershipService {
       preferredPartnerType: data.preferredPartnerType,
       supportStyle: data.supportStyle,
       availableCategories: data.availableCategories,
+      goalCategories: data.goalCategories,
       timeCommitment: data.timeCommitment,
       experienceLevel: data.experienceLevel,
       isAvailableForMatching: true,
@@ -135,6 +137,7 @@ class PartnershipService {
         preferredPartnerType: doc.preferredPartnerType,
         supportStyle: doc.supportStyle,
         availableCategories: doc.availableCategories,
+        goalCategories: doc.goalCategories || [],
         timeCommitment: doc.timeCommitment,
         experienceLevel: doc.experienceLevel,
         isAvailableForMatching: doc.isAvailableForMatching,
@@ -496,6 +499,40 @@ class PartnershipService {
     } catch (error) {
       console.error('Error getting user partnership:', error);
       return null;
+    }
+  }
+
+  async getUserPartnerships(userId: string): Promise<Partnership[]> {
+    try {
+      const result = await databases.listDocuments(
+        DATABASE_ID,
+        COLLECTIONS.PARTNERSHIPS,
+        [
+          Query.or([
+            Query.equal('user1Id', userId),
+            Query.equal('user2Id', userId)
+          ])
+        ]
+      );
+
+      return result.documents.map(doc => ({
+        id: doc.$id,
+        user1Id: doc.user1Id,
+        user2Id: doc.user2Id,
+        partnershipType: doc.partnershipType,
+        status: doc.status,
+        matchedAt: doc.matchedAt,
+        startedAt: doc.startedAt,
+        endedAt: doc.endedAt,
+        matchingPreferences: JSON.parse(doc.matchingPreferences || '{}'),
+        partnershipRules: JSON.parse(doc.partnershipRules || '{}'),
+        metrics: JSON.parse(doc.metrics || '{}'),
+        createdAt: doc.createdAt,
+        updatedAt: doc.updatedAt
+      }));
+    } catch (error) {
+      console.error('Error getting user partnerships:', error);
+      return [];
     }
   }
 

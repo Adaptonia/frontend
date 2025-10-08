@@ -21,6 +21,7 @@ interface SharedGoalFormProps {
   partnershipId: string;
   ownerId: string;
   partnerId: string;
+  partnerName?: string;
   onGoalCreated: (goal: SharedGoal) => void;
   onClose: () => void;
   isOpen: boolean;
@@ -30,6 +31,7 @@ const SharedGoalForm: React.FC<SharedGoalFormProps> = ({
   partnershipId,
   ownerId,
   partnerId,
+  partnerName,
   onGoalCreated,
   onClose,
   isOpen
@@ -145,7 +147,7 @@ const SharedGoalForm: React.FC<SharedGoalFormProps> = ({
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">Create Shared Goal</h2>
-                <p className="text-sm text-gray-600">Set a goal that you and your partner will work on together</p>
+                <p className="text-sm text-gray-600">Set a goal that you and {partnerName || 'your partner'} will work on together</p>
               </div>
             </div>
             <button
@@ -277,7 +279,7 @@ const SharedGoalForm: React.FC<SharedGoalFormProps> = ({
               <div className="flex items-center justify-between">
                 <div>
                   <h5 className="font-medium text-gray-800">Partner Verification Required</h5>
-                  <p className="text-sm text-gray-600">Your partner must verify task completion</p>
+                  <p className="text-sm text-gray-600">{partnerName || 'Your partner'} must verify task completion</p>
                 </div>
                 <motion.button
                   type="button"
@@ -328,10 +330,10 @@ const SharedGoalForm: React.FC<SharedGoalFormProps> = ({
               <div>
                 <h4 className="text-sm font-medium text-blue-900">Shared Goal Benefits</h4>
                 <ul className="text-sm text-blue-800 mt-2 space-y-1">
-                  <li>• Both you and your partner can view and track this goal</li>
-                  <li>• You can create tasks that your partner can verify</li>
+                  <li>• Both you and {partnerName || 'your partner'} can view and track this goal</li>
+                  <li>• You can create tasks that {partnerName || 'your partner'} can verify</li>
                   <li>• Progress is shared and visible to both partners</li>
-                  <li>• Get accountability and motivation from your partner</li>
+                  <li>• Get accountability and motivation from {partnerName || 'your partner'}</li>
                 </ul>
               </div>
             </div>

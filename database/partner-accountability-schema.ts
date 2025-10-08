@@ -7,6 +7,7 @@ export interface PartnershipPreferences {
   preferredPartnerType: 'p2p' | 'premium_expert' | 'either';
   supportStyle: string[]; // Array of support styles user prefers
   availableCategories: string[]; // Categories user wants accountability for
+  goalCategories: string[]; // Specific goal categories (finance, career, fitness, tech, etc.)
   timeCommitment: 'daily' | 'weekly' | 'flexible';
   experienceLevel: 'beginner' | 'intermediate' | 'advanced';
   isAvailableForMatching: boolean;
@@ -14,6 +15,30 @@ export interface PartnershipPreferences {
   preferredMeetingTimes?: string[]; // Array of time slots
   bio?: string; // Short bio for partner matching
   lastActiveAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExpertProfile {
+  id: string;
+  userId: string;
+  isExpert: boolean;
+  expertiseAreas: string[]; // finance, career, fitness, tech, etc.
+  yearsOfExperience: number;
+  certifications: string[];
+  specializations: string[]; // More specific areas within expertise
+  hourlyRate?: number;
+  availability: {
+    timeSlots: string[];
+    timezone: string;
+    maxClients: number;
+  };
+  bio: string;
+  achievements: string[];
+  isAvailableForMatching: boolean;
+  rating?: number;
+  totalClientsHelped: number;
+  successStories: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -157,9 +182,10 @@ export interface PartnerNotification {
   toUserId: string;
 
   // Notification type and content
-  type: 'partner_assigned' | 'task_completed' | 'verification_request' |
-        'verification_approved' | 'verification_rejected' | 'redo_requested' |
-        'goal_shared' | 'partnership_ended' | 'weekly_summary';
+  type: 'partner_assigned' | 'partnership_request' | 'task_completed' | 'verification_request' |
+    'verification_approved' | 'verification_rejected' | 'redo_requested' |
+    'goal_shared' | 'partnership_ended' | 'weekly_summary' | 'expert_task_assigned' | 
+    'expert_task_reminder' | 'expert_task_feedback';
 
   title: string;
   message: string;
@@ -221,6 +247,31 @@ export interface PartnershipMetrics {
   partnershipScore: number; // 0-100 based on mutual success
   reliabilityScore: number; // 0-100 based on timely verifications
 
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExpertTask {
+  id: string;
+  expertId: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskSubmission {
+  id: string;
+  taskId: string;
+  memberId: string;
+  submissionText: string;
+  submissionLink?: string;
+  status: 'pending' | 'approved' | 'rejected' | 'needs_revision';
+  expertComment?: string;
+  submittedAt: string;
+  reviewedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -402,6 +453,35 @@ export const APPWRITE_COLLECTIONS = {
     ]
   },
 
+  EXPERT_PROFILES: {
+    name: 'expert_profiles',
+    attributes: [
+      { key: 'userId', type: 'string', required: true },
+      { key: 'isExpert', type: 'boolean', required: true },
+      { key: 'expertiseAreas', type: 'string', required: false, array: true },
+      { key: 'yearsOfExperience', type: 'integer', required: true },
+      { key: 'certifications', type: 'string', required: false, array: true },
+      { key: 'specializations', type: 'string', required: false, array: true },
+      { key: 'hourlyRate', type: 'double', required: false },
+      { key: 'availability', type: 'string', required: true, size: 1000 },
+      { key: 'bio', type: 'string', required: true, size: 2000 },
+      { key: 'achievements', type: 'string', required: false, array: true },
+      { key: 'isAvailableForMatching', type: 'boolean', required: true },
+      { key: 'rating', type: 'double', required: false },
+      { key: 'totalClientsHelped', type: 'integer', required: true },
+      { key: 'successStories', type: 'string', required: false, array: true },
+      { key: 'createdAt', type: 'datetime', required: true },
+      { key: 'updatedAt', type: 'datetime', required: true }
+    ],
+    indexes: [
+      { key: 'userId', type: 'unique' },
+      { key: 'isExpert' },
+      { key: 'expertiseAreas' },
+      { key: 'isAvailableForMatching' },
+      { key: 'rating' }
+    ]
+  },
+
   PARTNERSHIP_METRICS: {
     name: 'partnership_metrics',
     attributes: [
@@ -434,6 +514,46 @@ export const APPWRITE_COLLECTIONS = {
       { key: 'user2Id' },
       { key: 'partnershipScore' },
       { key: 'reliabilityScore' }
+    ]
+  },
+
+  EXPERT_TASKS: {
+    name: 'expert_tasks',
+    attributes: [
+      { key: 'expertId', type: 'string', required: true },
+      { key: 'title', type: 'string', required: true, size: 255 },
+      { key: 'description', type: 'string', required: true, size: 2000 },
+      { key: 'dueDate', type: 'datetime', required: true },
+      { key: 'isActive', type: 'boolean', required: true },
+      { key: 'createdAt', type: 'datetime', required: true },
+      { key: 'updatedAt', type: 'datetime', required: true }
+    ],
+    indexes: [
+      { key: 'expertId' },
+      { key: 'isActive' },
+      { key: 'dueDate' }
+    ]
+  },
+
+  TASK_SUBMISSIONS: {
+    name: 'task_submissions',
+    attributes: [
+      { key: 'taskId', type: 'string', required: true },
+      { key: 'memberId', type: 'string', required: true },
+      { key: 'submissionText', type: 'string', required: true, size: 2000 },
+      { key: 'submissionLink', type: 'string', required: false },
+      { key: 'status', type: 'string', required: true },
+      { key: 'expertComment', type: 'string', required: false, size: 1000 },
+      { key: 'submittedAt', type: 'datetime', required: true },
+      { key: 'reviewedAt', type: 'datetime', required: false },
+      { key: 'createdAt', type: 'datetime', required: true },
+      { key: 'updatedAt', type: 'datetime', required: true }
+    ],
+    indexes: [
+      { key: 'taskId' },
+      { key: 'memberId' },
+      { key: 'status' },
+      { key: 'submittedAt' }
     ]
   }
 } as const;

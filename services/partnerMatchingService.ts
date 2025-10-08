@@ -1,5 +1,6 @@
 import { partnershipService } from './appwrite/partnershipService';
-import { PartnershipPreferences, Partnership } from '../database/partner-accountability-schema';
+import { expertService } from './appwrite/expertService';
+import { PartnershipPreferences, Partnership, ExpertProfile } from '../database/partner-accountability-schema';
 
 export interface MatchingResult {
   success: boolean;
@@ -52,8 +53,29 @@ class PartnerMatchingService {
         };
       }
 
-      // 3. Find best match
-      const bestMatch = await partnershipService.findBestMatch(userId);
+      // 3. Find best match - prioritize experts based on goal categories
+      let bestMatch = null;
+      
+      // First, try to find an expert match based on goal categories
+      if (userPreferences.goalCategories && userPreferences.goalCategories.length > 0) {
+        for (const goalCategory of userPreferences.goalCategories) {
+          const experts = await expertService.getExpertsByCategory(goalCategory);
+          if (experts.length > 0) {
+            // Find the best expert match
+            const expertMatch = await this.findBestExpertMatch(userPreferences, experts);
+            if (expertMatch) {
+              bestMatch = expertMatch;
+              break;
+            }
+          }
+        }
+      }
+      
+      // If no expert match found, fall back to regular partner matching
+      if (!bestMatch) {
+        bestMatch = await partnershipService.findBestMatch(userId);
+      }
+      
       if (!bestMatch) {
         return {
           success: false,
@@ -460,6 +482,72 @@ class PartnerMatchingService {
 
     } catch (error) {
       console.error('Error getting partnership insights:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Find the best expert match based on user preferences
+   */
+  private async findBestExpertMatch(userPreferences: PartnershipPreferences, experts: ExpertProfile[]): Promise<PartnershipPreferences | null> {
+    try {
+      // Filter experts based on user preferences
+      const compatibleExperts = experts.filter(expert => {
+        // Check if expert is available for matching
+        if (!expert.isAvailableForMatching) return false;
+        
+        // Check if expert has capacity (maxClients)
+        if (expert.availability.maxClients <= expert.totalClientsHelped) return false;
+        
+        // Check timezone compatibility (optional)
+        if (userPreferences.timezone && expert.availability.timezone) {
+          // For now, we'll be lenient with timezone matching
+          // In the future, we could add more sophisticated timezone matching
+        }
+        
+        return true;
+      });
+
+      if (compatibleExperts.length === 0) return null;
+
+      // Sort experts by rating and experience
+      const sortedExperts = compatibleExperts.sort((a, b) => {
+        // Primary sort by rating (descending)
+        const ratingDiff = (b.rating || 0) - (a.rating || 0);
+        if (ratingDiff !== 0) return ratingDiff;
+        
+        // Secondary sort by years of experience (descending)
+        return b.yearsOfExperience - a.yearsOfExperience;
+      });
+
+      // Get the best expert and convert to PartnershipPreferences format
+      const bestExpert = sortedExperts[0];
+      
+      // Create a mock PartnershipPreferences object for the expert
+      // This is a temporary solution - in a real implementation, we'd need to
+      // create a proper mapping or modify the data structure
+      const expertPreferences: PartnershipPreferences = {
+        id: bestExpert.id,
+        userId: bestExpert.userId,
+        preferredPartnerType: 'premium_expert',
+        supportStyle: ['expert_guidance', 'professional_coaching'],
+        availableCategories: bestExpert.expertiseAreas,
+        goalCategories: bestExpert.expertiseAreas,
+        timeCommitment: 'flexible', // Experts are typically flexible
+        experienceLevel: bestExpert.yearsOfExperience >= 10 ? 'advanced' : 
+                        bestExpert.yearsOfExperience >= 5 ? 'intermediate' : 'beginner',
+        isAvailableForMatching: bestExpert.isAvailableForMatching,
+        timezone: bestExpert.availability.timezone,
+        preferredMeetingTimes: bestExpert.availability.timeSlots,
+        bio: bestExpert.bio,
+        lastActiveAt: bestExpert.updatedAt,
+        createdAt: bestExpert.createdAt,
+        updatedAt: bestExpert.updatedAt
+      };
+
+      return expertPreferences;
+    } catch (error) {
+      console.error('Error finding best expert match:', error);
       return null;
     }
   }

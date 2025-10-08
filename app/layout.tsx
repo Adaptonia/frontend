@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import MobileZoomFix from "@/components/MobileZoomFix";
 import { ReminderChecker } from "@/components/ReminderChecker";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import PartnershipRequestHandler from "@/components/partnership/PartnershipRequestHandler";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -65,6 +66,8 @@ export default function RootLayout({
               <MobileZoomFix />
               {/* Email Reminder Checker - automatically sends due goal reminders */}
               <ReminderChecker />
+              {/* Partnership Request Handler - shows partnership request modals */}
+              <PartnershipRequestHandler />
             {/* Test Reminder Component - for debugging (remove in production) */}
             {/* <div className="fixed bottom-4 right-4 z-50">
               <TestReminder />

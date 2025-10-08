@@ -9,14 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import BottomNav from '@/components/dashboard/BottomNav';
 import { Search, Filter, Users, Calendar, Mail, User, Crown, Clock, Activity } from 'lucide-react';
-import { getAllUsers, promoteToAdmin, AdminUser } from '@/services/appwrite/userService';
+import { getAllUsers, promoteToAdmin, promoteToExpert, AdminUser } from '@/services/appwrite/userService';
 
 export default function AdminPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'student' | 'professional' | 'admin'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'student' | 'professional' | 'admin' | 'expert'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [email, setEmail] = useState('');
   const [isPromoting, setIsPromoting] = useState(false);
@@ -113,6 +113,33 @@ export default function AdminPage() {
   //   }
   // };
 
+  const handlePromoteToExpert = async () => {
+    if (!email.trim()) {
+      toast.error('Please enter an email address');
+      return;
+    }
+
+    setIsPromoting(true);
+    try {
+      const result = await promoteToExpert(email);
+      if (result.success) {
+        toast.success('User promoted to expert successfully');
+        setEmail('');
+        // Refresh users list
+        const response = await getAllUsers();
+        setUsers(response);
+        setFilteredUsers(response);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error('Failed to promote user to expert');
+      console.error('Error promoting user to expert:', error);
+    } finally {
+      setIsPromoting(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -138,6 +165,8 @@ export default function AdminPage() {
     switch (userType) {
       case 'admin':
         return <Crown className="w-4 h-4 text-yellow-500" />;
+      case 'expert':
+        return <Crown className="w-4 h-4 text-purple-500" />;
       case 'professional':
         return <User className="w-4 h-4 text-blue-500" />;
       case 'student':
@@ -151,6 +180,8 @@ export default function AdminPage() {
     switch (userType) {
       case 'admin':
         return 'Admin';
+      case 'expert':
+        return 'Expert';
       case 'professional':
         return 'Professional';
       case 'student':
@@ -208,6 +239,7 @@ export default function AdminPage() {
                 <option value="all">All Types</option>
                 <option value="student">Students</option>
                 <option value="professional">Professionals</option>
+                <option value="expert">Experts</option>
                 <option value="admin">Admins</option>
               </select>
 
@@ -337,6 +369,64 @@ export default function AdminPage() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        {/* Promotion Section */}
+        <div className="bg-white shadow-sm rounded-lg p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">User Promotion</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Promote to Expert */}
+            <div className="border border-gray-200 rounded-lg p-4">
+              <h3 className="font-medium text-gray-900 mb-2 flex items-center">
+                <Crown className="w-5 h-5 text-purple-500 mr-2" />
+                Promote to Expert
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Promote a user to expert status. Experts can create expert profiles and be matched with users.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="Enter user email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handlePromoteToExpert}
+                  disabled={isPromoting}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  {isPromoting ? 'Promoting...' : 'Promote to Expert'}
+                </Button>
+              </div>
+            </div>
+
+            {/* Promote to Admin */}
+            <div className="border border-gray-200 rounded-lg p-4">
+              <h3 className="font-medium text-gray-900 mb-2 flex items-center">
+                <Crown className="w-5 h-5 text-yellow-500 mr-2" />
+                Promote to Admin
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Promote a user to admin status. Admins can manage users and promote others.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="Enter user email"
+                  className="flex-1"
+                  disabled
+                />
+                <Button
+                  disabled
+                  className="bg-gray-400"
+                >
+                  Coming Soon
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
         

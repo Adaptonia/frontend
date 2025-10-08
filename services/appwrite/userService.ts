@@ -19,16 +19,24 @@ export interface AdminUser {
   $id: string;
   name: string;
   email: string;
-  userType: 'student' | 'professional' | 'admin';
+  userType: 'student' | 'professional' | 'admin' | 'expert';
   $createdAt: string;
   lastLoginAt?: string;
   isActive: boolean;
   loginCount: number;
   schoolName?: string;
   role?: string;
+  isExpert?: boolean;
+  expertiseAreas?: string[];
 }
 
 export interface PromoteAdminResponse {
+  success: boolean;
+  message: string;
+  user?: AdminUser;
+}
+
+export interface PromoteExpertResponse {
   success: boolean;
   message: string;
   user?: AdminUser;
@@ -308,6 +316,45 @@ export const getAllUsers = async (): Promise<AdminUser[]> => {
   }
 };
 
+// Get user by ID
+export const getUserById = async (userId: string): Promise<{success: boolean, data?: any}> => {
+  try {
+    console.log('🔍 Fetching user by ID:', userId);
+    
+    const response = await databases.listDocuments(
+      DATABASE_ID,
+      USERS_COLLECTION_ID,
+      [Query.equal('userId', userId)]
+    );
+    
+    if (response.documents.length === 0) {
+      console.log('❌ User not found:', userId);
+      return { success: false };
+    }
+    
+    const userData = response.documents[0];
+    const user = {
+      $id: userData.$id,
+      userId: userData.userId,
+      name: userData.name || 'Unknown User',
+      email: userData.email || '',
+      userType: userData.userType || 'student',
+      $createdAt: userData.$createdAt,
+      lastLoginAt: userData.lastLoginAt || undefined,
+      isActive: userData.isActive !== false,
+      loginCount: userData.loginCount || 0,
+      schoolName: userData.schoolName || undefined,
+      role: userData.role || undefined
+    };
+    
+    console.log('✅ User found:', user.name);
+    return { success: true, data: user };
+  } catch (error) {
+    console.error('❌ Error fetching user by ID:', error);
+    return { success: false };
+  }
+};
+
 // Promote user to admin
 export const promoteToAdmin = async (email: string): Promise<PromoteAdminResponse> => {
   try {
@@ -354,6 +401,64 @@ export const promoteToAdmin = async (email: string): Promise<PromoteAdminRespons
   } catch (error) {
     console.error('Error promoting user to admin:', error);
     throw new Error('Failed to promote user to admin');
+  }
+};
+
+// Promote user to expert
+export const promoteToExpert = async (email: string): Promise<PromoteExpertResponse> => {
+  try {
+    console.log('🔍 Promoting user to expert:', email);
+    
+    // Find user by email
+    const users = await databases.listDocuments(
+      DATABASE_ID,
+      USERS_COLLECTION_ID,
+      [Query.equal('email', email)]
+    );
+
+    if (users.documents.length === 0) {
+      return {
+        success: false,
+        message: 'User not found'
+      };
+    }
+
+    const user = users.documents[0];
+    
+    // Update user to expert
+    const updatedUser = await databases.updateDocument(
+      DATABASE_ID,
+      USERS_COLLECTION_ID,
+      user.$id,
+      {
+        userType: 'expert',
+        isExpert: true,
+        role: 'expert'
+      }
+    );
+
+    console.log('✅ User promoted to expert successfully');
+
+    return {
+      success: true,
+      message: 'User promoted to expert successfully',
+      user: {
+        $id: updatedUser.$id,
+        name: updatedUser.name || 'Unknown User',
+        email: updatedUser.email || '',
+        userType: 'expert',
+        $createdAt: updatedUser.$createdAt,
+        lastLoginAt: updatedUser.lastLoginAt || undefined,
+        isActive: updatedUser.isActive !== false,
+        loginCount: updatedUser.loginCount || 0,
+        schoolName: updatedUser.schoolName || undefined,
+        role: 'expert',
+        isExpert: true
+      }
+    };
+  } catch (error) {
+    console.error('Error promoting user to expert:', error);
+    throw new Error('Failed to promote user to expert');
   }
 };
 

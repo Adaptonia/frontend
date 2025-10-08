@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Users, Clock, Target, Star, Globe } from 'lucide-react';
+import { Save, Clock, Star, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { partnershipService, CreatePartnerPreferencesData } from '@/services/appwrite/partnershipService';
@@ -28,6 +28,7 @@ const PartnerPreferencesForm: React.FC<PartnerPreferencesFormProps> = ({
     preferredPartnerType: 'either',
     supportStyle: [],
     availableCategories: [],
+    goalCategories: [],
     timeCommitment: 'flexible',
     experienceLevel: 'beginner',
     timezone: '',
@@ -35,36 +36,20 @@ const PartnerPreferencesForm: React.FC<PartnerPreferencesFormProps> = ({
     bio: ''
   });
 
-  // Support style options
-  const supportStyles = [
-    { id: 'encouraging', label: 'Encouraging & Motivational', icon: '🎯' },
-    { id: 'structured', label: 'Structured & Organized', icon: '📋' },
-    { id: 'flexible', label: 'Flexible & Adaptive', icon: '🔄' },
-    { id: 'accountability', label: 'Strict Accountability', icon: '⚖️' },
-    { id: 'collaborative', label: 'Collaborative & Teamwork', icon: '🤝' },
-    { id: 'independent', label: 'Independent Check-ins', icon: '🎯' }
-  ];
 
   // Category options
   const categories = [
     { id: 'schedule', label: 'Schedule & Time Management', icon: '⏰' },
     { id: 'finance', label: 'Finance & Money Goals', icon: '💰' },
     { id: 'career', label: 'Career & Professional Growth', icon: '🚀' },
-    { id: 'audio_books', label: 'Learning & Audio Books', icon: '📚' }
+    { id: 'fitness', label: 'Fitness & Health', icon: '💪' },
+    { id: 'tech', label: 'Technology & Programming', icon: '💻' },
+    { id: 'business', label: 'Business & Entrepreneurship', icon: '📈' },
+    { id: 'education', label: 'Education & Learning', icon: '📚' },
+    { id: 'creative', label: 'Creative Arts', icon: '🎨' },
+    { id: 'lifestyle', label: 'Lifestyle & Wellness', icon: '🌱' }
   ];
 
-  // Time zones (simplified list)
-  const timezones = [
-    { id: 'America/New_York', label: 'Eastern Time (ET)' },
-    { id: 'America/Chicago', label: 'Central Time (CT)' },
-    { id: 'America/Denver', label: 'Mountain Time (MT)' },
-    { id: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
-    { id: 'Europe/London', label: 'Greenwich Mean Time (GMT)' },
-    { id: 'Europe/Berlin', label: 'Central European Time (CET)' },
-    { id: 'Asia/Tokyo', label: 'Japan Standard Time (JST)' },
-    { id: 'Asia/Shanghai', label: 'China Standard Time (CST)' },
-    { id: 'Australia/Sydney', label: 'Australian Eastern Time (AEST)' }
-  ];
 
   // Meeting time options
   const meetingTimes = [
@@ -82,8 +67,9 @@ const PartnerPreferencesForm: React.FC<PartnerPreferencesFormProps> = ({
       setFormData({
         userId: initialData.userId,
         preferredPartnerType: initialData.preferredPartnerType,
-        supportStyle: initialData.supportStyle,
-        availableCategories: initialData.availableCategories,
+        supportStyle: initialData.supportStyle || [],
+        availableCategories: initialData.availableCategories || [],
+        goalCategories: initialData.goalCategories || [],
         timeCommitment: initialData.timeCommitment,
         experienceLevel: initialData.experienceLevel,
         timezone: initialData.timezone || '',
@@ -93,21 +79,22 @@ const PartnerPreferencesForm: React.FC<PartnerPreferencesFormProps> = ({
     }
   }, [initialData]);
 
-  const handleSupportStyleToggle = (styleId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      supportStyle: prev.supportStyle.includes(styleId)
-        ? prev.supportStyle.filter(s => s !== styleId)
-        : [...prev.supportStyle, styleId]
-    }));
-  };
 
   const handleCategoryToggle = (categoryId: string) => {
     setFormData(prev => ({
       ...prev,
-      availableCategories: prev.availableCategories.includes(categoryId)
-        ? prev.availableCategories.filter(c => c !== categoryId)
-        : [...prev.availableCategories, categoryId]
+      availableCategories: (prev.availableCategories || []).includes(categoryId)
+        ? (prev.availableCategories || []).filter(c => c !== categoryId)
+        : [...(prev.availableCategories || []), categoryId]
+    }));
+  };
+
+  const handleGoalCategoryToggle = (categoryId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      goalCategories: (prev.goalCategories || []).includes(categoryId)
+        ? (prev.goalCategories || []).filter(c => c !== categoryId)
+        : [...(prev.goalCategories || []), categoryId]
     }));
   };
 
@@ -129,13 +116,13 @@ const PartnerPreferencesForm: React.FC<PartnerPreferencesFormProps> = ({
     }
 
     // Validation
-    if (formData.supportStyle.length === 0) {
-      toast.error('Please select at least one support style');
+    if (formData.availableCategories.length === 0) {
+      toast.error('Please select at least one category');
       return;
     }
 
-    if (formData.availableCategories.length === 0) {
-      toast.error('Please select at least one category');
+    if (formData.goalCategories.length === 0) {
+      toast.error('Please select at least one goal category');
       return;
     }
 
@@ -186,7 +173,7 @@ const PartnerPreferencesForm: React.FC<PartnerPreferencesFormProps> = ({
       <div className="flex-shrink-0 p-4 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-            <Users className="w-5 h-5 text-blue-600" />
+            <User className="w-5 h-5 text-blue-600" />
           </div>
           <div>
             <h2 className="text-xl font-semibold text-gray-900">
@@ -209,63 +196,7 @@ const PartnerPreferencesForm: React.FC<PartnerPreferencesFormProps> = ({
 
       <div className="flex-1 overflow-y-auto p-6">
         <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Partner Type */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <Users className="w-4 h-4 inline mr-2" />
-            Preferred Partner Type
-          </label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {[
-              { value: 'p2p', label: 'Peer-to-Peer', desc: 'Another user like you' },
-              { value: 'premium_expert', label: 'Premium Expert', desc: 'Professional coach' },
-              { value: 'either', label: 'Either', desc: 'I\'m flexible' }
-            ].map((option) => (
-              <motion.div
-                key={option.value}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className={`p-2.5 border-2 rounded-lg cursor-pointer transition-colors ${
-                  formData.preferredPartnerType === option.value
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-                onClick={() => setFormData(prev => ({ ...prev, preferredPartnerType: option.value as any }))}
-              >
-                <h3 className="font-medium text-gray-900">{option.label}</h3>
-                <p className="text-sm text-gray-500 mt-1">{option.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
 
-        {/* Support Styles */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <Target className="w-4 h-4 inline mr-2" />
-            Support Styles (Select all that apply)
-          </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {supportStyles.map((style) => (
-              <motion.div
-                key={style.id}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className={`p-2.5 border-2 rounded-lg cursor-pointer transition-colors ${
-                  formData.supportStyle.includes(style.id)
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-                onClick={() => handleSupportStyleToggle(style.id)}
-              >
-                <div className="flex items-center space-x-3">
-                  <span className="text-lg">{style.icon}</span>
-                  <span className="font-medium text-gray-900">{style.label}</span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
 
         {/* Categories */}
         <div>
@@ -280,11 +211,11 @@ const PartnerPreferencesForm: React.FC<PartnerPreferencesFormProps> = ({
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className={`p-2.5 border-2 rounded-lg cursor-pointer transition-colors ${
-                  formData.availableCategories.includes(category.id)
+                  (formData.goalCategories || []).includes(category.id)
                     ? 'border-blue-500 bg-blue-50'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
-                onClick={() => handleCategoryToggle(category.id)}
+                onClick={() => handleGoalCategoryToggle(category.id)}
               >
                 <div className="flex items-center space-x-3">
                   <span className="text-lg">{category.icon}</span>
@@ -294,6 +225,7 @@ const PartnerPreferencesForm: React.FC<PartnerPreferencesFormProps> = ({
             ))}
           </div>
         </div>
+
 
         {/* Time Commitment & Experience */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -330,23 +262,6 @@ const PartnerPreferencesForm: React.FC<PartnerPreferencesFormProps> = ({
           </div>
         </div>
 
-        {/* Timezone */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <Globe className="w-4 h-4 inline mr-2" />
-            Timezone (Optional)
-          </label>
-          <select
-            value={formData.timezone}
-            onChange={(e) => setFormData(prev => ({ ...prev, timezone: e.target.value }))}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">Select your timezone</option>
-            {timezones.map((tz) => (
-              <option key={tz.id} value={tz.id}>{tz.label}</option>
-            ))}
-          </select>
-        </div>
 
         {/* Preferred Meeting Times */}
         <div>

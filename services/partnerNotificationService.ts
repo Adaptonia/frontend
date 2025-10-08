@@ -19,9 +19,10 @@ export interface CreateNotificationData {
   partnershipId: string;
   fromUserId: string;
   toUserId: string;
-  type: 'partner_assigned' | 'task_completed' | 'verification_request' |
-        'verification_approved' | 'verification_rejected' | 'redo_requested' |
-        'goal_shared' | 'partnership_ended' | 'weekly_summary';
+  type: 'partner_assigned' | 'partnership_request' | 'task_completed' | 'verification_request' |
+    'verification_approved' | 'verification_rejected' | 'redo_requested' |
+    'goal_shared' | 'partnership_ended' | 'weekly_summary' | 'expert_task_assigned' | 
+    'expert_task_reminder' | 'expert_task_feedback';
   title: string;
   message: string;
   relatedTaskId?: string;
@@ -220,6 +221,38 @@ class PartnerNotificationService {
           subject: '🔄 Task needs revision',
           htmlContent: this.generateVerificationRejectedHTML(fromUserName, toUserName, notification.title, notification.message),
           textContent: this.generateVerificationRejectedText(fromUserName, toUserName, notification.title, notification.message)
+        };
+
+      case 'partnership_request':
+        return {
+          to: toUser.email,
+          subject: '🤝 Partnership Request - Someone wants to be your accountability partner!',
+          htmlContent: this.generatePartnershipRequestHTML(fromUserName, toUserName, notification.partnershipId),
+          textContent: this.generatePartnershipRequestText(fromUserName, toUserName, notification.partnershipId)
+        };
+
+      case 'expert_task_assigned':
+        return {
+          to: toUser.email,
+          subject: '📋 New Task Assigned - Your expert has given you a new task!',
+          htmlContent: this.generateExpertTaskAssignedHTML(fromUserName, toUserName, notification.title, notification.message),
+          textContent: this.generateExpertTaskAssignedText(fromUserName, toUserName, notification.title, notification.message)
+        };
+
+      case 'expert_task_reminder':
+        return {
+          to: toUser.email,
+          subject: '⏰ Task Reminder - Don\'t forget your assigned task!',
+          htmlContent: this.generateExpertTaskReminderHTML(fromUserName, toUserName, notification.title, notification.message),
+          textContent: this.generateExpertTaskReminderText(fromUserName, toUserName, notification.title, notification.message)
+        };
+
+      case 'expert_task_feedback':
+        return {
+          to: toUser.email,
+          subject: '💬 Task Feedback - Your expert has reviewed your submission!',
+          htmlContent: this.generateExpertTaskFeedbackHTML(fromUserName, toUserName, notification.title, notification.message),
+          textContent: this.generateExpertTaskFeedbackText(fromUserName, toUserName, notification.title, notification.message)
         };
 
       case 'goal_shared':
@@ -664,7 +697,7 @@ class PartnerNotificationService {
       partnershipId,
       fromUserId: requesterId,
       toUserId: partnerId,
-      type: 'partner_assigned',
+      type: 'partnership_request',
       title: 'Partnership Request',
       message: 'Someone wants to be your accountability partner! Review and accept or decline the request.',
       priority: 'high'
@@ -776,6 +809,256 @@ class PartnerNotificationService {
       relatedGoalId: goalId,
       priority: 'normal'
     });
+  }
+
+  // ========== PARTNERSHIP REQUEST EMAIL TEMPLATES ==========
+
+  private generatePartnershipRequestHTML(fromUserName: string, toUserName: string, partnershipId: string): string {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
+        <div style="background-color: white; border-radius: 8px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <div style="text-align: center; margin-bottom: 32px;">
+            <h1 style="color: #3b82f6; font-size: 24px; margin: 0;">🤝 Partnership Request</h1>
+          </div>
+
+          <p style="font-size: 16px; line-height: 1.6; color: #374151; margin-bottom: 24px;">
+            Hi ${toUserName},
+          </p>
+
+          <p style="font-size: 16px; line-height: 1.6; color: #374151; margin-bottom: 24px;">
+            <strong>${fromUserName}</strong> wants to be your accountability partner! They've requested to work together on achieving your goals.
+          </p>
+
+          <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 24px 0;">
+            <h3 style="color: #92400e; margin: 0 0 16px 0;">What this means:</h3>
+            <ul style="color: #374151; margin: 0; padding-left: 20px;">
+              <li style="margin-bottom: 8px;">You'll help each other stay accountable</li>
+              <li style="margin-bottom: 8px;">Verify each other's task completion</li>
+              <li style="margin-bottom: 8px;">Share goals and track progress together</li>
+              <li>Support each other's journey to success</li>
+            </ul>
+          </div>
+
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${process.env.NEXTAUTH_URL}/partnership/${partnershipId}"
+               style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin-right: 12px;">
+              Review Request
+            </a>
+            <a href="${process.env.NEXTAUTH_URL}/dashboard"
+               style="background-color: #6b7280; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+              Go to Dashboard
+            </a>
+          </div>
+
+          <p style="font-size: 14px; color: #6b7280; text-align: center; margin-top: 32px;">
+            You can accept or decline this request from your dashboard.
+          </p>
+        </div>
+      </div>
+    `;
+  }
+
+  private generatePartnershipRequestText(fromUserName: string, toUserName: string, partnershipId: string): string {
+    return `
+      Hi ${toUserName},
+
+      ${fromUserName} wants to be your accountability partner! They've requested to work together on achieving your goals.
+
+      What this means:
+      • You'll help each other stay accountable
+      • Verify each other's task completion
+      • Share goals and track progress together
+      • Support each other's journey to success
+
+      Review the request: ${process.env.NEXTAUTH_URL}/partnership/${partnershipId}
+      Go to dashboard: ${process.env.NEXTAUTH_URL}/dashboard
+
+      You can accept or decline this request from your dashboard.
+
+      Best regards,
+      The Adaptonia Team
+    `;
+  }
+
+  // Expert Task Email Templates
+  private generateExpertTaskAssignedHTML(fromUserName: string, toUserName: string, taskTitle: string, taskMessage: string): string {
+    return `
+      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; background-color: #f9fafb;">
+        <div style="background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); padding: 32px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px; font-weight: bold;">
+            📋 New Task Assigned!
+          </h1>
+          <p style="color: #e5e7eb; margin: 8px 0 0 0; font-size: 16px;">
+            Your expert has given you a new task to complete
+          </p>
+        </div>
+
+        <div style="background: white; padding: 32px;">
+          <h2 style="color: #1f2937; margin: 0 0 16px 0; font-size: 20px; font-weight: 600;">
+            ${taskTitle}
+          </h2>
+          
+          <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <p style="margin: 0; color: #374151; line-height: 1.6;">
+              ${taskMessage}
+            </p>
+          </div>
+
+          <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 16px; margin: 16px 0;">
+            <p style="margin: 0; color: #92400e; font-weight: 500;">
+              💡 <strong>Tip:</strong> Make sure to provide evidence of your work when submitting your task completion.
+            </p>
+          </div>
+
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" 
+               style="background: #8b5cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
+              View Task Details
+            </a>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private generateExpertTaskAssignedText(fromUserName: string, toUserName: string, taskTitle: string, taskMessage: string): string {
+    return `
+New Task Assigned!
+
+Hello ${toUserName},
+
+Your expert ${fromUserName} has assigned you a new task:
+
+Task: ${taskTitle}
+
+Description:
+${taskMessage}
+
+Please log in to your dashboard to view the full task details and submit your completion.
+
+Best regards,
+The Adaptonia Team
+    `;
+  }
+
+  private generateExpertTaskReminderHTML(fromUserName: string, toUserName: string, taskTitle: string, taskMessage: string): string {
+    return `
+      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; background-color: #f9fafb;">
+        <div style="background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); padding: 32px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px; font-weight: bold;">
+            ⏰ Task Reminder
+          </h1>
+          <p style="color: #fef3c7; margin: 8px 0 0 0; font-size: 16px;">
+            Don't forget about your assigned task!
+          </p>
+        </div>
+
+        <div style="background: white; padding: 32px;">
+          <h2 style="color: #1f2937; margin: 0 0 16px 0; font-size: 20px; font-weight: 600;">
+            ${taskTitle}
+          </h2>
+          
+          <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 16px; margin: 16px 0;">
+            <p style="margin: 0; color: #92400e; font-weight: 500;">
+              ⚠️ <strong>Reminder:</strong> This task is due soon. Please make sure to complete and submit it on time.
+            </p>
+          </div>
+
+          <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <p style="margin: 0; color: #374151; line-height: 1.6;">
+              ${taskMessage}
+            </p>
+          </div>
+
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" 
+               style="background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
+              Complete Task Now
+            </a>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private generateExpertTaskReminderText(fromUserName: string, toUserName: string, taskTitle: string, taskMessage: string): string {
+    return `
+Task Reminder
+
+Hello ${toUserName},
+
+This is a friendly reminder about your assigned task:
+
+Task: ${taskTitle}
+
+Description:
+${taskMessage}
+
+Please complete and submit this task as soon as possible.
+
+Best regards,
+The Adaptonia Team
+    `;
+  }
+
+  private generateExpertTaskFeedbackHTML(fromUserName: string, toUserName: string, taskTitle: string, taskMessage: string): string {
+    return `
+      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; background-color: #f9fafb;">
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 32px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px; font-weight: bold;">
+            💬 Task Feedback
+          </h1>
+          <p style="color: #d1fae5; margin: 8px 0 0 0; font-size: 16px;">
+            Your expert has reviewed your task submission
+          </p>
+        </div>
+
+        <div style="background: white; padding: 32px;">
+          <h2 style="color: #1f2937; margin: 0 0 16px 0; font-size: 20px; font-weight: 600;">
+            ${taskTitle}
+          </h2>
+          
+          <div style="background: #f0fdf4; border: 1px solid #10b981; border-radius: 8px; padding: 16px; margin: 16px 0;">
+            <p style="margin: 0; color: #065f46; font-weight: 500;">
+              ✅ <strong>Feedback:</strong> Your expert has reviewed your submission and provided feedback.
+            </p>
+          </div>
+
+          <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <p style="margin: 0; color: #374151; line-height: 1.6;">
+              ${taskMessage}
+            </p>
+          </div>
+
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" 
+               style="background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
+              View Feedback
+            </a>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private generateExpertTaskFeedbackText(fromUserName: string, toUserName: string, taskTitle: string, taskMessage: string): string {
+    return `
+Task Feedback
+
+Hello ${toUserName},
+
+Your expert ${fromUserName} has reviewed your task submission:
+
+Task: ${taskTitle}
+
+Feedback:
+${taskMessage}
+
+Please log in to your dashboard to view the full feedback and any next steps.
+
+Best regards,
+The Adaptonia Team
+    `;
   }
 }
 

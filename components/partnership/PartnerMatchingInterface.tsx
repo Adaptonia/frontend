@@ -23,6 +23,8 @@ import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import partnerMatchingService, { MatchingResult } from '@/services/partnerMatchingService';
 import { partnershipService } from '@/services/appwrite/partnershipService';
+import { userService } from '@/services/userService';
+import { expertService } from '@/services/appwrite/expertService';
 import { PartnershipPreferences, Partnership } from '@/database/partner-accountability-schema';
 
 interface PartnerMatchingInterfaceProps {
@@ -36,31 +38,15 @@ const PartnerMatchingInterface: React.FC<PartnerMatchingInterfaceProps> = ({
 }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<'auto' | 'manual'>('auto');
-  const [potentialPartners, setPotentialPartners] = useState<PartnershipPreferences[]>([]);
-  const [compatibilityScores, setCompatibilityScores] = useState<number[]>([]);
-  const [searchFilters, setSearchFilters] = useState({
-    category: '',
-    supportStyle: '',
-    timeCommitment: '',
-    partnerType: '',
-    experienceLevel: ''
-  });
+  const [potentialExperts, setPotentialExperts] = useState<any[]>([]);
   const [userPreferences, setUserPreferences] = useState<PartnershipPreferences | null>(null);
   const [matchingInProgress, setMatchingInProgress] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
 
   // Load user preferences
   useEffect(() => {
     loadUserPreferences();
   }, [user?.id]);
 
-  // Auto-search when switching to manual mode
-  useEffect(() => {
-    if (mode === 'manual' && user?.id && userPreferences && potentialPartners.length === 0) {
-      handleManualSearch();
-    }
-  }, [mode, user?.id, userPreferences]);
 
   const loadUserPreferences = async () => {
     if (!user?.id) return;
@@ -91,61 +77,47 @@ const PartnerMatchingInterface: React.FC<PartnerMatchingInterfaceProps> = ({
 
     setMatchingInProgress(true);
     try {
-      const result: MatchingResult = await partnerMatchingService.findAndCreatePartnership(user.id);
-
-      if (result.success && result.partnership) {
-        toast.success(result.message);
-        onPartnershipCreated?.(result.partnership);
-        onClose?.();
-      } else {
-        toast.error(result.message);
+      // Find experts that match user's goal categories
+      const experts: any[] = [];
+      
+      if (userPreferences.goalCategories && userPreferences.goalCategories.length > 0) {
+        for (const goalCategory of userPreferences.goalCategories) {
+          const categoryExperts = await expertService.getExpertsByCategory(goalCategory);
+          experts.push(...categoryExperts);
+        }
       }
+      
+      // Remove duplicates and filter available experts
+      const uniqueExperts = experts.filter((expert, index, self) => 
+        index === self.findIndex(e => e.id === expert.id) && 
+        expert.isAvailableForMatching
+      );
+      
+      if (uniqueExperts.length === 0) {
+        toast.error('No experts available for your goal categories. Try manual search.');
+        return;
+      }
+      
+      setPotentialExperts(uniqueExperts);
+      toast.success(`Found ${uniqueExperts.length} expert(s) matching your goals!`);
+      
     } catch (error) {
-      console.error('Error in auto matching:', error);
-      toast.error('Failed to find a partner. Please try again.');
+      console.error('Error finding experts:', error);
+      toast.error('Failed to find experts. Please try again.');
     } finally {
       setMatchingInProgress(false);
     }
   };
 
-  const handleManualSearch = async () => {
+
+
+  const handleRequestPartnership = async (partnerId: string) => {
     if (!user?.id) return;
 
     setLoading(true);
     try {
-      // Check if any filter is set
-      const hasFilters = Object.values(searchFilters).some(v => v);
-
-      const result = await partnerMatchingService.searchPotentialPartners(
-        user.id,
-        hasFilters ? {
-          category: searchFilters.category || undefined,
-          supportStyle: searchFilters.supportStyle || undefined,
-          timeCommitment: (searchFilters.timeCommitment as 'daily' | 'weekly' | 'flexible') || undefined,
-          partnerType: (searchFilters.partnerType as 'p2p' | 'premium_expert' | 'either') || undefined,
-          experienceLevel: (searchFilters.experienceLevel as 'beginner' | 'intermediate' | 'advanced') || undefined,
-        } : undefined
-      );
-      setPotentialPartners(result.partners);
-      setCompatibilityScores(result.scores);
-
-      if (result.partners.length === 0) {
-        toast.info('No partners found with your criteria. Try adjusting your filters.');
-      }
-    } catch (error) {
-      console.error('Error searching partners:', error);
-      toast.error('Failed to search for partners');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRequestPartnership = async (partnerId: string, partnerType: 'p2p' | 'premium_expert' = 'p2p') => {
-    if (!user?.id) return;
-
-    setLoading(true);
-    try {
-      const result = await partnerMatchingService.requestSpecificPartnership(user.id, partnerId, partnerType);
+      // All expert requests are premium_expert partnerships
+      const result = await partnerMatchingService.requestSpecificPartnership(user.id, partnerId, 'premium_expert');
 
       if (result.success && result.partnership) {
         toast.success(result.message);
@@ -162,41 +134,7 @@ const PartnerMatchingInterface: React.FC<PartnerMatchingInterfaceProps> = ({
     }
   };
 
-  const getSupportStyleLabel = (styleId: string): string => {
-    const styles = {
-      encouraging: 'Encouraging',
-      structured: 'Structured',
-      flexible: 'Flexible',
-      accountability: 'Accountability',
-      collaborative: 'Collaborative',
-      independent: 'Independent'
-    };
-    return styles[styleId as keyof typeof styles] || styleId;
-  };
 
-  const getCategoryLabel = (categoryId: string): string => {
-    const categories = {
-      schedule: 'Schedule',
-      finance: 'Finance',
-      career: 'Career',
-      audio_books: 'Learning'
-    };
-    return categories[categoryId as keyof typeof categories] || categoryId;
-  };
-
-  const getCompatibilityColor = (score: number): string => {
-    if (score >= 80) return 'text-green-600 bg-green-100';
-    if (score >= 60) return 'text-blue-600 bg-blue-100';
-    if (score >= 40) return 'text-yellow-600 bg-yellow-100';
-    return 'text-red-600 bg-red-100';
-  };
-
-  const getCompatibilityLabel = (score: number): string => {
-    if (score >= 80) return 'Excellent Match';
-    if (score >= 60) return 'Good Match';
-    if (score >= 40) return 'Fair Match';
-    return 'Low Compatibility';
-  };
 
   if (!userPreferences) {
     return (
@@ -219,12 +157,12 @@ const PartnerMatchingInterface: React.FC<PartnerMatchingInterfaceProps> = ({
       <div className="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Users className="w-5 h-5 text-blue-600" />
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <Award className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Find Your Accountability Partner</h2>
-              <p className="text-sm text-gray-600">Connect with someone who shares your goals and commitment</p>
+              <h2 className="text-xl font-semibold text-gray-900">Find Your Expert Coach</h2>
+              <p className="text-sm text-gray-600">Connect with experts who can help you achieve your goals</p>
             </div>
           </div>
           {onClose && (
@@ -238,30 +176,33 @@ const PartnerMatchingInterface: React.FC<PartnerMatchingInterfaceProps> = ({
         </div>
         <div className="p-6">
 
-      {/* Mode Selection */}
-      <div className="bg-gray-50 rounded-lg p-4 mb-6">
-        <div className="flex items-center space-x-4">
-          <span className="text-sm font-medium text-gray-700">Matching Mode:</span>
-          <div className="flex space-x-2">
-            {[
-              { id: 'auto', label: 'Auto Match', desc: 'Let us find your perfect partner' },
-              { id: 'manual', label: 'Browse Partners', desc: 'Search and choose manually' }
-            ].map((option) => (
-              <motion.button
-                key={option.id}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setMode(option.id as any)}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  mode === option.id
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                {option.label}
-              </motion.button>
-            ))}
-          </div>
+      {/* Auto Match Section */}
+      <div className="bg-purple-50 rounded-lg p-6 mb-6">
+        <div className="text-center">
+          <Award className="w-12 h-12 text-purple-600 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Find Expert Coaches</h3>
+          <p className="text-gray-600 mb-4">
+            Get matched with expert coaches based on your goal categories
+          </p>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleAutoMatch}
+            disabled={matchingInProgress}
+            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center space-x-2 mx-auto"
+          >
+            {matchingInProgress ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                <span>Finding Experts...</span>
+              </>
+            ) : (
+              <>
+                <Search className="w-4 h-4" />
+                <span>Find Expert Coaches</span>
+              </>
+            )}
+          </motion.button>
         </div>
       </div>
 
@@ -446,7 +387,7 @@ const PartnerMatchingInterface: React.FC<PartnerMatchingInterfaceProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {potentialPartners.map((partner, index) => (
+                  {(mode === 'auto' && potentialExperts.length > 0 ? potentialExperts : potentialPartners).map((partner, index) => (
                     <motion.div
                       key={partner.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -456,16 +397,24 @@ const PartnerMatchingInterface: React.FC<PartnerMatchingInterfaceProps> = ({
                     >
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                            <Users className="w-5 h-5 text-blue-600" />
+                          <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                            <Award className="w-5 h-5 text-purple-600" />
                           </div>
                           <div>
-                            <h4 className="font-medium text-gray-900">Partner #{index + 1}</h4>
-                            <p className="text-sm text-gray-600">{partner.experienceLevel} level</p>
+                            <h4 className="font-medium text-gray-900">
+                              {mode === 'auto' && potentialExperts.length > 0 
+                                ? `Expert #${index + 1}` 
+                                : partnerUserDetails[partner.userId]?.name || `Partner #${index + 1}`}
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              {mode === 'auto' && potentialExperts.length > 0 
+                                ? `${partner.yearsOfExperience} years experience` 
+                                : `${partner.experienceLevel} level`}
+                            </p>
                           </div>
                         </div>
-                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${getCompatibilityColor(compatibilityScores[index])}`}>
-                          {compatibilityScores[index]}% match
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${mode === 'auto' && potentialExperts.length > 0 ? 'bg-purple-100 text-purple-800' : getCompatibilityColor(compatibilityScores[index])}`}>
+                          {mode === 'auto' && potentialExperts.length > 0 ? 'Expert' : `${compatibilityScores[index]}% match`}
                         </div>
                       </div>
 
@@ -474,23 +423,48 @@ const PartnerMatchingInterface: React.FC<PartnerMatchingInterfaceProps> = ({
                       )}
 
                       <div className="space-y-2 mb-4">
-                        <div className="flex items-center space-x-2 text-sm">
-                          <Clock className="w-4 h-4 text-gray-500" />
-                          <span>{partner.timeCommitment} commitment</span>
-                        </div>
-                        <div className="flex items-center space-x-2 text-sm">
-                          <Target className="w-4 h-4 text-gray-500" />
-                          <span>{partner.availableCategories.map(getCategoryLabel).join(', ')}</span>
-                        </div>
-                        <div className="flex items-center space-x-2 text-sm">
-                          <Star className="w-4 h-4 text-gray-500" />
-                          <span>{partner.supportStyle.map(getSupportStyleLabel).join(', ')}</span>
-                        </div>
-                        {partner.timezone && (
-                          <div className="flex items-center space-x-2 text-sm">
-                            <Globe className="w-4 h-4 text-gray-500" />
-                            <span>{partner.timezone}</span>
-                          </div>
+                        {mode === 'auto' && potentialExperts.length > 0 ? (
+                          <>
+                            <div className="flex items-center space-x-2 text-sm">
+                              <Target className="w-4 h-4 text-gray-500" />
+                              <span>{partner.expertiseAreas?.join(', ') || 'Expert'}</span>
+                            </div>
+                            <div className="flex items-center space-x-2 text-sm">
+                              <Star className="w-4 h-4 text-gray-500" />
+                              <span>Rating: {partner.rating?.toFixed(1) || '0.0'}/5.0</span>
+                            </div>
+                            {partner.hourlyRate && (
+                              <div className="flex items-center space-x-2 text-sm">
+                                <Award className="w-4 h-4 text-gray-500" />
+                                <span>${partner.hourlyRate}/hour</span>
+                              </div>
+                            )}
+                            <div className="flex items-center space-x-2 text-sm">
+                              <Users className="w-4 h-4 text-gray-500" />
+                              <span>{partner.totalClientsHelped || 0} clients helped</span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-center space-x-2 text-sm">
+                              <Clock className="w-4 h-4 text-gray-500" />
+                              <span>{partner.timeCommitment} commitment</span>
+                            </div>
+                            <div className="flex items-center space-x-2 text-sm">
+                              <Target className="w-4 h-4 text-gray-500" />
+                              <span>{partner.availableCategories.map(getCategoryLabel).join(', ')}</span>
+                            </div>
+                            <div className="flex items-center space-x-2 text-sm">
+                              <Star className="w-4 h-4 text-gray-500" />
+                              <span>{partner.supportStyle?.map(getSupportStyleLabel).join(', ') || 'N/A'}</span>
+                            </div>
+                            {partner.timezone && (
+                              <div className="flex items-center space-x-2 text-sm">
+                                <Globe className="w-4 h-4 text-gray-500" />
+                                <span>{partner.timezone}</span>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
 
@@ -498,10 +472,14 @@ const PartnerMatchingInterface: React.FC<PartnerMatchingInterfaceProps> = ({
                         <motion.button
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
-                          onClick={() => handleRequestPartnership(partner.userId)}
-                          className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                          onClick={() => handleRequestPartnership(mode === 'auto' && potentialExperts.length > 0 ? partner.userId : partner.userId)}
+                          className={`flex-1 px-3 py-2 text-white rounded-lg transition-colors text-sm ${
+                            mode === 'auto' && potentialExperts.length > 0 
+                              ? 'bg-purple-600 hover:bg-purple-700' 
+                              : 'bg-blue-600 hover:bg-blue-700'
+                          }`}
                         >
-                          Request Partnership
+                          {mode === 'auto' && potentialExperts.length > 0 ? 'Request Expert' : 'Request Partnership'}
                         </motion.button>
                         <button className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm">
                           <MessageSquare className="w-4 h-4" />
@@ -509,7 +487,9 @@ const PartnerMatchingInterface: React.FC<PartnerMatchingInterfaceProps> = ({
                       </div>
 
                       <div className="mt-2 text-xs text-gray-500">
-                        {getCompatibilityLabel(compatibilityScores[index])}
+                        {mode === 'auto' && potentialExperts.length > 0 
+                          ? 'Expert available for your goal categories' 
+                          : getCompatibilityLabel(compatibilityScores[index])}
                       </div>
                     </motion.div>
                   ))}

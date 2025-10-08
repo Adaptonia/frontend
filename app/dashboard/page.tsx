@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Plus, Calendar, User, BookOpen, BarChart3, Edit3, GraduationCap, Briefcase, ChevronDown, Share2, Users } from 'lucide-react'
+import { Plus, Calendar, User, BookOpen, BarChart3, Edit3, GraduationCap, Briefcase, ChevronDown, Share2, Users, Crown } from 'lucide-react'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
@@ -33,11 +33,14 @@ import ShareModal from '@/components/ShareModal'
 
 // Partner Accountability Components
 import PartnerPreferencesForm from '@/components/partnership/PartnerPreferencesForm'
-import PartnerMatchingInterface from '@/components/partnership/PartnerMatchingInterface'
+import ExpertMatchingInterface from '@/components/partnership/ExpertMatchingInterface'
 import PartnerDashboard from '@/components/partnership/PartnerDashboard'
 import { partnershipService } from '@/services/appwrite/partnershipService'
 import partnerMatchingService from '@/services/partnerMatchingService'
 import { Partnership, PartnershipPreferences } from '@/database/partner-accountability-schema'
+
+// Expert Task Components
+import UserExpertTasks from '@/components/expert/UserExpertTasks'
 
 
 const Dashboard = () => {
@@ -559,22 +562,22 @@ const Dashboard = () => {
 
         {/* Notification Settings section removed - using Resend for email notifications */}
 
-        {/* Accountability Partner Section */}
+        {/* Expert Class Section */}
         <div className="bg-white rounded-xl p-5 mb-6 shadow-sm">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-blue-500 text-lg font-medium flex items-center">
               <Users className="w-5 h-5 mr-2" />
-              Accountability Partner
+              Expert Class
             </h2>
           </div>
 
           {partnershipLoading ? (
             <div className="text-center py-6">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-              <p className="text-gray-600">Loading partnership status...</p>
+              <p className="text-gray-600">Loading expert class status...</p>
             </div>
           ) : userPartnership ? (
-            // User has a partner
+            // User is in an expert class
             <div className="space-y-4">
               <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
                 <div className="flex items-center space-x-3">
@@ -582,9 +585,9 @@ const Dashboard = () => {
                     <Users className="w-5 h-5 text-green-600" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-green-800">Partnership Active</h3>
+                    <h3 className="font-medium text-green-800">Expert Class Active</h3>
                     <p className="text-sm text-green-600">
-                      Status: {userPartnership.status.charAt(0).toUpperCase() + userPartnership.status.slice(1)}
+                      Status: Enrolled
                     </p>
                   </div>
                 </div>
@@ -602,62 +605,38 @@ const Dashboard = () => {
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <p className="text-lg font-bold text-gray-900">0</p>
-                  <p className="text-xs text-gray-600">Shared Goals</p>
+                  <p className="text-xs text-gray-600">Assigned Tasks</p>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <p className="text-lg font-bold text-gray-900">0</p>
-                  <p className="text-xs text-gray-600">Tasks Verified</p>
+                  <p className="text-xs text-gray-600">Completed</p>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <p className="text-lg font-bold text-gray-900">0</p>
-                  <p className="text-xs text-gray-600">Pending Reviews</p>
+                  <p className="text-xs text-gray-600">Pending</p>
                 </div>
               </div>
             </div>
           ) : (
-            // User doesn't have a partner
+            // User is not in an expert class
             <div className="text-center py-6">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Users className="w-8 h-8 text-blue-600" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Find Your Accountability Partner</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Join an Expert Class</h3>
               <p className="text-gray-600 mb-4 max-w-md mx-auto">
-                {!userPreferences
-                  ? "Set up your preferences and get matched with someone who shares your goals and commitment."
-                  : "Your preferences are set! Ready to find your perfect accountability partner."}
+                Get personalized guidance and tasks from experts in your field. Learn from the best and achieve your goals faster.
               </p>
 
               <div className="flex justify-center space-x-3">
-                {!userPreferences && (
-                  <button
-                    onClick={() => setShowPartnerPreferences(true)}
-                    className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
-                  >
-                    Set Preferences
-                  </button>
-                )}
                 <button
                   onClick={handleFindPartner}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
                 >
                   <Users className="w-4 h-4" />
-                  <span>Find Partner</span>
+                  <span>Browse Experts</span>
                 </button>
               </div>
-
-              {userPreferences && (
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    ✓ Preferences set • {userPreferences.preferredPartnerType.replace('_', ' ')} • {userPreferences.timeCommitment}
-                  </p>
-                  <button
-                    onClick={() => setShowPartnerPreferences(true)}
-                    className="text-xs text-blue-600 hover:text-blue-700 mt-1"
-                  >
-                    Update preferences
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -750,6 +729,37 @@ const Dashboard = () => {
                   </div>
                 </div>
                 <div className="text-blue-400">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Expert Dashboard Button - Only visible to experts */}
+        {user?.userType === 'expert' && (
+          <div className="bg-white rounded-xl p-5 mb-6 shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-purple-500 text-lg font-medium">Expert Dashboard</h2>
+            </div>
+            
+            <div className="space-y-3">
+              <button 
+                onClick={() => router.push('/expert')}
+                className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg hover:shadow-md transition-all"
+              >
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                    <Crown className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-medium text-purple-800">Expert Dashboard</h3>
+                    <p className="text-sm text-purple-600">Manage your expert profile and help others</p>
+                  </div>
+                </div>
+                <div className="text-purple-400">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
@@ -1063,9 +1073,9 @@ const Dashboard = () => {
         initialData={userPreferences}
       />
 
-      {/* Partner Matching Modal */}
+      {/* Expert Matching Modal */}
       {showPartnerMatching && (
-        <PartnerMatchingInterface
+        <ExpertMatchingInterface
           onPartnershipCreated={handlePartnershipCreated}
           onClose={() => setShowPartnerMatching(false)}
         />

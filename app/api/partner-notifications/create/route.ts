@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
     // Validate notification type
     const validTypes = [
       'partner_assigned',
+      'partnership_request',
       'task_completed',
       'verification_request',
       'verification_approved',

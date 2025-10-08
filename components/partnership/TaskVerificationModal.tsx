@@ -25,6 +25,7 @@ interface TaskVerificationModalProps {
   onClose: () => void;
   onVerified: (updatedTask: PartnerTask) => void;
   verifierId: string;
+  ownerName?: string;
 }
 
 const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
@@ -32,7 +33,8 @@ const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
   isOpen,
   onClose,
   onVerified,
-  verifierId
+  verifierId,
+  ownerName
 }) => {
   const [action, setAction] = useState<'approve' | 'reject' | 'request_redo' | null>(null);
   const [comment, setComment] = useState('');
@@ -115,7 +117,7 @@ const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
       color: 'yellow',
       icon: RefreshCw,
       title: 'Request Redo',
-      description: 'Ask your partner to redo or improve this task',
+      description: `Ask ${ownerName || 'your partner'} to redo or improve this task`,
       buttonText: 'Request Redo'
     }
   };
@@ -147,7 +149,7 @@ const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
                 </div>
                 <div>
                   <h2 className="text-xl font-semibold text-gray-900">Verify Task</h2>
-                  <p className="text-sm text-gray-600">Review and verify your partner's completed task</p>
+                  <p className="text-sm text-gray-600">Review and verify {ownerName || 'your partner'}'s completed task</p>
                 </div>
               </div>
               <button
