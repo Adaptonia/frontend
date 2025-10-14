@@ -121,7 +121,8 @@ class PartnerMatchingService {
       return {
         success: true,
         partnership,
-        message: `Great match found! You have ${compatibilityScore}% compatibility with your new partner. Check your email for details!`
+        message: ``
+        // Great match found! You have ${compatibilityScore}% compatibility with your new partner. Check your email for details!`
       };
 
     } catch (error) {

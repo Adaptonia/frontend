@@ -271,7 +271,7 @@ const Dashboard = () => {
     setUserPartnership(partnership);
     setShowPartnerMatching(false);
     loadPartnershipData(); // Reload partnership data
-    toast.success('🎉 Partnership created! Check your email for details.');
+    // toast.success('🎉 Partnership created! Check your email for details.');
   };
 
   const handleFindPartner = async () => {
