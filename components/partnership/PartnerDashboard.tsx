@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { partnershipService } from '@/services/appwrite/partnershipService';
 import UserExpertTasks from '@/components/expert/UserExpertTasks';
 
 interface PartnerDashboardProps {
@@ -18,6 +20,7 @@ interface PartnerDashboardProps {
 
 const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ partnershipId }) => {
   const { user } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [showEndPartnershipModal, setShowEndPartnershipModal] = useState(false);
 
@@ -40,9 +43,17 @@ const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ partnershipId }) =>
 
   const handleEndPartnership = async () => {
     try {
-      // Handle ending the expert class relationship
+      // End the partnership in Appwrite and make users available again
+      const success = await partnershipService.updatePartnershipStatus(partnershipId, 'ended');
+
+      if (!success) {
+        toast.error('Failed to leave expert class');
+        return;
+      }
+
       toast.success('Left expert class successfully');
-      // Close modal or redirect
+      // Refresh dashboard state so user is no longer shown as enrolled
+      router.refresh();
     } catch (error) {
       console.error('Error ending partnership:', error);
       toast.error('Failed to leave expert class');
