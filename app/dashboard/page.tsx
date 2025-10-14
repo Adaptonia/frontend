@@ -616,6 +616,16 @@ const Dashboard = () => {
                   <p className="text-xs text-gray-600">Pending</p>
                 </div>
               </div>
+
+              {/* Preferences quick access */}
+              <div className="mt-2 text-right">
+                <button
+                  onClick={() => setShowPartnerPreferences(true)}
+                  className="text-sm text-blue-600 hover:text-blue-700"
+                >
+                  Update preferences
+                </button>
+              </div>
             </div>
           ) : (
             // User is not in an expert class
@@ -629,6 +639,14 @@ const Dashboard = () => {
               </p>
 
               <div className="flex justify-center space-x-3">
+                {!userPreferences && (
+                  <button
+                    onClick={() => setShowPartnerPreferences(true)}
+                    className="px-6 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                  >
+                    Set Preferences
+                  </button>
+                )}
                 <button
                   onClick={handleFindPartner}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
@@ -637,6 +655,20 @@ const Dashboard = () => {
                   <span>Browse Experts</span>
                 </button>
               </div>
+
+              {userPreferences && (
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg max-w-md mx-auto">
+                  <p className="text-sm text-blue-800">
+                    Preferences set. You can update them anytime.
+                  </p>
+                  <button
+                    onClick={() => setShowPartnerPreferences(true)}
+                    className="text-xs text-blue-600 hover:text-blue-700 mt-1"
+                  >
+                    Update preferences
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
