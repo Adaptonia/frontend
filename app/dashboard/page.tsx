@@ -1126,7 +1126,14 @@ const Dashboard = () => {
                 ×
               </button>
             </div>
-            <PartnerDashboard partnershipId={userPartnership.id} />
+            <PartnerDashboard
+              partnershipId={userPartnership.id}
+              onPartnershipEnded={() => {
+                // Reload partnership data and close modal
+                loadPartnershipData();
+                setShowPartnerDashboard(false);
+              }}
+            />
           </div>
         </div>
       )}

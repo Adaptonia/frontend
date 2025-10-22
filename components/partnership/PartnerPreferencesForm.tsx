@@ -116,11 +116,6 @@ const PartnerPreferencesForm: React.FC<PartnerPreferencesFormProps> = ({
     }
 
     // Validation
-    if (formData.availableCategories.length === 0) {
-      toast.error('Please select at least one category');
-      return;
-    }
-
     if (formData.goalCategories.length === 0) {
       toast.error('Please select at least one goal category');
       return;
@@ -132,9 +127,11 @@ const PartnerPreferencesForm: React.FC<PartnerPreferencesFormProps> = ({
       let result: PartnershipPreferences | null;
 
       // Ensure userId is set before saving
+      // Auto-sync goalCategories to availableCategories for regular users
       const dataToSave = {
         ...formData,
-        userId: user.id
+        userId: user.id,
+        availableCategories: formData.goalCategories // Sync categories
       };
 
       if (initialData) {

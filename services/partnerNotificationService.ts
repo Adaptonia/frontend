@@ -21,8 +21,8 @@ export interface CreateNotificationData {
   toUserId: string;
   type: 'partner_assigned' | 'partnership_request' | 'task_completed' | 'verification_request' |
     'verification_approved' | 'verification_rejected' | 'redo_requested' |
-    'goal_shared' | 'partnership_ended' | 'weekly_summary' | 'expert_task_assigned' | 
-    'expert_task_reminder' | 'expert_task_feedback';
+    'goal_shared' | 'partnership_ended' | 'weekly_summary' | 'expert_task_assigned' |
+    'expert_task_reminder' | 'expert_task_feedback' | 'expert_class_student_joined' | 'expert_class_joined';
   title: string;
   message: string;
   relatedTaskId?: string;
@@ -253,6 +253,22 @@ class PartnerNotificationService {
           subject: '💬 Task Feedback - Your expert has reviewed your submission!',
           htmlContent: this.generateExpertTaskFeedbackHTML(fromUserName, toUserName, notification.title, notification.message),
           textContent: this.generateExpertTaskFeedbackText(fromUserName, toUserName, notification.title, notification.message)
+        };
+
+      case 'expert_class_student_joined':
+        return {
+          to: toUser.email,
+          subject: '🎓 New Student Joined - A mentee has enrolled in your expert class!',
+          htmlContent: this.generateExpertClassStudentJoinedHTML(fromUserName, toUserName, notification.partnershipId),
+          textContent: this.generateExpertClassStudentJoinedText(fromUserName, toUserName, notification.partnershipId)
+        };
+
+      case 'expert_class_joined':
+        return {
+          to: toUser.email,
+          subject: '🎓 Welcome to Expert Class - You\'ve joined your accountability coach!',
+          htmlContent: this.generateExpertClassJoinedHTML(fromUserName, toUserName, notification.partnershipId),
+          textContent: this.generateExpertClassJoinedText(fromUserName, toUserName, notification.partnershipId)
         };
 
       case 'goal_shared':
@@ -1059,6 +1075,224 @@ Please log in to your dashboard to view the full feedback and any next steps.
 Best regards,
 The Adaptonia Team
     `;
+  }
+
+  // ========== EXPERT CLASS JOIN EMAIL TEMPLATES ==========
+
+  // Email to EXPERT when a student joins their class
+  private generateExpertClassStudentJoinedHTML(studentName: string, expertName: string, partnershipId: string): string {
+    return `
+      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; background-color: #f9fafb;">
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 32px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">
+            🎓 New Student Enrolled!
+          </h1>
+          <p style="color: #d1fae5; margin: 8px 0 0 0; font-size: 16px;">
+            A mentee has joined your expert class
+          </p>
+        </div>
+
+        <div style="background: white; padding: 32px;">
+          <h2 style="color: #1f2937; margin: 0 0 16px 0; font-size: 22px; font-weight: 600;">
+            Hello ${expertName}! 👋
+          </h2>
+
+          <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #065f46; font-size: 18px; font-weight: 600;">
+              <strong>${studentName}</strong> has joined your expert class as a mentee!
+            </p>
+          </div>
+
+          <p style="color: #374151; line-height: 1.6; margin: 20px 0;">
+            You now have a new student who is eager to learn from your expertise and guidance. They're counting on you to help them achieve their goals through your mentorship.
+          </p>
+
+          <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <h3 style="color: #92400e; margin: 0 0 12px 0; font-size: 16px;">💡 What You Can Do:</h3>
+            <ul style="margin: 0; padding-left: 20px; color: #374151; line-height: 1.8;">
+              <li>Assign tasks to guide their learning journey</li>
+              <li>Review and provide feedback on their submissions</li>
+              <li>Track their progress through the expert dashboard</li>
+              <li>Offer personalized mentorship and support</li>
+            </ul>
+          </div>
+
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/expert"
+               style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
+              Go to Expert Dashboard
+            </a>
+          </div>
+
+          <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+            Ready to start mentoring? Create your first task assignment from your expert dashboard!
+          </p>
+        </div>
+
+        <div style="background: #f3f4f6; padding: 24px; text-align: center;">
+          <p style="color: #6b7280; font-size: 14px; margin: 0;">
+            Questions? Contact us at <a href="mailto:support@adaptonia.app" style="color: #10b981;">support@adaptonia.app</a>
+          </p>
+          <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 0 0;">
+            The Adaptonia Team - Empowering growth through expert guidance
+          </p>
+        </div>
+      </div>
+    `;
+  }
+
+  private generateExpertClassStudentJoinedText(studentName: string, expertName: string, partnershipId: string): string {
+    return `
+🎓 New Student Enrolled!
+
+Hello ${expertName}! 👋
+
+${studentName} has joined your expert class as a mentee!
+
+You now have a new student who is eager to learn from your expertise and guidance. They're counting on you to help them achieve their goals through your mentorship.
+
+💡 What You Can Do:
+• Assign tasks to guide their learning journey
+• Review and provide feedback on their submissions
+• Track their progress through the expert dashboard
+• Offer personalized mentorship and support
+
+Go to Expert Dashboard: ${process.env.NEXT_PUBLIC_APP_URL}/expert
+
+Ready to start mentoring? Create your first task assignment from your expert dashboard!
+
+---
+Questions? Contact us at support@adaptonia.app
+The Adaptonia Team - Empowering growth through expert guidance
+    `;
+  }
+
+  // Email to STUDENT when they join an expert class
+  private generateExpertClassJoinedHTML(expertName: string, studentName: string, partnershipId: string): string {
+    return `
+      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; background-color: #f9fafb;">
+        <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 32px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">
+            🎓 Welcome to Expert Class!
+          </h1>
+          <p style="color: #bfdbfe; margin: 8px 0 0 0; font-size: 16px;">
+            You've joined your accountability coach
+          </p>
+        </div>
+
+        <div style="background: white; padding: 32px;">
+          <h2 style="color: #1f2937; margin: 0 0 16px 0; font-size: 22px; font-weight: 600;">
+            Congratulations ${studentName}! 🎉
+          </h2>
+
+          <div style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #1e40af; font-size: 18px; font-weight: 600;">
+              You have joined <strong>${expertName}'s</strong> expert class!
+            </p>
+            <p style="margin: 8px 0 0 0; color: #1e3a8a; font-size: 14px;">
+              Your accountability mentor and coach
+            </p>
+          </div>
+
+          <p style="color: #374151; line-height: 1.6; margin: 20px 0;">
+            You're now part of an exclusive mentorship program where ${expertName} will guide you through personalized tasks and provide expert feedback to help you achieve your goals.
+          </p>
+
+          <div style="background: #f0fdf4; border: 1px solid #10b981; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <h3 style="color: #065f46; margin: 0 0 12px 0; font-size: 16px;">✨ What Happens Next:</h3>
+            <ul style="margin: 0; padding-left: 20px; color: #374151; line-height: 1.8;">
+              <li>Your expert will assign personalized tasks</li>
+              <li>Complete tasks and submit your work</li>
+              <li>Receive expert feedback and guidance</li>
+              <li>Track your progress in real-time</li>
+              <li>Grow with professional mentorship</li>
+            </ul>
+          </div>
+
+          <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 16px; margin: 20px 0;">
+            <p style="margin: 0; color: #92400e; font-weight: 500;">
+              💡 <strong>Pro Tip:</strong> Check your dashboard regularly for new task assignments and feedback from your expert!
+            </p>
+          </div>
+
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard"
+               style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);">
+              View Your Expert Class
+            </a>
+          </div>
+
+          <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+            Ready to get started? Your expert may have already assigned your first task. Check your dashboard now!
+          </p>
+        </div>
+
+        <div style="background: #f3f4f6; padding: 24px; text-align: center;">
+          <p style="color: #6b7280; font-size: 14px; margin: 0;">
+            Questions? Contact us at <a href="mailto:support@adaptonia.app" style="color: #3b82f6;">support@adaptonia.app</a>
+          </p>
+          <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 0 0;">
+            The Adaptonia Team - Achieve more together through accountability
+          </p>
+        </div>
+      </div>
+    `;
+  }
+
+  private generateExpertClassJoinedText(expertName: string, studentName: string, partnershipId: string): string {
+    return `
+🎓 Welcome to Expert Class!
+
+Congratulations ${studentName}! 🎉
+
+You have joined ${expertName}'s expert class!
+Your accountability mentor and coach
+
+You're now part of an exclusive mentorship program where ${expertName} will guide you through personalized tasks and provide expert feedback to help you achieve your goals.
+
+✨ What Happens Next:
+• Your expert will assign personalized tasks
+• Complete tasks and submit your work
+• Receive expert feedback and guidance
+• Track your progress in real-time
+• Grow with professional mentorship
+
+💡 Pro Tip: Check your dashboard regularly for new task assignments and feedback from your expert!
+
+View Your Expert Class: ${process.env.NEXT_PUBLIC_APP_URL}/dashboard
+
+Ready to get started? Your expert may have already assigned your first task. Check your dashboard now!
+
+---
+Questions? Contact us at support@adaptonia.app
+The Adaptonia Team - Achieve more together through accountability
+    `;
+  }
+
+  // ========== EXPERT CLASS NOTIFICATION HELPERS ==========
+
+  async notifyExpertClassJoined(partnershipId: string, studentId: string, expertId: string): Promise<void> {
+    // Notify student that they joined an expert class
+    await this.createNotification({
+      partnershipId,
+      fromUserId: expertId,
+      toUserId: studentId,
+      type: 'expert_class_joined',
+      title: 'Joined Expert Class',
+      message: 'You\'ve successfully joined an expert class! Your mentor will assign tasks to help you grow.',
+      priority: 'high'
+    });
+
+    // Notify expert that a student joined their class
+    await this.createNotification({
+      partnershipId,
+      fromUserId: studentId,
+      toUserId: expertId,
+      type: 'expert_class_student_joined',
+      title: 'New Student Enrolled',
+      message: 'A new student has joined your expert class. Start mentoring by assigning tasks!',
+      priority: 'high'
+    });
   }
 }
 

@@ -134,63 +134,68 @@ const UserExpertTasks: React.FC<UserExpertTasksProps> = ({ onTaskSubmitted }) =>
 
   const TaskCard = ({ task, submission, isOverdue }: { task: any, submission?: TaskSubmission, isOverdue: boolean }) => {
     const isSubmitted = submission && submission.status !== 'pending';
-    
+
     return (
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow"
+        className="bg-white rounded-xl border-2 border-gray-200 hover:border-purple-300 p-5 hover:shadow-lg transition-all duration-200"
       >
-        <div className="flex items-start justify-between">
+        {/* Header with Title and Status */}
+        <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
-            <div className="flex items-center space-x-3 mb-2">
-              <h3 className="text-lg font-medium text-gray-900">{task.title}</h3>
+            <div className="flex items-center flex-wrap gap-2 mb-2">
+              <h3 className="text-xl font-semibold text-gray-900">{task.title}</h3>
               {isOverdue && !isSubmitted && (
-                <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">
+                <span className="px-3 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
                   Overdue
                 </span>
               )}
-              {isSubmitted && (
-                <div className={`px-3 py-1 rounded-full text-sm font-medium flex items-center space-x-2 ${getStatusColor(submission.status)}`}>
-                  {getStatusIcon(submission.status)}
-                  <span className="capitalize">{submission.status.replace('_', ' ')}</span>
-                </div>
-              )}
             </div>
-            
-            <p className="text-gray-600 mb-3">{task.description}</p>
-            
-            {/* Expert Comment for needs_revision */}
-            {isSubmitted && submission.status === 'needs_revision' && submission.expertComment && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
-                <h4 className="font-medium text-yellow-800 mb-1 flex items-center space-x-2">
-                  <MessageSquare className="w-4 h-4" />
-                  <span>Expert Feedback:</span>
-                </h4>
-                <p className="text-yellow-700 text-sm">{submission.expertComment}</p>
+            {isSubmitted && (
+              <div className={`inline-flex items-center space-x-2 px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(submission.status)}`}>
+                {getStatusIcon(submission.status)}
+                <span className="capitalize">{submission.status.replace('_', ' ')}</span>
               </div>
             )}
-            
-            <div className="flex items-center space-x-4 text-sm text-gray-500">
-              <div className="flex items-center space-x-1">
-                <User className="w-4 h-4" />
-                <span>Expert: {task.expertName || 'Unknown'}</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <Calendar className="w-4 h-4" />
-                <span>Due: {formatDate(task.dueDate)}</span>
-              </div>
+          </div>
+        </div>
+
+        {/* Description */}
+        <p className="text-gray-600 mb-4 leading-relaxed">{task.description}</p>
+
+        {/* Expert Comment for needs_revision */}
+        {isSubmitted && submission.status === 'needs_revision' && submission.expertComment && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-lg p-4 mb-4">
+            <h4 className="font-semibold text-yellow-800 mb-2 flex items-center space-x-2">
+              <MessageSquare className="w-4 h-4" />
+              <span>Expert Feedback:</span>
+            </h4>
+            <p className="text-yellow-700 text-sm leading-relaxed">{submission.expertComment}</p>
+          </div>
+        )}
+
+        {/* Footer with Meta Info and Action Button */}
+        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-sm text-gray-600">
+            <div className="flex items-center space-x-2">
+              <User className="w-4 h-4 text-gray-400" />
+              <span className="font-medium">{task.expertName || 'Unknown'}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Calendar className="w-4 h-4 text-gray-400" />
+              <span>{formatDate(task.dueDate)}</span>
             </div>
           </div>
-          
-          <div className="flex items-center space-x-2 ml-4">
+
+          <div className="flex-shrink-0">
             {!submission ? (
               <button
                 onClick={() => {
                   setSelectedTask(task);
                   setShowSubmissionForm(true);
                 }}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+                className="px-5 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 active:bg-purple-800 transition-all shadow-sm hover:shadow-md flex items-center space-x-2 font-medium"
               >
                 <Plus className="w-4 h-4" />
                 <span>Submit</span>
@@ -201,7 +206,7 @@ const UserExpertTasks: React.FC<UserExpertTasksProps> = ({ onTaskSubmitted }) =>
                   setSelectedTask(task);
                   setShowSubmissionForm(true);
                 }}
-                className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center space-x-2"
+                className="px-5 py-2.5 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 active:bg-yellow-800 transition-all shadow-sm hover:shadow-md flex items-center space-x-2 font-medium"
               >
                 <Edit className="w-4 h-4" />
                 <span>Resubmit</span>
@@ -212,7 +217,7 @@ const UserExpertTasks: React.FC<UserExpertTasksProps> = ({ onTaskSubmitted }) =>
                   setSelectedTask(task);
                   setShowSubmissionForm(true);
                 }}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2"
+                className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 active:bg-gray-300 transition-all flex items-center space-x-2 font-medium"
               >
                 <Eye className="w-4 h-4" />
                 <span>View</span>
@@ -227,36 +232,44 @@ const UserExpertTasks: React.FC<UserExpertTasksProps> = ({ onTaskSubmitted }) =>
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
-            <FileText className="w-6 h-6 text-purple-600" />
-            <span>Expert Tasks</span>
-          </h2>
-          <p className="text-gray-600 mt-1">
-            Tasks assigned by your expert mentors
-          </p>
+      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6 border border-purple-100">
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center">
+            <FileText className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Expert Tasks</h2>
+            <p className="text-gray-600 mt-0.5">
+              Tasks assigned by your expert mentors
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Tasks by Status */}
       {tasks.length === 0 ? (
-        <div className="text-center py-12">
-          <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No tasks assigned yet</h3>
-          <p className="text-gray-600">
-            Your expert will assign tasks to help you achieve your goals.
-          </p>
+        <div className="bg-white rounded-xl border-2 border-dashed border-gray-300 p-12">
+          <div className="text-center">
+            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-10 h-10 text-gray-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No tasks assigned yet</h3>
+            <p className="text-gray-600 max-w-md mx-auto">
+              Your expert will assign tasks to help you achieve your goals. Check back soon!
+            </p>
+          </div>
         </div>
       ) : (
         <div className="space-y-8">
           {/* Needs Revision Section */}
           {needsRevisionTasks.length > 0 && (
             <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <AlertCircle className="w-5 h-5 text-yellow-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Needs Revision</h3>
-                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
+              <div className="flex items-center space-x-3 mb-5">
+                <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                  <AlertCircle className="w-5 h-5 text-yellow-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Needs Revision</h3>
+                <span className="px-3 py-1.5 bg-yellow-100 text-yellow-800 text-sm font-semibold rounded-full">
                   {needsRevisionTasks.length}
                 </span>
               </div>
@@ -265,11 +278,11 @@ const UserExpertTasks: React.FC<UserExpertTasksProps> = ({ onTaskSubmitted }) =>
                   const submission = getTaskSubmission(task.id);
                   const isOverdue = new Date(task.dueDate) < new Date();
                   return (
-                    <TaskCard 
-                      key={task.id} 
-                      task={task} 
-                      submission={submission} 
-                      isOverdue={isOverdue} 
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      submission={submission}
+                      isOverdue={isOverdue}
                     />
                   );
                 })}
@@ -280,10 +293,12 @@ const UserExpertTasks: React.FC<UserExpertTasksProps> = ({ onTaskSubmitted }) =>
           {/* Pending Tasks Section */}
           {pendingTasks.length > 0 && (
             <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <Clock className="w-5 h-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Pending Submission</h3>
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+              <div className="flex items-center space-x-3 mb-5">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Pending Submission</h3>
+                <span className="px-3 py-1.5 bg-blue-100 text-blue-800 text-sm font-semibold rounded-full">
                   {pendingTasks.length}
                 </span>
               </div>
@@ -292,11 +307,11 @@ const UserExpertTasks: React.FC<UserExpertTasksProps> = ({ onTaskSubmitted }) =>
                   const submission = getTaskSubmission(task.id);
                   const isOverdue = new Date(task.dueDate) < new Date();
                   return (
-                    <TaskCard 
-                      key={task.id} 
-                      task={task} 
-                      submission={submission} 
-                      isOverdue={isOverdue} 
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      submission={submission}
+                      isOverdue={isOverdue}
                     />
                   );
                 })}
@@ -307,10 +322,12 @@ const UserExpertTasks: React.FC<UserExpertTasksProps> = ({ onTaskSubmitted }) =>
           {/* Completed Tasks Section */}
           {completedTasks.length > 0 && (
             <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Completed</h3>
-                <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+              <div className="flex items-center space-x-3 mb-5">
+                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Completed</h3>
+                <span className="px-3 py-1.5 bg-green-100 text-green-800 text-sm font-semibold rounded-full">
                   {completedTasks.length}
                 </span>
               </div>
@@ -319,11 +336,11 @@ const UserExpertTasks: React.FC<UserExpertTasksProps> = ({ onTaskSubmitted }) =>
                   const submission = getTaskSubmission(task.id);
                   const isOverdue = new Date(task.dueDate) < new Date();
                   return (
-                    <TaskCard 
-                      key={task.id} 
-                      task={task} 
-                      submission={submission} 
-                      isOverdue={isOverdue} 
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      submission={submission}
+                      isOverdue={isOverdue}
                     />
                   );
                 })}

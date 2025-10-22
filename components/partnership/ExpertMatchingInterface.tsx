@@ -159,6 +159,23 @@ const ExpertMatchingInterface: React.FC<ExpertMatchingInterfaceProps> = ({
       );
 
       if (result) {
+        // Send expert class specific email notifications
+        try {
+          const partnerNotificationService = (await import('@/services/partnerNotificationService')).default;
+
+          // Send specialized emails for expert class joining
+          // studentId = current user (mentee), expertId = the expert they're joining
+          await partnerNotificationService.notifyExpertClassJoined(
+            result.id,
+            user.id, // student/mentee
+            expertId // expert/mentor
+          );
+          console.log('✅ Expert class email notifications sent to both student and expert');
+        } catch (error) {
+          console.error('❌ Failed to send email notifications:', error);
+          // Don't fail the partnership creation if email fails
+        }
+
         toast.success('Successfully joined expert class!');
         onPartnershipCreated?.(result);
         onClose?.();
