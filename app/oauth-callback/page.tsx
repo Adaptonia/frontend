@@ -13,7 +13,6 @@ export default function OAuthCallback() {
   useEffect(() => {
     const handleOAuthCallback = async () => {
       try {
-        console.log('🔄 OAuth callback: Processing authentication...')
         
         // Check for OAuth error in URL parameters
         const urlParams = new URLSearchParams(window.location.search)
@@ -34,7 +33,6 @@ export default function OAuthCallback() {
         const user = await getCurrentUser()
         
         if (user) {
-          console.log('✅ OAuth callback: User authenticated:', user.email)
           
           // Update auth context (same as email/password flow)
           setUser(user)
@@ -45,13 +43,11 @@ export default function OAuthCallback() {
           // Wait a moment for context to update
           await new Promise(resolve => setTimeout(resolve, 500))
           
-          console.log('📍 OAuth callback: Redirecting to dashboard...')
           
           // Redirect to dashboard (centralized flow)
           window.location.replace('/dashboard')
           
         } else {
-          console.log('❌ OAuth callback: No user found, retrying...', attempts + 1, '/', maxAttempts)
           
           // Retry logic for cases where OAuth session might need more time
           if (attempts < maxAttempts) {
@@ -69,7 +65,6 @@ export default function OAuthCallback() {
         
         // Retry logic for network or temporary errors
         if (attempts < maxAttempts) {
-          console.log('🔄 Retrying OAuth callback...', attempts + 1, '/', maxAttempts)
           setAttempts(prev => prev + 1)
           setTimeout(() => handleOAuthCallback(), 2000)
         } else {

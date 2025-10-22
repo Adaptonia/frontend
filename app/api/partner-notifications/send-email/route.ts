@@ -35,12 +35,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Partner notification email sent successfully:', {
-      notificationId,
-      emailId: emailResult.data?.id,
-      recipient: emailData.to,
-      subject: emailData.subject
-    });
+   
 
     return NextResponse.json({
       success: true,

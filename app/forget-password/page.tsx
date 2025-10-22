@@ -23,7 +23,6 @@ const Page = () => {
                 email
             })
 
-            console.log("✅ Password reset email sent:", response.data)
             
             // Show success message and redirect to login
             alert('Password reset email sent! Please check your email and click the reset link.')

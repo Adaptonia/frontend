@@ -8,37 +8,25 @@ export function ReminderChecker() {
 
   const checkAndSendReminders = async () => {
     try {
-      console.log("✅ LOG 2: Checking for due reminders...");
       const dueReminders = await reminderService.getDueReminders();
 
-      console.log(`✅ LOG 2.1: Query returned ${dueReminders.documents.length} reminders. Current time: ${new Date().toISOString()}`);
       
       if (dueReminders.documents.length === 0) {
-        console.log("✅ LOG 2.2: No due reminders found. Checking all pending reminders for debug...");
         
         // Debug: Let's see ALL pending reminders regardless of due date
         try {
           const allPendingReminders = await reminderService.getAllPendingReminders();
-          console.log("✅ LOG 2.3: All pending reminders:", allPendingReminders.documents.map((r: any) => ({
-            id: r.$id,
-            sendAt: r.sendAt,
-            status: r.status,
-            userEmail: r.userEmail,
-            title: r.title
-          })));
+        
         } catch (err) {
-          console.log("✅ LOG 2.3: Could not fetch all pending reminders (method may not exist)");
         }
         
         return;
       }
       
-      console.log(`Found ${dueReminders.documents.length} due reminders.`);
 
       await Promise.all(
         dueReminders.documents.map(async (reminder) => {
           try {
-            console.log(`✅ LOG 3: Processing reminder ${reminder.$id} for user ${reminder.userEmail}`);
             // Directly call the API with the reminder data, like Salein
             const response = await fetch("/api/notifications/reminder", {
               method: "POST",
@@ -53,7 +41,6 @@ export function ReminderChecker() {
             });
 
             if (!response.ok) {
-              console.error("Failed to send reminder:", await response.text());
               throw new Error("Failed to send reminder");
             }
 

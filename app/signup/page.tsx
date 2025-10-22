@@ -53,7 +53,6 @@ const Page = () => {
         router.push('/login')
       }
 
-      console.log(account)
     } catch (error) {
       console.error(error)
       

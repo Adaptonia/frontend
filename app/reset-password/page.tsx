@@ -71,7 +71,6 @@ const ResetPasswordContent = () => {
                 password
             })
 
-            console.log("✅ Password reset successful:", response.data)
             
             // Navigate to success page
             router.push('/password-changed')

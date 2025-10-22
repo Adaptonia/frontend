@@ -26,7 +26,6 @@ const Page = () => {
             await loginUser(email, password)
             
             // Let AuthContext handle the user state properly
-            console.log('📝 Login Page: Login successful, refreshing auth context');
             
             // Show success message
             toast.success('Logged in successfully')
@@ -34,7 +33,6 @@ const Page = () => {
             // Add a very short delay to ensure the toast is visible
             await new Promise(resolve => setTimeout(resolve, 500));
             
-            console.log('📝 Login Page: Redirecting to dashboard...');
             // Use window.location.replace for a clean redirect
             window.location.replace('/dashboard');
             

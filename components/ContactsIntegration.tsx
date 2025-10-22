@@ -202,7 +202,6 @@ const ContactsIntegration: React.FC<ContactsIntegrationProps> = ({
                 })
               }
             } catch (shareError) {
-              console.log('Share cancelled or failed for:', contact.name)
               // Fallback to SMS if share fails
               await fallbackToSMS(contact)
             }

@@ -120,7 +120,6 @@ const Dashboard = () => {
   // Load goals when user is available
   useEffect(() => {
     if (user && !authLoading) {
-      console.log("📊 User authenticated, loading goals for:", user.email);
       loadGoals();
       loadLibraryItems();
       loadPartnershipData();
@@ -130,10 +129,8 @@ const Dashboard = () => {
       }
       // Load user-specific goal packs for regular users
       if (user.userType && user.userType !== null) {
-        console.log('🎯 User has userType:', user.userType, '- Loading goal packs...');
         loadUserGoalPacks();
       } else {
-        console.log('⚠️ User userType not set:', user.userType);
       }
     }
   }, [user, authLoading]);
@@ -141,7 +138,6 @@ const Dashboard = () => {
   // Reload goal packs when user type changes
   useEffect(() => {
     if (user?.userType && !authLoading) {
-      console.log('🔄 User type changed to:', user.userType, '- Reloading goal packs...');
       loadUserGoalPacks();
     }
   }, [user?.userType]);
@@ -206,10 +202,7 @@ const Dashboard = () => {
       const preferences = await partnershipService.getPartnerPreferences(user.id);
       setUserPreferences(preferences);
 
-      console.log('Partnership data loaded:', {
-        hasPartnership: !!partnership,
-        hasPreferences: !!preferences
-      });
+     
     } catch (error) {
       // Only log actual errors, not "document not found" cases
       if (error instanceof Error && !error.message.includes('Document with the requested ID could not be found')) {
@@ -346,7 +339,6 @@ const Dashboard = () => {
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date)
-    // console.log('Selected date:', date)
     // Here you could filter tasks for the selected date
   }
 
@@ -366,8 +358,6 @@ const Dashboard = () => {
   }
 
   const handleGoalClick = (goal: Goal) => {
-    console.log('Goal clicked:', goal);
-  console.log('Goal has properties:', Object.keys(goal));
     setActiveGoal(goal);
     setIsEditModalOpen(true);
   };
@@ -771,7 +761,7 @@ const Dashboard = () => {
         )}
 
         {/* Expert Dashboard Button - Only visible to experts */}
-        {user?.userType === 'expert' && (
+        {(user?.userType as any) === 'expert' && (
           <div className="bg-white rounded-xl p-5 mb-6 shadow-sm">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-purple-500 text-lg font-medium">Expert Dashboard</h2>

@@ -35,7 +35,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('🔍 Cron job: Starting email reminders check...');
 
     // Initialize Appwrite client
     const client = new Client()
@@ -59,7 +58,6 @@ export async function GET(request: NextRequest) {
       ]
     );
 
-    console.log(`📋 Found ${dueReminders.documents.length} due email reminders`);
 
     if (dueReminders.documents.length === 0) {
       return NextResponse.json({
@@ -78,7 +76,6 @@ export async function GET(request: NextRequest) {
     // Process each reminder
     for (const reminder of dueReminders.documents) {
       try {
-        console.log(`📧 Processing reminder: ${reminder.$id}`);
         
         // Use user details directly from the reminder document
         if (!reminder.userEmail) {
@@ -159,7 +156,6 @@ export async function GET(request: NextRequest) {
             }
           );
           
-          console.log(`✅ Recurring reminder sent (Day ${currentDay}/${totalDays}) and scheduled for next day`);
         } else {
           // Non-recurring or final day of recurring reminder
         await databases.updateDocument(
@@ -173,16 +169,11 @@ export async function GET(request: NextRequest) {
             }
           );
           
-          if (isRecurring) {
-            console.log(`✅ Final recurring reminder sent (Day ${totalDays}/${totalDays}) - series complete`);
-          } else {
-            console.log(`✅ Single reminder sent successfully`);
-          }
+          
         }
 
         results.processed++;
         results.successful++;
-        console.log(`✅ Email sent successfully to ${reminder.userEmail}`);
 
       } catch (error: any) {
         results.processed++;
@@ -202,11 +193,9 @@ export async function GET(request: NextRequest) {
           }
         );
 
-        console.log(`❌ Failed to send reminder ${reminder.$id}:`, error);
       }
     }
 
-    console.log('📊 Email reminders processing complete:', results);
 
     return NextResponse.json({
       success: true,

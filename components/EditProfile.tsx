@@ -25,7 +25,6 @@ export default function EditProfile({ isOpen, onClose }: EditProfileType) {
   
   // const [subscription, setSubscription] = useState("Not Subscribed");
   // const profileRef = useRef(null);
-  console.log(email, "email");
 
   useEffect(() => {
     // Update form when user data changes

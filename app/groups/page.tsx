@@ -224,7 +224,6 @@ const GroupsPageContent: React.FC = () => {
           
           // For offline scenarios, still allow initialization if we have auth user
           if (user.id && user.name) {
-            console.log('Using fallback initialization for offline mode');
             setUserInitialized(true);
             localStorage.setItem(cacheKey, JSON.stringify({
               timestamp: Date.now(),
@@ -245,7 +244,6 @@ const GroupsPageContent: React.FC = () => {
         
         // For offline scenarios, use fallback initialization
         if (user.id && user.name) {
-          console.log('Network error - using fallback initialization for offline mode');
           setUserInitialized(true);
           localStorage.setItem(cacheKey, JSON.stringify({
             timestamp: Date.now(),
@@ -485,15 +483,7 @@ const GroupsPageContent: React.FC = () => {
               }
               onClick={() => {
                 // Debug info on click
-                console.log('🔍 Cache Debug Info:', {
-                  isCacheHit,
-                  channelsLoading,
-                  isRefreshing,
-                  userChannelsCount: userChannels.length,
-                  publicChannelsCount: publicChannels.length,
-                  userInitialized,
-                  isOnline: navigator.onLine
-                });
+              
               }}
             >
               <div className="flex items-center space-x-1">

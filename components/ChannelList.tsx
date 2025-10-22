@@ -114,15 +114,7 @@ const ChannelList: React.FC<ChannelListProps> = ({ onChannelSelect }) => {
     isDeleting: isDeletingFromHook
   } = useChannelsWithCache(user?.id)
 
-  // Add debugging for environment variables
-  // useEffect(() => {
-  //   console.log('🔧 ChannelList Environment Config:', {
-  //     DATABASE_ID: process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID,
-  //     CHANNELS_COLLECTION_ID: process.env.NEXT_PUBLIC_APPWRITE_CHANNELS_COLLECTION_ID,
-  //     expectedDatabaseId: '682b16d40036fd19f920',
-  //     expectedChannelsCollectionId: '682b2ffa0012db7e075f'
-  //   })
-  // }, [])
+
 
   const toggleSection = (sectionId: string) => {
     const newCollapsed = new Set(collapsedSections)

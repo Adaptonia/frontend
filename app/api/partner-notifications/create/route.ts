@@ -51,13 +51,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Partner notification created successfully:', {
-      notificationId: notification.id,
-      type: notification.type,
-      fromUserId: notification.fromUserId,
-      toUserId: notification.toUserId,
-      emailSent: notification.emailSent
-    });
+   
 
     return NextResponse.json({
       success: true,

@@ -157,9 +157,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
     if (!message.trim() || !onSendMessage || !isUserMember) return
 
     const messageData: SendMessageData = {
-      content: message.trim(),
-      messageType: 'text',
-      replyToId: replyingTo?.messageId
+      content: message.trim()
     }
 
     const success = await onSendMessage(messageData)
@@ -172,7 +170,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
 
   // Handle file upload
   const handleFileUpload = (files: File[]) => {
-    console.log('Files uploaded:', files)
+    // console.log('Files uploaded:', files)
     // TODO: Implement file upload logic
   }
 
@@ -426,8 +424,8 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
                     </span>
                   </div>
 
-                  {/* Reply Quote */}
-                  {msg.replyToId && (
+                  {/* Reply Quote - Commented out until replyToId is added to MessageWithSender type */}
+                  {/* {msg.replyToId && (
                     <div className="flex mb-2">
                       <div className="w-1 bg-blue-500 rounded-full mr-3"></div>
                       <div className="text-sm text-gray-600">
@@ -435,7 +433,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
                         {msg.replyToId}
                       </div>
                     </div>
-                  )}
+                  )} */}
 
                   {/* Message Content */}
                   <div 

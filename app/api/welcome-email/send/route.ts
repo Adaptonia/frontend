@@ -34,11 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Welcome email sent successfully:', {
-      emailId: emailResult.data?.id,
-      recipient: emailData.to,
-      subject: emailData.subject
-    });
+   
 
     return NextResponse.json({
       success: true,
