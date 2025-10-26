@@ -113,8 +113,8 @@ class PaystackService {
     const plans = {
       starter: {
         name: '6 Weeks',
-        amount: 100, // Naira
-        amountInKobo: 10000, // Kobo (amount * 100)
+        amount: 40000, // Naira
+        amountInKobo: 4000000, // Kobo (amount * 100)
         duration: 42, // days (6 weeks)
         description: '₦40,000 for 6 weeks',
         mentors: 1,
