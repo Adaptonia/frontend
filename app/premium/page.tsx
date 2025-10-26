@@ -3,12 +3,77 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
+import { paystackService } from '@/services/paystackService';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 const PremiumPage = () => {
-  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
+  const { user } = useAuth();
+  const router = useRouter();
+  const [selectedPlan, setSelectedPlan] = useState<'starter' | 'professional' | 'unlimited'>('professional');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubscribe = async () => {
+    if (!user || !user.id || !user.email) {
+      toast.error('Please login to subscribe');
+      router.push('/login');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const planDetails = paystackService.getPlanDetails(selectedPlan);
+      const reference = paystackService.generateReference(user.id);
+
+      // Initialize Paystack payment
+      const response = await paystackService.initializePayment({
+        email: user.email,
+        amount: planDetails.amountInKobo,
+        reference,
+        plan: selectedPlan,
+        metadata: {
+          userId: user.id,
+          plan: selectedPlan,
+        },
+      });
+
+      // Verify payment on backend
+      const verifyResponse = await fetch('/api/payment/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reference: response.reference,
+          userId: user.id,
+          plan: selectedPlan,
+        }),
+      });
+
+      const verifyData = await verifyResponse.json();
+
+      if (verifyData.success) {
+        toast.success('Subscription activated successfully!');
+        router.push('/dashboard');
+      } else {
+        toast.error(verifyData.message || 'Payment verification failed');
+      }
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message === 'Payment cancelled') {
+        toast.info('Payment cancelled');
+      } else {
+        console.error('Payment error:', error);
+        toast.error('An error occurred during payment');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="flex flex-col min-h-screen  bg-gradient-to-b from-[#2196F3] from-20% to-white to-80%">
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-[#2196F3] from-20% to-white to-80%">
       {/* Header with back button */}
       <header className="pt-10 px-6">
         <Link href="/dashboard" className="text-white">
@@ -35,14 +100,7 @@ const PremiumPage = () => {
 
         {/* Features */}
         <div className="mb-10 w-full">
-          <div className="flex items-center mb-4">
-            <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center mr-4">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 6L9 17L4 12" stroke="#2196F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <p className="text-white">Unlimited goal tracking with advanced analytics</p>
-          </div>
+         
           <div className="flex items-center mb-4">
             <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center mr-4">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -63,18 +121,19 @@ const PremiumPage = () => {
 
         {/* Subscription options */}
         <div className="w-full space-y-4">
-          {/* Monthly option */}
-          <div 
-            className={`bg-white p-4 rounded-xl flex justify-between items-center ${selectedPlan === 'monthly' ? 'border-2 border-blue-700' : ''}`}
-            onClick={() => setSelectedPlan('monthly')}
+          {/* Starter Plan - 6 Weeks */}
+          <div
+            className={`bg-white p-4 rounded-xl flex justify-between items-center ${selectedPlan === 'starter' ? 'border-2 border-blue-700' : ''}`}
+            onClick={() => setSelectedPlan('starter')}
           >
-            <div className=''>
-              <p className="font-semibold text-xs">1 Month</p>
+            <div>
+              <p className="font-semibold text-xs">6 Weeks</p>
+              <p className="text-gray-500 text-xs">1 dedicated mentor</p>
             </div>
             <div className="flex items-center">
-              <p className="mr-4 font-semibold text-xs">₦2,500 / month</p>
-              <div className={`w-6 h-6 rounded-full border-2 ${selectedPlan === 'monthly' ? 'border-blue-500' : 'border-gray-300'}`}>
-                {selectedPlan === 'monthly' && (
+              <p className="mr-4 font-semibold text-xs">₦40,000</p>
+              <div className={`w-6 h-6 rounded-full border-2 ${selectedPlan === 'starter' ? 'border-blue-500' : 'border-gray-300'}`}>
+                {selectedPlan === 'starter' && (
                   <div className="w-full h-full rounded-full bg-blue-500 flex items-center justify-center">
                     <div className="w-2 h-2 bg-white rounded-full"></div>
                   </div>
@@ -83,29 +142,52 @@ const PremiumPage = () => {
             </div>
           </div>
 
-          {/* Yearly option with discount */}
-          <div 
-            className={`relative bg-white p-4 rounded-xl flex justify-between items-center ${selectedPlan === 'yearly' ? 'border-2 border-[#229FDB]' : ''}`}
-            onClick={() => setSelectedPlan('yearly')}
+          {/* Professional Plan - 12 Weeks */}
+          <div
+            className={`relative bg-white p-4 rounded-xl flex justify-between items-center ${selectedPlan === 'professional' ? 'border-2 border-[#229FDB]' : ''}`}
+            onClick={() => setSelectedPlan('professional')}
           >
-            {/* Save badge */}
+            {/* Popular badge */}
             <div className="absolute -top-3 left-3 bg-[#E89E43] px-3 py-1 rounded-full text-black text-xs font-medium">
-              Save 50%
+              Popular
             </div>
-            
-            <div className="">
-              <p className="font-semibold text-xs">12 months</p>
-              <div className='flex justify-center gap-2'>
-              <p className="text-gray-500 text-xs line-through">₦35,000</p>
-              <p className="font-bold text-xs">₦ 25,000</p>
-              </div>
-              
+
+            <div>
+              <p className="font-semibold text-xs">12 Weeks</p>
+              <p className="text-gray-500 text-xs">2 expert mentors</p>
             </div>
-            
+
             <div className="flex items-center">
-              <p className="mr-4 font-semibold text-xs">₦2,000 / month</p>
-              <div className={`w-6 h-6 rounded-full border-2 ${selectedPlan === 'yearly' ? 'border-blue-500' : 'border-gray-300'}`}>
-                {selectedPlan === 'yearly' && (
+              <p className="mr-4 font-semibold text-xs">₦60,000</p>
+              <div className={`w-6 h-6 rounded-full border-2 ${selectedPlan === 'professional' ? 'border-blue-500' : 'border-gray-300'}`}>
+                {selectedPlan === 'professional' && (
+                  <div className="w-full h-full rounded-full bg-blue-500 flex items-center justify-center">
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Unlimited Plan - 6 Months */}
+          <div
+            className={`relative bg-white p-4 rounded-xl flex justify-between items-center ${selectedPlan === 'unlimited' ? 'border-2 border-purple-700' : ''}`}
+            onClick={() => setSelectedPlan('unlimited')}
+          >
+            {/* Best Value badge */}
+            <div className="absolute -top-3 left-3 bg-purple-600 px-3 py-1 rounded-full text-white text-xs font-medium">
+              Best Value
+            </div>
+
+            <div>
+              <p className="font-semibold text-xs">6 Months</p>
+              <p className="text-gray-500 text-xs">Unlimited expert mentors</p>
+            </div>
+
+            <div className="flex items-center">
+              <p className="mr-4 font-semibold text-xs">₦100,000</p>
+              <div className={`w-6 h-6 rounded-full border-2 ${selectedPlan === 'unlimited' ? 'border-blue-500' : 'border-gray-300'}`}>
+                {selectedPlan === 'unlimited' && (
                   <div className="w-full h-full rounded-full bg-blue-500 flex items-center justify-center">
                     <div className="w-2 h-2 bg-white rounded-full"></div>
                   </div>
@@ -117,12 +199,16 @@ const PremiumPage = () => {
 
         {/* Free trial text */}
         <p className="text-black text-center mt-10 mb-4">
-          Start your 7-day free trial. <span className="opacity-70">Cancel anytime</span>
+          Start your {selectedPlan} journey. <span className="opacity-70">Cancel anytime</span>
         </p>
 
         {/* Upgrade button */}
-        <button className="w-full bg-[#229FDB] text-white font-medium py-4 rounded-full">
-          Try free and upgrade
+        <button
+          onClick={handleSubscribe}
+          disabled={loading}
+          className="w-full bg-[#229FDB] text-white font-medium py-4 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? 'Processing...' : 'Upgrade Now'}
         </button>
 
         {/* Page indicator dots */}

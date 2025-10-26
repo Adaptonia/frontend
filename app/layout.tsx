@@ -53,6 +53,7 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <link rel="manifest" href="/manifest.json" />
+        <script src="https://js.paystack.co/v1/inline.js" async></script>
       </head>
       <body
         className={`${poppins.variable} font-sans antialiased h-full overscroll-none full-screen`}

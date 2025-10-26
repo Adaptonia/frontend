@@ -184,8 +184,8 @@ export interface PartnerNotification {
   // Notification type and content
   type: 'partner_assigned' | 'partnership_request' | 'task_completed' | 'verification_request' |
     'verification_approved' | 'verification_rejected' | 'redo_requested' |
-    'goal_shared' | 'partnership_ended' | 'weekly_summary' | 'expert_task_assigned' | 
-    'expert_task_reminder' | 'expert_task_feedback';
+    'goal_shared' | 'partnership_ended' | 'weekly_summary' | 'expert_task_assigned' |
+    'expert_task_reminder' | 'expert_task_feedback' | 'expert_class_joined' | 'expert_class_student_joined';
 
   title: string;
   message: string;
@@ -272,6 +272,22 @@ export interface TaskSubmission {
   expertComment?: string;
   submittedAt: string;
   reviewedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Subscription {
+  id: string;
+  userId: string;
+  plan: 'starter' | 'professional' | 'unlimited';
+  status: 'active' | 'expired' | 'cancelled';
+  amount: number;
+  currency: string;
+  paymentReference: string;
+  paymentChannel: string;
+  startDate: string;
+  endDate: string;
+  autoRenew: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -554,6 +570,30 @@ export const APPWRITE_COLLECTIONS = {
       { key: 'memberId' },
       { key: 'status' },
       { key: 'submittedAt' }
+    ]
+  },
+
+  SUBSCRIPTIONS: {
+    name: 'subscriptions',
+    attributes: [
+      { key: 'userId', type: 'string', required: true },
+      { key: 'plan', type: 'string', required: true },
+      { key: 'status', type: 'string', required: true },
+      { key: 'amount', type: 'integer', required: true },
+      { key: 'currency', type: 'string', required: true },
+      { key: 'paymentReference', type: 'string', required: true },
+      { key: 'paymentChannel', type: 'string', required: true },
+      { key: 'startDate', type: 'datetime', required: true },
+      { key: 'endDate', type: 'datetime', required: true },
+      { key: 'autoRenew', type: 'boolean', required: true },
+      { key: 'createdAt', type: 'datetime', required: true },
+      { key: 'updatedAt', type: 'datetime', required: true }
+    ],
+    indexes: [
+      { key: 'userId' },
+      { key: 'status' },
+      { key: 'paymentReference', type: 'unique' },
+      { key: 'endDate' }
     ]
   }
 } as const;

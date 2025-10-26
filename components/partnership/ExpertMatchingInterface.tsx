@@ -17,7 +17,9 @@ import { useAuth } from '@/context/AuthContext';
 import { partnershipService } from '@/services/appwrite/partnershipService';
 import { expertService } from '@/services/appwrite/expertService';
 import { getUserById } from '@/services/appwrite/userService';
+import { subscriptionService } from '@/services/appwrite/subscriptionService';
 import { PartnershipPreferences, Partnership } from '@/database/partner-accountability-schema';
+import { useRouter } from 'next/navigation';
 
 interface ExpertMatchingInterfaceProps {
   onPartnershipCreated?: (partnership: Partnership) => void;
@@ -29,6 +31,7 @@ const ExpertMatchingInterface: React.FC<ExpertMatchingInterfaceProps> = ({
   onClose
 }) => {
   const { user } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [potentialExperts, setPotentialExperts] = useState<any[]>([]);
   const [expertUserDetails, setExpertUserDetails] = useState<{[key: string]: any}>({});
@@ -143,6 +146,15 @@ const ExpertMatchingInterface: React.FC<ExpertMatchingInterfaceProps> = ({
 
   const handleJoinExpert = async (expertId: string) => {
     if (!user?.id) return;
+
+    // Check if user has active premium subscription
+    const hasPremium = await subscriptionService.hasActivePremium(user.id);
+
+    if (!hasPremium) {
+      toast.error('Premium subscription required to join expert classes');
+      router.push('/premium');
+      return;
+    }
 
     setLoading(true);
     try {

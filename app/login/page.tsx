@@ -37,9 +37,23 @@ const Page = () => {
             window.location.replace('/dashboard');
             
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Login failed'
-            console.error('Login error:', errorMessage)
-            toast.error(errorMessage)
+            let errorMessage = 'Login failed. Please try again.';
+
+            if (error instanceof Error) {
+                // Provide user-friendly error messages
+                if (error.message.includes('Invalid credentials')) {
+                    errorMessage = 'Invalid email or password';
+                } else if (error.message.includes('User profile not found')) {
+                    errorMessage = 'Account not found. Please sign up first.';
+                } else if (error.message.includes('network') || error.message.includes('fetch')) {
+                    errorMessage = 'Network error. Please check your connection.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+
+            console.error('Login error:', error);
+            toast.error(errorMessage);
         } finally {
             setIsLoading(false)
         }

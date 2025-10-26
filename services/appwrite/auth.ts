@@ -99,12 +99,18 @@ export const loginUser = async (email: string, password: string): Promise<User> 
       USERS_COLLECTION_ID,
       [Query.equal('userId', accountDetails.$id)]
     );
-    
+
     if (users.documents.length === 0) {
-      console.error('❌ User document not found in database');
-      throw new Error('User not found in database');
+      console.warn('⚠️ User document not found in database, user may need to complete registration');
+      // Delete the session since user data is incomplete
+      try {
+        await account.deleteSession('current');
+      } catch (err) {
+        console.log('Could not delete session:', err);
+      }
+      throw new Error('User profile not found. Please contact support.');
     }
-    
+
     const userData = users.documents[0];
     console.log('✅ User document found:', userData);
     
@@ -130,6 +136,19 @@ export const loginUser = async (email: string, password: string): Promise<User> 
     return user;
   } catch (error: unknown) {
     console.error('❌ Login error:', error);
+
+    // Provide more user-friendly error messages
+    if (error instanceof Error) {
+      if (error.message.includes('Invalid credentials') || error.message.includes('Invalid `password`')) {
+        throw new Error('Invalid email or password');
+      } else if (error.message.includes('User profile not found')) {
+        throw error; // Already has a good message
+      } else if (error.message.includes('network') || error.message.includes('fetch failed')) {
+        throw new Error('Network error. Please check your internet connection.');
+      }
+    }
+
+    // Re-throw the original error if we don't have a specific handler
     throw error;
   }
 };

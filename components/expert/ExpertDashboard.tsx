@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Crown,
@@ -38,15 +38,7 @@ const ExpertDashboard: React.FC = () => {
     monthlyEarnings: 0
   });
 
-  // If user is an expert (by role), but has no profile yet, prompt to create one
-  useEffect(() => {
-    const hasExpertRole = user?.userType === 'expert' || (user as any)?.role === 'expert' || (user as any)?.isExpert === true;
-    if (hasExpertRole && !expertProfile) {
-      setShowProfileForm(true);
-    }
-  }, [user?.userType, (user as any)?.role, (user as any)?.isExpert, expertProfile]);
-
-  const handleProfileCreated = (profile: ExpertProfile) => {
+  const handleProfileCreated = (_profile: ExpertProfile) => {
     setShowProfileForm(false);
     loadExpertProfile();
   };

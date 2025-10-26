@@ -76,8 +76,13 @@ class PartnerNotificationService {
         ...notificationData,
       };
 
-      // Attempt to send email notification
-      await this.sendEmailNotification(notification);
+      // Attempt to send email notification (non-blocking)
+      try {
+        await this.sendEmailNotification(notification);
+      } catch (emailError) {
+        console.error('Failed to send email notification (non-critical):', emailError);
+        // Continue even if email fails
+      }
 
       return notification;
     } catch (error) {
